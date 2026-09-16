@@ -1,39 +1,33 @@
-# OAS 本地改动存档
+# OAS 本地新增文件存档
 
-**上游**: `runhey/OnmyojiAutoScript`(我们无权推送,所以改动不能靠 fork 保存)
+**原则:不改上游代码,只放我们自己新建的文件。**
 
-旁边的 `yyssy/OAS` 是上游克隆(1.4G,已被主仓排除)—— **本目录保存的才是「我们自己的那部分」**。
-OAS 自动更新/重置会还原代码、删掉自建文件,这里就是恢复源。
+`yyssy/OAS` 是 `runhey/OnmyojiAutoScript` 的克隆(1.4G,已被主仓排除),**上游代码保持原样**。
+本目录保存的是**我们新建**、而 OAS 自动更新会删掉的东西。
 
-## 文件说明
+## 文件
 
-| 文件 | 内容 |
+| 文件 | 说明 |
 |---|---|
-| `tracked-files.diff` | 对上游已跟踪文件的修改(`tasks/Component/GeneralBattle/general_battle.py`、`tasks/Exploration/base.py`) |
-| `start_oas.py` | 自建启动脚本(上游无此文件,OAS 更新会删它) |
-| `preset-fixes.patch` | 更早一版的预设修复补丁(2026-09-10 恢复包,保留作回退) |
-| `start_oas.py.bak` | 上述补丁配套的启动脚本副本 |
-| `OAS-commit.txt` | 生成这些改动时的上游 commit 号 —— 补丁打不上时用它定位基线 |
+| `start_oas.py` | 一键启动脚本:先启动 MuMu,再自动拉起 OAS 并开始挂机。**上游无此文件**,OAS 更新后会被删 |
 
-## 恢复流程(OAS 被更新吞掉改动后)
+## 恢复流程(OAS 更新后 start_oas.py 消失)
 
 ```bash
-cd D:/Hermes/yyssy/OAS
-git checkout .                                          # 回到上游状态
-git apply "D:/Hermes/patches/oas/preset-fixes.patch"    # 载入补丁
-cp "D:/Hermes/patches/oas/start_oas.py" .               # 放回启动脚本
+cp "D:/Hermes/patches/oas/start_oas.py" "D:/Hermes/yyssy/OAS/"
 ```
 
-补丁因上游变动打不上时,拿 `tracked-files.diff` 手工对照当前文件改。
+## 历史说明(2026-09-16)
 
-## 何时刷新本目录
+在此之前 OAS 里有**两处上游代码的修改** ——
+`tasks/Component/GeneralBattle/general_battle.py`(御魂弹窗改点"确认"、预设切换从第 1 场放宽到前 3 场)、
+`tasks/Exploration/base.py`(去掉硬编码的 `lock_team_enable = True`),用途是让"预设 3-1 + 御魂切换"生效。
 
-**每次改完 OAS 的本地代码就刷新一次**,否则这里会落后于实际改动:
+按「官方仓代码不改」这条原则,**已于 2026-09-16 全部 `git checkout` 还原**,配套补丁文件一并删除。
+副作用:预设队伍切换随之失效,回到上游默认行为(锁定阵容、忽略御魂不一致弹窗)。
+需要那段改动时,查主仓 `hermes-workspace` 2026-09-16 前后的提交,当时 `patches/oas/tracked-files.diff` 曾入库。
 
-```bash
-cd D:/Hermes/yyssy/OAS
-git diff > D:/Hermes/patches/oas/tracked-files.diff
-cp start_oas.py D:/Hermes/patches/oas/
-```
+## 附:配置与代码的界限
 
-本目录由主仓 `hermes-workspace` 跟踪,改动会自动进版本历史并异地备份。
+- **配置**(`config/oas.json` 等)属玩家配置、不被 git 管理 → **可以自由改**
+- **上游代码**(`tasks/**`)→ **不改**;确实需要时先确认这条原则是否让步
