@@ -1,0 +1,36 @@
+diff --git a/tasks/Component/GeneralBattle/general_battle.py b/tasks/Component/GeneralBattle/general_battle.py
+index 157f5b4b..e38fcc8b 100644
+--- a/tasks/Component/GeneralBattle/general_battle.py
++++ b/tasks/Component/GeneralBattle/general_battle.py
+@@ -59,13 +59,13 @@ class GeneralBattle(BattleWait, GeneralBuff, GeneralBattleAssets):
+             self.screenshot()
+             if self.is_in_real_battle(False):  # 战斗阶段
+                 return True
+-            if self.appear_then_click(self.I_DISABLE_7DAYS_DIFF_SOUL, interval=0.6):  # 关闭御魂不一致提示
+-                continue
+-            if self.appear_then_click(self.I_CONFIRM_CLOSE_DIFF_SOUL, interval=0.6):  # 确认关闭御魂不一致提示
+-                continue
++            if self.appear(self.I_DISABLE_7DAYS_DIFF_SOUL, interval=0.6):  # 御魂不一致弹窗:点确认应用预设御魂
++                if self.appear_then_click(self.I_CONFIRM, interval=0.6):
++                    logger.info('Apply preset souls')
++                    continue
+             if self.is_in_prepare(False):  # 战斗准备阶段
+                 if not getattr(config, 'lock_team_enable', False):  # 没有锁定阵容
+-                    if self.current_count == 1 and not confed:  # 第一次战斗且是本次第一次配置
++                    if self.current_count <= 3 and not confed:  # 前3场都尝试切预设(重启落进战斗中会错过第1场)
+                         self.switch_preset_team(config.preset_enable, config.preset_group, config.preset_team)
+                         self.check_and_open_buff(buff)
+                         confed = True
+diff --git a/tasks/Exploration/base.py b/tasks/Exploration/base.py
+index 8354147c..e04ebbca 100644
+--- a/tasks/Exploration/base.py
++++ b/tasks/Exploration/base.py
+@@ -44,7 +44,7 @@ class BaseExploration(GameUi, GeneralBattle, GeneralRoom, GeneralInvite, Replace
+ 
+     @cached_property
+     def _config(self):
+-        self.config.exploration.general_battle_config.lock_team_enable = True
++        # 不强制锁定阵容,读配置文件值,以便预设队伍生效(曾硬编码True导致预设永不切换,同Orochi旧坑)
+         limit_time = self.config.exploration.exploration_config.limit_time
+         self.limit_time: timedelta = timedelta(
+             hours=limit_time.hour,
