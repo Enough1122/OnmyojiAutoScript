@@ -10,7 +10,6 @@ repos/
 # ---- 2. 大体积 / 可再生成 / 非版本化内容 ----
 backups/
 env/
-_memos_extract/
 .claude/
 .hermes/
 .local/
