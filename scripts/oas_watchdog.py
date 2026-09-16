@@ -10,7 +10,7 @@ import sys
 import time
 from datetime import datetime, timedelta
 
-OAS_DIR = r"D:/Hermes/yyssy/OAS"
+OAS_DIR = r"D:/Hermes/repos/OAS"
 TOOL_PY = OAS_DIR + "/toolkit/python.exe"
 PORT = 22267
 STALE_MIN = 15

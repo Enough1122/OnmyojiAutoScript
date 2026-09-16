@@ -2,7 +2,7 @@
 import subprocess
 import sys
 
-OAS_DIR = r"D:/Hermes/yyssy/OAS"
+OAS_DIR = r"D:/Hermes/repos/OAS"
 TOOL_PY = OAS_DIR + "/toolkit/python.exe"
 WS_STOP = r"C:\Users\admin\AppData\Local\Temp\oas_stop.py"
 

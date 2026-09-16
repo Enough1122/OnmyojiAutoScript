@@ -27,7 +27,7 @@ import sys
 import time
 from pathlib import Path
 
-OAS_DIR = Path('D:/Hermes/yyssy/OAS')
+OAS_DIR = Path('D:/Hermes/repos/OAS')
 CONFIG_DIR = OAS_DIR / 'config'
 TOOLKIT_PYTHON = OAS_DIR / 'toolkit' / 'python.exe'
 ADB = OAS_DIR / 'toolkit' / 'Lib' / 'site-packages' / 'adbutils' / 'binaries' / 'adb.exe'
@@ -145,8 +145,8 @@ def write_config(serial):
 def start_oas():
     """启动 OAS,TERM=dumb + NO_COLOR=1 绕过 colorama 死锁"""
     env_clean = {
-        'PATH': 'D:/Hermes/yyssy/OAS/toolkit;D:/Hermes/yyssy/OAS/toolkit/Scripts;'
-                'D:/Hermes/yyssy/OAS/toolkit/Git/mingw64/bin;/c/Windows/System32',
+        'PATH': 'D:/Hermes/repos/OAS/toolkit;D:/Hermes/repos/OAS/toolkit/Scripts;'
+                'D:/Hermes/repos/OAS/toolkit/Git/mingw64/bin;/c/Windows/System32',
         'PYTHONUTF8': '1',
         'TERM': 'dumb',
         'NO_COLOR': '1',

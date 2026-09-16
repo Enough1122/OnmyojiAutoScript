@@ -2,7 +2,7 @@
 
 **原则:不改上游代码,只放我们自己新建的文件。**
 
-`yyssy/OAS` 是 `runhey/OnmyojiAutoScript` 的克隆(1.4G,已被主仓排除),**上游代码保持原样**。
+`repos/OAS` 是 `runhey/OnmyojiAutoScript` 的克隆(1.4G,已被主仓排除),**上游代码保持原样**。
 本目录保存的是**我们新建**、而 OAS 自动更新会删掉的东西。
 
 ## 文件
@@ -14,7 +14,7 @@
 ## 恢复流程(OAS 更新后 start_oas.py 消失)
 
 ```bash
-cp "D:/Hermes/patches/oas/start_oas.py" "D:/Hermes/yyssy/OAS/"
+cp "D:/Hermes/patches/oas/start_oas.py" "D:/Hermes/repos/OAS/"
 ```
 
 ## 历史说明(2026-09-16)

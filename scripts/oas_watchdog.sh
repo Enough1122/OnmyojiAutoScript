@@ -2,7 +2,7 @@
 # OAS watchdog — 检查 OAS 进程是否活着，崩了重启
 # 被 cronjob no_agent=True 调用
 
-OAS_DIR="D:/Hermes/yyssy/OAS"
+OAS_DIR="D:/Hermes/repos/OAS"
 LOG_FILE="$OAS_DIR/log/2026-06-28_oas.txt"
 
 # 1. 检查进程

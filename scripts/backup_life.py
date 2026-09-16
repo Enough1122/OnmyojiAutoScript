@@ -7,8 +7,8 @@
 真源即工作目录,无副本、无镜像 —— 版本控制直接作用于工作空间本身。
 
 安全约定:
-  * 只操作 D:/Hermes 自己的 git;子目录里的独立仓(hermes-agent-fix /
-    lark-coding-agent-bridge / ai-berkshire / OAS)已被 .gitignore 排除,不触碰
+  * 只操作 D:/Hermes 自己的 git;外部/独立仓统一放在 repos/(已被 .gitignore
+    整夹排除),不触碰
   * 仓库必须保持 private —— 历史里有完整体重与健康记录
 """
 import subprocess

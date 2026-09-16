@@ -4,14 +4,10 @@
 # ============================================================
 
 # ---- 1. 独立 git 仓库(>100M,或第三方克隆)----
-projects/hermes-agent-fix/
-projects/lark-coding-agent-bridge/
-references/ai-berkshire/
-yyssy/OAS/
+# 2026-09-16 起外部/独立仓统一放 repos/(整夹一条排除;新克隆丢进去即可,无需改本文件)
+repos/
 
 # ---- 2. 大体积 / 可再生成 / 非版本化内容 ----
-yyssy/
-references/
 backups/
 env/
 _memos_extract/
