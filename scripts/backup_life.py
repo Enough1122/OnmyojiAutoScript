@@ -16,6 +16,7 @@ import sys
 from pathlib import Path
 
 SRC = Path("D:/Hermes")
+SPACE = Path("D:/Hermes")          # 大仓真源=工作空间本身(直接版本控制,不复制)
 REPO = Path("D:/Hermes/projects/life-backup")
 MAP = [("健康", "health"), ("diary", "diary"), ("记录", "records")]
 
@@ -24,7 +25,29 @@ def run(args):
     return subprocess.run(args, cwd=REPO, capture_output=True, text=True)
 
 
+def git(workdir, args):
+    return subprocess.run(["git"] + args, cwd=workdir, capture_output=True, text=True)
+
+
+def sync_repo(workdir, label):
+    """对"真源即工作目录"的仓库执行 add/commit/push,返回一行摘要。"""
+    git(workdir, ["add", "-A"])
+    status = git(workdir, ["status", "--porcelain"]).stdout.strip()
+    if not status:
+        return f"{label}: 无变化"
+    n = len(status.splitlines())
+    git(workdir, ["commit", "-m", f"自动备份:{n} 处变更"])
+    pushed = git(workdir, ["push"])
+    if pushed.returncode == 0:
+        return f"{label}: 已推送 {n} 处变更"
+    return f"{label}: push 失败 {pushed.stderr[:200]}"
+
+
 def main():
+    # 1) 大仓:D:/Hermes 本身就是 git 仓库(真源直接版本控制,无需复制)
+    print(sync_repo(SPACE, "工作空间(hermes-workspace)"))
+
+    # 2) 生活数据专用镜像仓 —— 冗余备份,分类清晰
     if not REPO.exists():
         sys.exit(f"仓库目录不存在: {REPO}")
     if not (REPO / ".git").exists():
