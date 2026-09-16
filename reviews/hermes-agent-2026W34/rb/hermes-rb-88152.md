@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. hermes_cli/kanban_db.py — Positive: the two silent artifact-drop paths (unresolvable path, outside-workspace escape) now log task id + reason before still appending, so "where did my artifact go" becomes answerable from logs; and the ContextVar binding is documented as precedence tier 1 in `get_current_board`'s chain rather than remaining implicit knowledge.
+
+2. tools/kanban_tools.py:`_DESC_BOARD` — Positive: the rewritten description states the override semantics *and* warns against hardcoding remembered slugs, which is exactly the misuse that defeats per-conversation board bindings; the empty-`thread_id` subscription warning similarly catches misrouted completion notices at subscribe time instead of delivery time. No change requested.

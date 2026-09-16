@@ -1,0 +1,51 @@
+diff --git a/packages/core/src/npm-config.ts b/packages/core/src/npm-config.ts
+index 896bb84872c1..a68c23afcd61 100644
+--- a/packages/core/src/npm-config.ts
++++ b/packages/core/src/npm-config.ts
+@@ -16,7 +16,12 @@ export const load = (dir: string) =>
+         npmPath,
+         cwd: dir,
+         env: { ...process.env },
+-        argv: [process.execPath, process.execPath],
++        // Pin the project prefix so `dir/.npmrc` is always read as the project
++        // config. Without this, @npmcli/config walks up looking for the nearest
++        // package.json/node_modules, and when an ancestor contains either
++        // (commonly the user's home directory on Windows), `dir/.npmrc` is
++        // silently ignored and installs fall back to the default registry.
++        argv: [process.execPath, process.execPath, `--prefix=${dir}`],
+         execPath: process.execPath,
+         platform: process.platform,
+         definitions,
+diff --git a/packages/core/test/npm-config.test.ts b/packages/core/test/npm-config.test.ts
+index 895b35db5409..4a730f7842db 100644
+--- a/packages/core/test/npm-config.test.ts
++++ b/packages/core/test/npm-config.test.ts
+@@ -1,4 +1,5 @@
+ import path from "path"
++import { mkdir } from "fs/promises"
+ import { describe, expect, test } from "bun:test"
+ import { Effect } from "effect"
+ import { NpmConfig } from "@opencode-ai/core/npm-config"
+@@ -14,6 +15,22 @@ describe("NpmConfig.load", () => {
+     expect(config.registry).toBe("https://registry.example.test/")
+   })
+ 
++  test("prefers the requested directory over ancestor package.json anchors", async () => {
++    await using tmp = await tmpdir()
++    // An ancestor holding package.json captures @npmcli/config's prefix walk,
++    // which would otherwise read this .npmrc instead of the requested dir's.
++    await Bun.write(path.join(tmp.path, "package.json"), JSON.stringify({ name: "anchor" }))
++    await Bun.write(path.join(tmp.path, ".npmrc"), "registry=https://ancestor.example.test/\n")
++
++    const dir = path.join(tmp.path, "project")
++    await mkdir(dir)
++    await Bun.write(path.join(dir, ".npmrc"), "registry=https://project.example.test/\n")
++
++    const config = await Effect.runPromise(NpmConfig.load(dir))
++
++    expect(config.registry).toBe("https://project.example.test/")
++  })
++
+   test("reads scoped registries from project .npmrc", async () => {
+     await using tmp = await tmpdir()
+     await Bun.write(path.join(tmp.path, ".npmrc"), "@acme:registry=https://npm.acme.test/\n")

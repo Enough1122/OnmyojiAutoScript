@@ -1,0 +1,380 @@
+{
+  "success": true,
+  "status": 0,
+  "code": 0,
+  "message": "ok",
+  "data": {
+    "requestId": null,
+    "message": "OK",
+    "status": 0,
+    "code": 0,
+    "data": {
+      "protocolType": "SEARCH_DATA",
+      "id": "4dab370f-35a8-4150-b91b-4d44ac3cf802",
+      "refSeq": null,
+      "keyEntityList": null,
+      "searchDataResultDTO": {
+        "questionId": "3cf302f4-5f1f-4ab7-94eb-cace70548099",
+        "dataTableDTOList": [
+          {
+            "code": "002602.SZ",
+            "entityName": "世纪华通(002602.SZ)",
+            "hsjDelay": false,
+            "table": {
+              "ZXJ_f2_3": [
+                "15.06"
+              ],
+              "headName": [
+                "2026-09-14 19:11"
+              ]
+            },
+            "rawTable": {
+              "ZXJ_f2_3": [
+                "15.06"
+              ],
+              "headName": [
+                "2026-09-14 19:11"
+              ]
+            },
+            "truncateRawTable": {},
+            "nameMap": {
+              "ZXJ_f2_3": "最新价",
+              "headNameSub": "数据来源"
+            },
+            "headNameMap": {},
+            "field": {
+              "returnCode": "ZXJ_f2_3",
+              "returnName": "最新价",
+              "classCode": "007001",
+              "checkedRelatedIndicators": true,
+              "startDate": "2026-09-14 00:00:00",
+              "endDate": "2026-09-14 00:00:00",
+              "fuzzy": true,
+              "defineType": 0,
+              "isLoopN": false,
+              "apiCode": "3",
+              "isGroup": false,
+              "returnSourceCode": "f2",
+              "returnSourceName": "最新价",
+              "graph": "2",
+              "unit": "0",
+              "tableType": "2",
+              "dcsdField": false
+            },
+            "entityName2TagMap": {},
+            "macroAttributeExcelMap": {},
+            "fieldSet": [
+              {
+                "returnCode": "ZXJ_f2_3",
+                "returnName": "最新价",
+                "classCode": "007001",
+                "checkedRelatedIndicators": true,
+                "startDate": "2026-09-14 00:00:00",
+                "endDate": "2026-09-14 00:00:00",
+                "fuzzy": true,
+                "defineType": 0,
+                "isLoopN": false,
+                "apiCode": "3",
+                "isGroup": false,
+                "returnSourceCode": "f2",
+                "returnSourceName": "最新价",
+                "graph": "2",
+                "unit": "0",
+                "tableType": "2",
+                "dcsdField": false
+              }
+            ],
+            "dataTableType": "NORM_TABLE",
+            "rowInfo": {},
+            "colInfo": {},
+            "indicatorOrder": [
+              "ZXJ_f2_3"
+            ],
+            "tipFlags": [
+              "0"
+            ],
+            "dataType": "行情数据",
+            "title": "世纪华通(002602.SZ)当前的最新价",
+            "hasThumbnail": true,
+            "indicatorLimited": false,
+            "dataPositionEnum": "MetricLeftTimeTop",
+            "orderCol": {},
+            "jumpUrlList": [],
+            "dataTypeEnum": "HQ",
+            "dateRuleSet": [],
+            "freqConvert": false,
+            "deleteInfo": [],
+            "macroCodeMap": {},
+            "entityTagDTO": {
+              "entityId": "1000009782",
+              "entityType": "SEC",
+              "entityTypeCode": "058001001",
+              "entityTypeName": "A股",
+              "classCode": "002001",
+              "className": "沪深京股票",
+              "publishCode": "",
+              "fullName": "世纪华通",
+              "shortName": "",
+              "matchWord": "世纪华通",
+              "secuCode": "002602",
+              "market": "0",
+              "marketChar": ".SZ",
+              "correct": false,
+              "hasKLine": false,
+              "valuation": false,
+              "relatedEntity": false
+            },
+            "entityTagDTOList": [
+              {
+                "entityId": "1000009782",
+                "entityType": "SEC",
+                "entityTypeCode": "058001001",
+                "entityTypeName": "A股",
+                "classCode": "002001",
+                "className": "沪深京股票",
+                "publishCode": "",
+                "fullName": "世纪华通",
+                "shortName": "",
+                "matchWord": "世纪华通",
+                "secuCode": "002602",
+                "market": "0",
+                "marketChar": ".SZ",
+                "correct": false,
+                "hasKLine": false,
+                "valuation": false,
+                "relatedEntity": false
+              }
+            ],
+            "indexTable": false,
+            "edbThirdData": false,
+            "dataUpdate": {
+              "2026-09-14 19:11": false
+            },
+            "supportsTimeSeries": false,
+            "estimatedTokens": 0,
+            "summaryTips": {
+              "periodicalReport": null
+            },
+            "nestEntityListMap": {},
+            "excelTimeTruncate": false,
+            "frontendEntityName": "",
+            "frontendEntityCode": "",
+            "frontendTitle": "",
+            "frontendDesc": "",
+            "indicatorCount": 0,
+            "fieldParameterStr": "",
+            "tdayEnum": "NORMAL"
+          },
+          {
+            "code": "002602.SZ",
+            "entityName": "世纪华通(002602.SZ)",
+            "table": {
+              "325898": [
+                "15.06元",
+                "15.56元",
+                "15.56元",
+                "15.78元",
+                "16.13元",
+                "16.16元"
+              ],
+              "headName": [
+                "2026-09-14(日)",
+                "2026-09-11(日)",
+                "2026-09-10(日)",
+                "2026-09-09(日)",
+                "2026-09-08(日)",
+                "2026-09-07(日)"
+              ]
+            },
+            "rawTable": {
+              "325898": [
+                "15.06",
+                "15.56",
+                "15.56",
+                "15.78",
+                "16.13",
+                "16.16"
+              ],
+              "headName": [
+                "2026-09-14",
+                "2026-09-11",
+                "2026-09-10",
+                "2026-09-09",
+                "2026-09-08",
+                "2026-09-07"
+              ]
+            },
+            "truncateRawTable": {},
+            "nameMap": {
+              "325898": "收盘价",
+              "headNameSub": "数据来源"
+            },
+            "headNameMap": {},
+            "field": {
+              "returnCode": "325898",
+              "returnName": "收盘价",
+              "classCode": "007121",
+              "checkedRelatedIndicators": true,
+              "startDate": "2026-09-14 00:00:00",
+              "endDate": "2026-09-14 00:00:00",
+              "fuzzy": true,
+              "dateGranularity": "DAY",
+              "defineType": 0,
+              "isLoopN": false,
+              "fixedParamValue": "AdjustFlag=1,CurType=1,Period=1",
+              "isGroup": false,
+              "returnSourceCode": "CLOSE",
+              "returnSourceName": "收盘价",
+              "graph": "2",
+              "unit": "2",
+              "tableType": "20",
+              "unitName": "元",
+              "dcsdField": true
+            },
+            "entityName2TagMap": {},
+            "macroAttributeExcelMap": {},
+            "fieldSet": [
+              {
+                "returnCode": "325898",
+                "returnName": "收盘价",
+                "classCode": "007121",
+                "checkedRelatedIndicators": true,
+                "startDate": "2026-09-14 00:00:00",
+                "endDate": "2026-09-14 00:00:00",
+                "fuzzy": true,
+                "dateGranularity": "DAY",
+                "defineType": 0,
+                "isLoopN": false,
+                "fixedParamValue": "AdjustFlag=1,CurType=1,Period=1",
+                "isGroup": false,
+                "returnSourceCode": "CLOSE",
+                "returnSourceName": "收盘价",
+                "graph": "2",
+                "unit": "2",
+                "tableType": "20",
+                "unitName": "元",
+                "dcsdField": true
+              }
+            ],
+            "dataTableType": "NORM_TABLE",
+            "rowInfo": {},
+            "colInfo": {},
+            "indicatorOrder": [
+              "325898"
+            ],
+            "tipFlags": [],
+            "dataType": "数据浏览器",
+            "title": "世纪华通(002602.SZ)的收盘价",
+            "hasThumbnail": true,
+            "indicatorLimited": false,
+            "dataPositionEnum": "MetricLeftTimeTop",
+            "orderCol": {},
+            "jumpUrlList": [
+              {
+                "choiceUrl": "EM://stockdatacenter?type=browser&modType=STOCK&code=002602.SZ&indId=100000000001098|121:2026-09-14|513:1",
+                "typeName": "股票数据浏览器"
+              }
+            ],
+            "dataTypeEnum": "DATA_BROWSER",
+            "dateRuleSet": [],
+            "freqConvert": false,
+            "deleteInfo": [],
+            "macroCodeMap": {},
+            "entityTagDTO": {
+              "entityId": "1000009782",
+              "entityType": "SEC",
+              "entityTypeCode": "058001001",
+              "entityTypeName": "A股",
+              "classCode": "002001",
+              "className": "沪深京股票",
+              "publishCode": "",
+              "fullName": "世纪华通",
+              "shortName": "",
+              "matchWord": "世纪华通",
+              "secuCode": "002602",
+              "market": "0",
+              "marketChar": ".SZ",
+              "correct": false,
+              "hasKLine": false,
+              "valuation": false,
+              "relatedEntity": false
+            },
+            "entityTagDTOList": [
+              {
+                "entityId": "1000009782",
+                "entityType": "SEC",
+                "entityTypeCode": "058001001",
+                "entityTypeName": "A股",
+                "classCode": "002001",
+                "className": "沪深京股票",
+                "publishCode": "",
+                "fullName": "世纪华通",
+                "shortName": "",
+                "matchWord": "世纪华通",
+                "secuCode": "002602",
+                "market": "0",
+                "marketChar": ".SZ",
+                "correct": false,
+                "hasKLine": false,
+                "valuation": false,
+                "relatedEntity": false
+              }
+            ],
+            "indexTable": false,
+            "edbThirdData": false,
+            "dataUpdate": {
+              "2026-09-14": false
+            },
+            "supportsTimeSeries": false,
+            "estimatedTokens": 0,
+            "summaryTips": {
+              "periodicalReport": null
+            },
+            "nestEntityListMap": {},
+            "excelTimeTruncate": false,
+            "frontendEntityName": "",
+            "frontendEntityCode": "",
+            "frontendTitle": "",
+            "frontendDesc": "",
+            "indicatorCount": 0,
+            "fieldParameterStr": "",
+            "tdayEnum": "TDAY"
+          }
+        ],
+        "condition": {
+          "search_data_task_0": [
+            "世纪华通",
+            "最新价收盘价",
+            "2026-09-14至2026-09-14"
+          ]
+        },
+        "entityTagDTOList": [
+          {
+            "entityId": "1000009782",
+            "entityType": "SEC",
+            "entityTypeCode": "058001001",
+            "entityTypeName": "A股",
+            "classCode": "002001",
+            "className": "沪深京股票",
+            "publishCode": "",
+            "fullName": "世纪华通",
+            "shortName": "",
+            "matchWord": "世纪华通",
+            "secuCode": "002602",
+            "market": "0",
+            "marketChar": ".SZ",
+            "correct": false,
+            "hasKLine": false,
+            "valuation": false,
+            "relatedEntity": false
+          }
+        ]
+      },
+      "entityName": null,
+      "message": null,
+      "tableTruncated": false
+    },
+    "stack": null
+  },
+  "requestId": "162f7651cdf848aabba135444b3ee770"
+}

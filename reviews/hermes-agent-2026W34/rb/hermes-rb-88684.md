@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. scripts/dev-sandbox.sh — Positive: scoping the retry to a transient-failure regex is the right discipline — a typo'd ref still fails on attempt one instead of after three backoffs, while the 429 burst case gets bounded linear retries; and the final failure now prints what git actually said, which is the diagnostic that was missing when rate-limited legs looked like "bad ref". Env overrides for attempts/delay/regex let tests drive the loop without sleeping, and the transient regex failing to compile degrades safely to no-retry.
+
+2. Tests — Positive: a real git *stub with a failure counter* proves both the retry path (two 429s then success, counter > 2) and the bounded budget (99 failures → exactly 6 fetch invocations = 3 attempts × 2 strategies), plus the scope check that a genuinely unresolvable ref never retries. Killing the run once past ref resolution keeps the test focused without building a full sandbox. No change requested.

@@ -1,0 +1,332 @@
+diff --git a/hermes_cli/main.py b/hermes_cli/main.py
+index 448261c6c200..7499168c3be2 100644
+--- a/hermes_cli/main.py
++++ b/hermes_cli/main.py
+@@ -13312,6 +13312,16 @@ def cmd_computer_use(args):
+         help="Only sessions in one workspace: a git repo root or project dir "
+         "(matched by path substring or basename).",
+     )
++    sessions_list.add_argument(
++        "--after",
++        metavar="TIME",
++        help="Only sessions started at/after TIME (duration ago or ISO timestamp)",
++    )
++    sessions_list.add_argument(
++        "--before",
++        metavar="TIME",
++        help="Only sessions started before TIME (duration ago or ISO timestamp)",
++    )
+ 
+     def _add_session_filter_args(p, default_older_help):
+         p.add_argument(
+diff --git a/hermes_cli/sessions_cmd.py b/hermes_cli/sessions_cmd.py
+index 3cc69f44bcec..52db7045da3c 100644
+--- a/hermes_cli/sessions_cmd.py
++++ b/hermes_cli/sessions_cmd.py
+@@ -327,25 +327,24 @@ def _recovery_progress(info):
+     _exclude = None if _source else ["tool"]
+ 
+     if action == "list":
++        from hermes_cli.session_filters import build_prune_filters
+         from hermes_state import workspace_key as _ws_key
+ 
+-        sessions = db.list_sessions_rich(
+-            source=args.source, exclude_sources=_exclude, limit=args.limit
+-        )
+-
+-        # Workspace filter: match a session by its workspace key (git repo
+-        # root, else cwd) — path substring or exact basename.
+         _ws_filter = (getattr(args, "workspace", None) or "").strip()
+-        if _ws_filter:
+-            _needle = _ws_filter.lower()
+-
+-            def _in_workspace(s):
+-                key = (_ws_key(s) or "").lower()
+-                return bool(key) and (
+-                    _needle in key or _needle == os.path.basename(key.rstrip("/\\"))
+-                )
++        try:
++            _time_filters = build_prune_filters(args)
++        except ValueError as e:
++            print(f"Error: {e}")
++            return 2
+ 
+-            sessions = [s for s in sessions if _in_workspace(s)]
++        sessions = db.list_sessions_rich(
++            source=args.source,
++            exclude_sources=_exclude,
++            limit=args.limit,
++            started_after=_time_filters["started_after"],
++            started_before=_time_filters["started_before"],
++            workspace_query=_ws_filter or None,
++        )
+ 
+         if not sessions:
+             print("No sessions found.")
+diff --git a/hermes_state.py b/hermes_state.py
+index 60e63ba8ee07..4862fe2de082 100644
+--- a/hermes_state.py
++++ b/hermes_state.py
+@@ -8947,6 +8947,9 @@ def list_sessions_rich(
+         include_pinned: bool = False,
+         session_key: str = None,
+         include_hidden: bool = False,
++        started_after: float = None,
++        started_before: float = None,
++        workspace_query: str = None,
+     ) -> List[Dict[str, Any]]:
+         """List sessions with preview (first user message) and last active timestamp.
+ 
+@@ -9001,6 +9004,13 @@ def list_sessions_rich(
+         Pass ``session_key`` to restrict results to one stable gateway
+         conversation scope (DM, group, channel, or thread, including the
+         configured per-user isolation policy).
++
++        ``started_after`` is an inclusive lower bound on the surfaced logical
++        session's original start time; ``started_before`` is an exclusive upper
++        bound. Both filters are applied before LIMIT/OFFSET.
++
++        ``workspace_query`` case-insensitively matches a substring of the
++        session's workspace key (git repository root, falling back to cwd).
+         """
+         # Rows carry token/cost totals — drain queued deltas first so
+         # listings (sidebar, /resume, dashboards) show exact counters.
+@@ -9042,6 +9052,75 @@ def list_sessions_rich(
+             clause, clause_params = _cwd_prefix_clause(cwd_prefix)
+             where_clauses.append(clause)
+             params.extend(clause_params)
++        if started_after is not None:
++            where_clauses.append("s.started_at >= ?")
++            params.append(started_after)
++        if started_before is not None:
++            where_clauses.append("s.started_at < ?")
++            params.append(started_before)
++        workspace_needle = (workspace_query or "").strip().lower()
++        if workspace_needle:
++            workspace_needle = _escape_like(workspace_needle)
++            workspace_value_sql = (
++                "COALESCE(NULLIF(TRIM(s.git_repo_root), ''), "
++                "NULLIF(TRIM(s.cwd), ''))"
++            )
++            if project_compression_tips and not include_children:
++                # Match the same logical row that compression projection below
++                # surfaces. The recursive walk mirrors get_compression_tip(): at
++                # each level it selects one canonical continuation, rather than
++                # admitting any sibling in the compression subtree.
++                workspace_value_sql = f"""
++                    (
++                        WITH RECURSIVE selected_tip(cur_id, depth, path) AS (
++                            SELECT s.id, 0, ',' || s.id || ','
++                            UNION ALL
++                            SELECT child.id, tip.depth + 1,
++                                   tip.path || child.id || ','
++                            FROM selected_tip tip
++                            JOIN sessions parent ON parent.id = tip.cur_id
++                            JOIN sessions child ON child.id = (
++                                SELECT candidate.id
++                                FROM sessions candidate
++                                WHERE candidate.parent_session_id = parent.id
++                                  AND parent.end_reason = 'compression'
++                                  AND json_extract(
++                                      COALESCE(candidate.model_config, '{{}}'),
++                                      '$._branched_from'
++                                  ) IS NULL
++                                  AND json_extract(
++                                      COALESCE(candidate.model_config, '{{}}'),
++                                      '$._delegate_from'
++                                  ) IS NULL
++                                  AND COALESCE(candidate.source, '') != 'tool'
++                                ORDER BY
++                                  CASE
++                                    WHEN candidate.end_reason = 'compression' THEN 0
++                                    WHEN candidate.ended_at IS NULL THEN 1
++                                    ELSE 2
++                                  END,
++                                  {_sql_session_last_active("candidate")} DESC,
++                                  candidate.started_at DESC,
++                                  candidate.id DESC
++                                LIMIT 1
++                            )
++                            WHERE tip.depth < 100
++                              AND INSTR(tip.path, ',' || child.id || ',') = 0
++                        )
++                        SELECT COALESCE(
++                                   NULLIF(TRIM(logical_tip.git_repo_root), ''),
++                                   NULLIF(TRIM(logical_tip.cwd), '')
++                               )
++                        FROM selected_tip
++                        JOIN sessions logical_tip ON logical_tip.id = selected_tip.cur_id
++                        ORDER BY selected_tip.depth DESC
++                        LIMIT 1
++                    )
++                """
++            where_clauses.append(
++                f"LOWER({workspace_value_sql}) LIKE ? ESCAPE '\\'"
++            )
++            params.append(f"%{workspace_needle}%")
+         if min_message_count > 0:
+             where_clauses.append("s.message_count >= ?")
+             params.append(min_message_count)
+diff --git a/tests/hermes_cli/test_sessions_list_time_filters.py b/tests/hermes_cli/test_sessions_list_time_filters.py
+new file mode 100644
+index 000000000000..110a23fc1af2
+--- /dev/null
++++ b/tests/hermes_cli/test_sessions_list_time_filters.py
+@@ -0,0 +1,157 @@
++from argparse import Namespace
++from datetime import datetime
++
++import pytest
++
++from hermes_cli.sessions_cmd import cmd_sessions
++from hermes_state import SessionDB
++
++
++@pytest.fixture()
++def db(tmp_path):
++    session_db = SessionDB(db_path=tmp_path / "state.db")
++    yield session_db
++    session_db.close()
++
++
++def _create_at(db, session_id, started_at, source="cli", cwd=None):
++    db.create_session(session_id, source, cwd=cwd)
++    db._conn.execute(
++        "UPDATE sessions SET started_at = ? WHERE id = ?",
++        (started_at, session_id),
++    )
++    db._conn.commit()
++
++
++def test_list_sessions_rich_applies_inclusive_after_and_exclusive_before(db):
++    _create_at(db, "at-after", 100.0)
++    _create_at(db, "inside", 150.0)
++    _create_at(db, "at-before", 200.0)
++
++    rows = db.list_sessions_rich(started_after=100.0, started_before=200.0)
++
++    assert [row["id"] for row in rows] == ["inside", "at-after"]
++
++
++def test_list_sessions_rich_composes_time_source_and_limit(db):
++    _create_at(db, "cli-old", 100.0, cwd="/work/target-repo")
++    _create_at(db, "other-source", 190.0, source="telegram", cwd="/work/target-repo")
++    _create_at(db, "other-workspace", 190.0, cwd="/work/elsewhere")
++    _create_at(db, "cli-new", 175.0, cwd="/work/target-repo/src")
++    _create_at(db, "cli-too-new", 250.0, cwd="/work/target-repo")
++
++    rows = db.list_sessions_rich(
++        source="cli",
++        started_after=100.0,
++        started_before=200.0,
++        workspace_query="TARGET-REPO",
++        limit=1,
++    )
++
++    assert [row["id"] for row in rows] == ["cli-new"]
++
++
++@pytest.mark.parametrize("order_by_last_active", [False, True])
++def test_list_sessions_rich_filters_projected_compression_tip_workspace(
++    db, order_by_last_active
++):
++    _create_at(db, "root", 100.0, cwd="C:/work/old-repo")
++    db.end_session("root", "compression")
++    _create_at(db, "tip", 150.0, cwd="C:/work/new-repo")
++    db._conn.execute(
++        "UPDATE sessions SET parent_session_id = ? WHERE id = ?",
++        ("root", "tip"),
++    )
++    _create_at(db, "competitor", 200.0, cwd="C:/work/other-repo")
++    db._conn.commit()
++
++    matching = db.list_sessions_rich(
++        workspace_query="new-repo",
++        order_by_last_active=order_by_last_active,
++        limit=1,
++    )
++    stale = db.list_sessions_rich(
++        workspace_query="old-repo",
++        order_by_last_active=order_by_last_active,
++        limit=1,
++    )
++
++    assert [row["id"] for row in matching] == ["tip"]
++    assert stale == []
++
++
++def _list_args(**overrides):
++    values = {
++        "sessions_action": "list",
++        "source": None,
++        "limit": 20,
++        "workspace": None,
++        "after": None,
++        "before": None,
++    }
++    values.update(overrides)
++    return Namespace(**values)
++
++
++class _RecordingDB:
++    def __init__(self):
++        self.list_kwargs = None
++
++    def list_sessions_rich(self, **kwargs):
++        self.list_kwargs = kwargs
++        return []
++
++
++def test_sessions_list_parses_time_bounds_and_preserves_other_filters(
++    monkeypatch, capsys
++):
++    db = _RecordingDB()
++    monkeypatch.setattr("hermes_state.SessionDB", lambda: db)
++
++    result = cmd_sessions(
++        _list_args(
++            source="telegram",
++            limit=7,
++            workspace="repo",
++            after="2026-08-01",
++            before="2026-08-08",
++        )
++    )
++
++    assert result is None
++    assert db.list_kwargs == {
++        "source": "telegram",
++        "exclude_sources": None,
++        "limit": 7,
++        "started_after": pytest.approx(
++            datetime.fromisoformat("2026-08-01").timestamp()
++        ),
++        "started_before": pytest.approx(
++            datetime.fromisoformat("2026-08-08").timestamp()
++        ),
++        "workspace_query": "repo",
++    }
++    assert capsys.readouterr().out == "No sessions found.\n"
++
++
++def test_sessions_list_rejects_empty_start_window(monkeypatch, capsys):
++    db = _RecordingDB()
++    monkeypatch.setattr("hermes_state.SessionDB", lambda: db)
++
++    result = cmd_sessions(_list_args(after="2026-08-08", before="2026-08-01"))
++
++    assert result == 2
++    assert db.list_kwargs is None
++    assert "Empty start-time window" in capsys.readouterr().out
++
++
++def test_sessions_list_without_time_bounds_preserves_existing_query(monkeypatch):
++    db = _RecordingDB()
++    monkeypatch.setattr("hermes_state.SessionDB", lambda: db)
++
++    cmd_sessions(_list_args())
++
++    assert db.list_kwargs["started_after"] is None
++    assert db.list_kwargs["started_before"] is None
++    assert db.list_kwargs["workspace_query"] is None
++    assert db.list_kwargs["exclude_sources"] == ["tool"]

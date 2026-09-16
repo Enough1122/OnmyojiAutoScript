@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Review of "fix(cli): route startup config warnings through the prompt_toolkit renderer". Correct fix for #87919: patch_stdout's StdoutProxy strips the ESC byte from raw stderr ANSI, leaving visible `?[33m…?[0m` artifacts in the interactive CLI; routing through banner.cprint (prompt_toolkit ANSI rendering, print fallback where PT has no console — the established #2448 pattern) fixes the rendering at both call sites. The tests are particularly good: beyond asserting the copy, a recording-stderr fixture proves NO raw ANSI escape reaches sys.stderr anymore. One compatibility note:
+
+1. hermes_cli/config.py:_emit_startup_warning_block (channel change) — warnings previously went to STDERR and now land on STDOUT via the renderer even in non-TUI contexts (gateway start under systemd, scripts capturing stderr); anything tailing or alerting on stderr for config problems stops seeing them — consider keeping a stderr mirror when `sys.stderr.isatty()` is false, or documenting the channel change in release notes.

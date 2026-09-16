@@ -1,0 +1,13 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Reviewed the diff. This closes a genuinely nasty class of bugs: a profile borrowing a global fallback pool used to write cooldowns/rotations into a *profile shadow*, forking single-use refresh chains; now the pool remembers its owner store (\`source_path\` + sealed \`source_entry_ids\`) and persists mutations there, refresh paths rebase *all* owned rows under a deterministic two-lock ordering, and missing/malformed owner state fails closed before any refresh POST. The test suite is exemplary — two spawned processes racing one refresh yielding exactly one HTTP POST, per-entry rotation isolation, concurrent add/status/remove preserving an unrelated owner row, and the suppression-inheritance fix preventing profile singleton re-seeds.
+
+Points worth a follow-up thought:
+
+- **agent/credential_pool.py:~800/815 — the new \`RuntimeError\`s surface raw to the request path.** \"Credential pool entry disappeared while it was in use\" is precise for logs but cryptic as a chat error. Consider translating at the agent boundary into actionable guidance (\"credentials changed on disk — run \`hermes auth login <provider>\` again\") so fail-closed doesn't read as a Hermes bug to end users.
+
+- **The explicit-add shadow now forks live token chains.** With fallback pools previously never writing, \`add_entry\`'s rebind-to-profile plus full-slice persistence means the global rows get *copied* into the profile store (the test blesses \`[global-codex, profile-personal]\`). From then on, rotations by other profiles update root, but this profile's copies only move when it refreshes itself — two divergent refresh chains for what was one credential. That matches the long-documented shadowing contract, but the PR makes it reachable far more often; a doc note (\\"adding any key to a profile clones and detaches the borrowed rows\\") would set expectations.
+
+- **hermes_cli/auth.py ~1660 — \`_read_credential_pool_with_source\` returns the active path for the empty-everything case** so a later explicit add stays profile-local: good, but worth a comment since it means \`source_path\` can point at a store with no rows for this provider until first write.
+
+Nit: \`CredentialPool.__init__\` defaults \`source_path\` to \`_auth_file_path()\` implicitly; making both new kwargs required at internal construction sites (load_pool is the sole producer) would prevent a future direct construction from silently mis-targeting writes.

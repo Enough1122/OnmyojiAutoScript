@@ -1,0 +1,9 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Review of "fix(kanban): allow reviewed PR rework to respawn". Individually this is careful work: `_parse_finite_int_timestamp` rejects bool/NaN/inf/text so dynamic-typed SQLite columns fail CLOSED, the rework bypass demands durable provenance (`changes_requested`/`review_reopened` naming the CURRENT implementer, landing in ready/todo, STRICTLY newer than the PR handoff — ties not trusted since comments and events keep independent clocks), and switching latest-run ordering from `ended_at DESC` to `id DESC` dodges SQLite's dynamic-type sort on malformed timestamps. Suggestions:
+
+1. OVERLAP WITH #90225 — this PR adds a SECOND, differently-scoped rule-4 bypass to the same `check_respawn_guard` that #90225 already extended with `_ACTIVE_PR_CONTINUATION_EVENT_KINDS` + comment_id→event binding (any of promoted_manual/unblocked/changes_requested/review_reopened after the newest PR comment, equal-second allowed for CLI UNBLOCK). Two parallel bypass routes with DIFFERENT trust levels over the same guard is exactly how the duplicate-PR protection erodes — consolidate into one canonical path (this PR's provenance-strict version is arguably the better primitive) or explicitly define how the two compose.
+
+2. hermes_cli/kanban_db.py:9195 (unbounded scan) — the recent-success check dropped its SQL cutoff and now fetches EVERY completed run for the task, filtering in Python; on a long-lived chatty task this grows without bound on every dispatcher tick — push `ended_at >= now - window - slack` back into the SQL (keeping the Python validation for what it returns).
+
+3. nit (permanent lockout edge) — a single malformed/future `ended_at` completion now returns "recent_success" forever (fail-closed), with no log line; emit at least a warning naming the task and value so operators can repair the row instead of wondering why the card never respawns.

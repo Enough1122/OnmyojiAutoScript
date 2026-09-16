@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. gateway-event.ts — Positive: widening the recovery edge from "never saw an assistant payload" to `turnLive` (a confirmed live turn whose terminal message never arrived) closes the reconnect-gap case where interim text streamed but `message.complete` was lost — previously that left awaitingResponse latched exactly like #46517 but with partial content on screen, which is worse because it looks alive. The once-per-edge coalescing comment carries over correctly.
+
+2. index.ts hydration gate — Positive: `(!unresolvedUserTail || !finalText)` is the subtle half — a turn that produced *some* text but ended unresolved still needs the durable transcript pulled rather than trusting the stream; its regression test mounts a state whose transcript ends on the user message and asserts hydration fires with the right args on an empty completion. No change requested.

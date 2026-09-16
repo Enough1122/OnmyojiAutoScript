@@ -1,0 +1,7 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. plugins/memory/mem0/__init__.py:`get_tool_schemas` + mode gates — Positive: the implementation honors the plan's hard constraints exactly as written — mode normalized by a total function (invalid/non-string → hybrid), frozen once at `__init__` so prompt text and schema exposure can't diverge mid-agent-lifetime, `context` returns an empty schema list while `tools` swaps only the search *description* on a `deepcopy`d schema set (no shared-object mutation), and the tools-mode gates sit at every automatic entry point rather than inside backend handlers. Setup coverage is equally thorough: all three backend flows persist `recall_mode`, unknown keys survive round-trips, dry-run writes nothing, and invalid flags fall back to hybrid — each with tests.
+
+2. hermes_cli/subcommands/memory.py — Positive: `provider_args` REMAINDER passthrough keeps the CLI provider-agnostic (mem0's own `parse_flags` interprets its options; no mem0-specific branch enters shared code), which is the correct seam for per-provider setup extensions generally.
+
+3. Nit: the committed planning artifact (`docs/plans/2026-08-19-...-plan.md`) is unusually detailed relative to what the repo typically ships — great for reviewers, but confirm `docs/plans/` is an intended tracked location and not a local working directory leaking into the diff; if intentional, consider whether future plans should land separately from feature PRs so the feature diff stays reviewable at a glance.

@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. plugins/dashboard_auth/basic:`_resolve_secret` — Positive: the three-tier precedence (explicit env/config → persisted auto-generated → per-process random) fixes the "sessions die on every restart" annoyance without weakening anything — an explicitly configured secret still wins, the persisted key is written atomically (pid-suffixed temp + `os.replace`) with 0o600, and a short/corrupt file (<16 bytes) is regenerated rather than trusted. The tests cover the whole matrix including the end-to-end restart-survival case and explicit-secret-beats-persisted.
+
+2. Nit: two processes racing a *first* boot each generate their own secret and `os.replace` makes it last-writer-wins — tokens minted by the loser invalidate at next verify, i.e., one extra login. Benign and rare, but an `O_CREAT|O_EXCL` open would make it strictly first-writer-wins if that ever matters. No change requested.

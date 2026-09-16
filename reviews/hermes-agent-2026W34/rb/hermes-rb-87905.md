@@ -1,0 +1,3 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Review of "fix(buzz): default unfetched channel metadata to group, never auto-DM". Correct fail-safe inversion: under `BUZZ_CHANNELS` unset (watch-all), EVERY channel legitimately lacked a configured entry, so the old "trusted when unconfigured" rule tagged each un-fetched group as a DM candidate and latched its replies onto the home/DM channel (#87899). Defaulting unknown metadata to GROUP is strictly safer — relay-materialized DMs are still caught once their channels-list metadata loads with the DM shape, and both the regression and the delayed-metadata latch are tested. No blocking issues found.

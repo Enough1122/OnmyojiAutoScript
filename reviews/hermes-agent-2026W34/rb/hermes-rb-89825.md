@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. hermes_cli/web_server.py:`start_server` — Positive: the `on_listening` hook is specified precisely where lifecycle side effects belong — called exactly once *after* uvicorn's startup() has bound the socket and the READY sentinel printed, skipped entirely when startup bails (the EADDRINUSE case that previously leaked spawned MCP servers per supervisor ThrottleInterval), and isolated so a raising hook can't kill serving. All three behaviors have dedicated tests, including an ordering assertion against a wrapped `startup()` and a stubbed-failure run proving normal return.
+
+2. hermes_cli/main.py:`cmd_dashboard` — Positive: moving MCP discovery behind the hook fixes the real operational blast radius described in the test docstring (KeepAlive relaunch turning one failed bind into a shared-MCP rate-limit storm for every client on the host). The contract note that callers must keep the hook cheap (it runs on the event loop) is stated in the docstring, and the current caller complies since discovery spawns its own thread. No change requested.

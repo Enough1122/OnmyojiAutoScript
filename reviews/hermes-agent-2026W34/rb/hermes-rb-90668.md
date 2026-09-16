@@ -1,0 +1,10 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Correct root-cause analysis: with single-use refresh grants, every 401-waiter that rotates again invalidates the previous winner in sequence — the adopted-token short-circuit keyed on `rejected_access_token` breaks the storm, and always evicting peers/sessions caches on reauth closes the subtler "root client rotated but child SDK objects kept stale transports" hole. The waiter-adopts-winner test with a `pytest.fail` tripwire on any second exchange is exactly the right shape. Points:
+
+1. plugins/memory/honcho/session.py:_force_reauth (~294) — `rejected_token` comes from `self.honcho._http.api_key`, an SDK-private attribute. Two failure modes worth guarding: (a) an SDK rename makes it `None` forever, silently reverting to the old cache-only check whose blind spot (waiter's cache already advanced) is precisely this PR's bug — the storm returns with green tests; (b) if `api_key` ever carries a scheme/prefix while disk stores the bare token, the inequality flips and a waiter *still* re-rotates. Suggest a debug log when the live client exists but yields no usable token, plus a comment naming the SDK attribute as a tracked coupling.
+2. oauth.py:~575 — the adopt branch updates `_expiry_cache` before returning; good, since the next caller of `ensure_fresh_token` compares against it. Worth one assertion in the new test that the cache was advanced too (it currently pins only the return value).
+3. session.py — unconditional cache eviction even when `apply_token_to_client` succeeded in place is slightly over-broad, but correctness-by-simplicity beats tracking which SDK objects hold transport refs; the added test asserting eviction on the in-place path documents the choice well. No change needed. (positive)
+4. Style nit: the two adopt branches (`rejected_access_token` vs legacy `cached`) are near-duplicates — folding the legacy one into the same helper once the rejected-token plumbing is trusted everywhere would leave one adoption rule. (nit)
+
+No blocking issues found.

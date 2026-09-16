@@ -1,0 +1,10 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Right fix conceptually: deriving the human-gate from immutable event history (`block_loop_detected` until a `triage_escalation_recovered` lands *inside* the same successful transaction) survives exactly the things mutable columns don't — reassignment, restarts, stale reads — and the recovery-only-on-success semantics are properly tested for both decompose modes including the failure case. Points:
+
+1. hermes_cli/kanban_db.py (`_recover_triage_escalation`, called from `specify_triage_task`:~7345) — recovery keys off *operation success*, not operator identity. If anything automated can call `specify_triage_task` (a worker bot, a cron, a future tool wrapper), the human gate opens without a human. `decompose` got the `AUTO_DECOMPOSER_AUTHOR` guard but `specify` didn't; consider the same author check there, or document why specify is human-only by construction.
+2. hermes_cli/kanban_decompose.py:`decompose_task` (~288) — the escalation check runs in its own read txn, then the actual decompose commits later; an escalation landing between the two lets this particular auto-run slip through (`decompose_triage_task` will happily recover inside its txn since nothing re-checks author there). Narrow window, low impact, but moving the author guard into `decompose_triage_task`'s write txn (next to `_recover_triage_escalation`) closes it completely.
+3. tests — solid matrix (redispatch refusal across reassignment, manual fanout/non-fanout recovery, failure keeps gate, fresh triage unaffected), but the `specify_triage_task` recovery path has no test at all, despite being half the recovery surface (and the riskiest per item 1).
+4. kanban_db.py:`_BLOCK_LOOP_ESCALATED_SQL` — the predicate assumes `task_events.id` ordering is chronological, which holds for single-writer SQLite autoincrement; worth a one-line comment so nobody "fixes" it with a timestamp comparison that breaks on clock skew. Also fine perf-wise given the triage-column filter runs first, but if the board grows an index on `task_events(task_id, kind)` this gets cheaper. (nit)
+
+No blocking issues found.

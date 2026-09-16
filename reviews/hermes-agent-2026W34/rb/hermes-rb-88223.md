@@ -1,0 +1,5 @@
+> AI code review - automated review for reference; please use your judgment.
+
+Reviewed the diff. Good capability split: SLACK_BOT_TOKEN alone is now a legitimate outbound-only transport (cron deliveries, explicit sends) while SLACK_APP_TOKEN becomes an opt-in ingress toggle - exactly matching the "notify my channel from a script" use case that never needed Socket Mode. The implementation is careful: platform lock acquisition becomes conditional on the app token actually existing, the early-return registers no handlers and logs the degraded mode explicitly, required_env narrows to the bot token with SLACK_APP_TOKEN demoted to optional_env, the setup wizard prompts and skips accordingly (including remove_env_value for a previously saved app token), and the new test drives _deliver_result end-to-end with a bot-token-only env proving the standalone sender path resolves.
+
+Nit: worth one docs sentence on the messaging page stating what outbound-only mode does NOT do (no /sessions, no approvals-in-chat, no mention gating) so users do not enable it expecting interactivity and file a bug.

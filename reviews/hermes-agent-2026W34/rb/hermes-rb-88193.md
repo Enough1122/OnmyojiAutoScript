@@ -1,0 +1,3 @@
+> AI code review - automated review for reference; please use your judgment.
+
+Reviewed the diff. Correct compatibility fix: Ghostty/Wayland deliver Ctrl+V as kitty csi-u (`\u001b[118;5u`), modifyOtherKeys (`\u001b[27;5;118~`), or Alt+V as ESC+v depending on protocol negotiation, and none of those shapes reached the paste hotkey branch before, so the composer typed a literal "v". The new non-Mac ctrl/meta+decoded-v arm preserves the voice-shortcut precedence (checked first), the raw \x16 and Mac arms are untouched, hotkeys.ts now advertises all three spellings per platform, and the parameterized tests cover every sequence plus pass-through assertions.

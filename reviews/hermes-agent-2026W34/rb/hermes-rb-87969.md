@@ -1,0 +1,3 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. hermes_cli/tools_config.py:`_plugin_stt_providers` — Positive: a faithful mirror of the TTS plugin-row injection — discovery guarded, built-in shadowing filtered at the picker layer too (belt-and-braces with the registry), malformed schemas skipped rather than crashing Settings, and selecting a row writes `stt.provider` through the same path hardcoded rows use so dispatch picks it up automatically. Rendering plugin rows below built-ins keeps the picker deterministic. No change requested.

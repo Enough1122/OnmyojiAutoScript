@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. cron/scheduler.py:`_deliver_result` — Positive: unifying the relay special case and the new native case under one rule ("a *resolved live transport* with no config block means enablement lives elsewhere; synthesize enabled") is cleaner than a second platform-specific branch, and the invariant that an explicit `enabled=False` block still rejects is preserved and separately tested. Under multiplex the live adapter genuinely is the enablement signal, since HERMES_HOME remapping makes per-profile platforms blocks routinely absent.
+
+2. tests/cron/test_scheduler.py — Positive: both sides pinned — live-native-without-block delivers through the adapter (with a real `run_coroutine_threadsafe` shim so `native.send` is actually awaited), while explicitly-disabled still rejects with the same message text. No change requested.

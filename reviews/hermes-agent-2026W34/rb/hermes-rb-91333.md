@@ -1,0 +1,9 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. apps/desktop/src/app/chat/session-tile.tsx:313 — resolveStoredSession(storedSessionId) is awaited but its RESULT is never read; both outcomes fall through to the same patchSessionTile(...{error}). Why it matters: when the probe *confirms* the session still exists, latching 'Session not found' onto a healthy session is misleading (it self-heals only on the next gateway reopen), and the await's real value — distinguishing found from gone — is discarded. If the intent is purely side-effectful store hydration before re-checking runtimeId, that deserves a comment; otherwise branch: found -> clear the latched error / schedule one retry, gone -> keep the tile with the error per this PR's new fail-safe policy.
+
+2. Same hunk — for tiles deliberately preserved through a 404 (stale cross-profile persisted tile), the surfaced message stays the raw 'Session not found' error text. Why it matters: the whole point of this change is 'the tile is not garbage'; telling the user it was not found while keeping it invites confusion. Suggestion: map this terminal case to calmer copy, e.g. 'Session unavailable — you can retry resuming it', and keep raw messages for transient errors.
+
+3. No tests accompany the catch-branch logic; it is extractable (given resume error + probe outcome + tile state, decide next action) and would pin the two behaviors that motivated the fix: never delete on inconclusive lookup, and don't double-error after a concurrent resume wins the race. Cheap to add at the extracted-function level.
+
+The fail-safe direction is right: refusing to discard on an inconclusive reconnect-time lookup, and re-checking current.runtimeId before overwriting state, fixes both the deletion bug and the lost-update race cleanly. The storedSessionStillExists useCallback also correctly stabilizes the previously inline closure for the effect deps.

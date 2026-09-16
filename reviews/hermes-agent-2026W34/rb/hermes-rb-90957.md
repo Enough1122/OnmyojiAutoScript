@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. apps/desktop/src/plugins/hermes-bots/plugin.js:`createCanonicalChat` — Nit: the `'Bot Chat'` title literal is now a load-bearing constant in two places (this eager write and the deferred kickoff fallback's eventual title), with no shared symbol; a future rename updates one and strands the other, reintroducing the identity split this PR fixes. Suggestion: hoist to a module-level `const CANONICAL_CHAT_TITLE = 'Bot Chat'`.
+
+2. Same function + tests/canonical-chat-creation.test.mjs — Positive: materializing the lazy row via `session.title` before `saveBotMeta`/open fixes both symptoms named in the comment (REST 404 on mount, auto-titler winning the race), and the compatibility story is genuinely covered rather than asserted — the second test forces `session.title` to throw "unknown method" and verifies the event order still degrades to kickoff-then-navigate-retry. The first test's exact event-sequence assertion (`session.list → session.create → session.title → open → prompt.submit`) is the right strictness for an ordering bug. No change requested beyond item 1.

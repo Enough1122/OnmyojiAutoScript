@@ -1,0 +1,11 @@
+> AI code review - automated review for reference; please use your judgment.
+
+Reviewed the diff. This closes the #89332 outage class properly: dual identity signals (st_dev/st_ino for mv-or-new-file, plus a once-per-file application_id generation stamp for cp-onto-same-path), checked before every write and - critically - before any self-heal branch (FTS rebuild, fail-open, NOTADB reconnect), because all of those amplify a generation mismatch instead of fixing it. The divert layer (gateway pending spool + sessions/<id>.jsonl JSONL) means the live turn survives operator intervention, the new "replaced" persistence cause flows through classifier/cause-tuple/explainer with user guidance that explicitly forbids doctor --fix, and the test suite covers both replace shapes, second-write-after-halt, adoption-after-reopen, and - importantly - a control proving genuine in-file FTS corruption still rebuilds when identity matches.
+
+- **Coordination required with PR #91585.** That PR (state.db hardening) *removes* _reconnect_after_notadb and the _notadb_reconnect_attempted guard entirely and narrows is_malformed_db_error usage, while this PR *keeps* the reconnect path and wraps it with the identity check. Both also add overlapping tests around the same methods. Whichever merges second has real reconciliation work - please link the two PRs so the NOTADB story (kept-and-guarded vs removed-fail-closed) lands as one deliberate decision rather than whichever diff applied cleanly.
+
+- **hermes_state.py ~4110 - _raise_if_db_replaced() runs an os.stat (+ optional header read) on every _execute_write iteration.** Correctness-first is defensible, but on a busy gateway this adds two syscalls per transcript/routing write. If that shows up, a tiny TTL cache (e.g. re-stat at most every 250ms, always re-check inside error/recovery branches where it matters most) would bound the cost without weakening the guard where it counts.
+
+- Nit: divert_session_transcript_jsonl appends without size cap or rotation - fine as an emergency lane, but a note in the error text that the jsonl grows until intervention (it already names the path, which is great) could spare support one mystery.
+
+No blocking issues found.

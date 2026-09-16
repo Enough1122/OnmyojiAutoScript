@@ -1,0 +1,7 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. gateway/platforms/api_server.py:`_handle_session_messages` — Pagination nit introduced by filtering after windowing: `offset`/`limit` slice the raw rows while `returned` counts only *visible* ones, so a page that happens to be all scaffolding returns `data: []` with `returned: 0` even when later pages hold real messages — clients advancing by `returned` will stop early and conclude history ended. Suggestion: filter first, then window the visible list (or report both counts), and document whichever contract clients should rely on.
+
+2. agent/conversation_loop.py — Positive: stripping only the *trailing-most* assistant+[System:] pair on recovery success (earlier rounds cleaned as each success arrives) keeps the transcript free of assistant→assistant adjacencies that models misread as a user turn, without touching historical pairs mid-recovery where the nudge may still be needed.
+
+3. Nit: `_is_display_hidden_marker` now exists in at least two copies (tui_gateway.server and api_server) with an explicit "Mirrors…" comment tying them together — one drifts, transcripts diverge between surfaces. Suggestion: hoist the predicate into a small shared module both import. No change requested beyond items 1–3.

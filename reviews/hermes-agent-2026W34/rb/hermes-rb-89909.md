@@ -1,0 +1,13 @@
+> AI code review - automated review for reference; please use your judgment.
+
+Reviewed the diff. This is a substantial and mostly well-executed authorization refactor: observed-group commands now route through the shared anonymized source (so /new resets the same transcript ordinary messages use) while the real actor rides on MessageEvent; every slash gate rehydrates the actor into an access-only source; missing-actor stateful commands fail closed even with unconfigured policy (help/status/whoami floor preserved); adapter-native surfaces that previously bypassed MessageEvent dispatch entirely - model-picker taps - are now gated by an injected runner-owned checker whose absence means deny; multiplex profiles get profile-scoped checkers that swap the runtime scope and re-home the source. Test coverage spans dispatch, gating matrix (bare vs suffixed vs non-observe vs topics), picker persistence under exact shared keys, approvals admin boundary, and reset failing closed before hooks fire.
+
+- **gateway/run.py ~20880 - the always-allowed floor {help, status, whoami} is hardcoded inline.** SlashAccessPolicy already owns an always-allowed floor concept elsewhere; two definitions of "safe without identity" will drift. Extract a module-level constant shared by both, or derive the exemption set from the policy class.
+
+- **Audit remaining _check_slash_access call sites.** The diff migrates three gates inside _handle_message to _slash_access_source; given the function's length, please confirm no later gate (or one in slash_commands.py still reading source.user_id directly - e.g. anything comparing against admins) was left on the anonymized identity. A repo-wide grep for `_check_slash_access(` and `.user_id` within slash handlers would close this systematically.
+
+- **Behavior-change blast radius beyond Telegram.** Any current or future adapter that emits user_id-less sources (other observe/relay modes, webhook synthetics marked internal but dispatched) will now hit the deny wall for all stateful commands even when operators had them working under an unconfigured policy. That is the intended fail-closed direction, but it deserves a release note ("stateful slash commands now require an identifiable sender") plus a quick pass over adapters confirming they populate MessageEvent.actor fields the way _build_message_event now does for Telegram.
+
+- Nit: _is_bare_bot_command inspects only the first bot_command entity - adequate since Telegram emits at most one per message body, but a comment saying so prevents an unnecessary "fix" later.
+
+No blocking issues found.

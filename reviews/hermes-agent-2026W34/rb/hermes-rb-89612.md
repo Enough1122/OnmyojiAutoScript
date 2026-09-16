@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Review of "fix(agent): recover unattended sessions after stale providers return". Textbook circuit-breaker retrofit onto an existing streak counter: open-on-threshold with a monotonic opened_at, fail-fast during cooldown with an actionable retry-after in the error text, a SINGLE half-open probe claimed by refreshing the timestamp under the state lock (so N concurrent calls cannot all probe), success clearing both streak and timestamp, and a lock-audit test proving the streak read happens under protection. The stale-probe-refresh path correctly returns to a full cooldown rather than hot-looping. One nit:
+
+- when a concurrent caller hits the guard while another's probe is already in flight, it gets "retry after ~60s" even though the in-flight probe may succeed within seconds — harmless (the next attempt will succeed or the breaker reopens), but distinguishing "probe in flight" from "cooldown" in that message would set better expectations for unattended operators watching logs.

@@ -1,0 +1,3 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. website/docs/user-guide/windows-native.md — Positive: the corrections track the current implementation faithfully — profile-scoped task names (Hermes_Gateway vs Hermes_Gateway_<profile> with per-profile query commands), the .vbs/wscript Startup fallback replacing the stale cmd.exe description, and the hidden-console launcher replacing pythonw.exe/detached-flags language that no longer matches reality. Both English and zh-Hans are updated in lockstep, including the troubleshooting entry now telling users exactly which schtasks name to query and how to opt into the Startup fallback. No change requested.

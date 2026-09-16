@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. hermes_cli/windows_policy_block.py:`_winerror_code`/`detect_policy_block` — Positive: detection is layered correctly — winerror attribute, `(os error N)` text suffix for subprocess-relayed errors, stable text signatures case-insensitively, and exception-chain walking with a cycle guard; `extra_text` support acknowledges the real signal often lives in captured stderr rather than the Python exception. Guidance-only framing (never touches policy, raw error always preserved) plus the aka.ms link makes it actionable.
+
+2. Tests — Positive: the deterministic fuzz pair is the standout — 5000 randomized OSErrors prove zero false positives while 2000 cased/embedded signature variants prove zero misses — and an AST pin asserts `_update_via_zip`'s handler still calls both detector and guidance so a refactor can't silently drop the #87789 wiring. Installation docs get a proper troubleshooting section. No change requested.

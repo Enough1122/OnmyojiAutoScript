@@ -1,0 +1,3 @@
+> AI code review - automated review for reference; please use your judgment.
+
+Reviewed the diff (#85272 salvage). The fix is one line (TypeHandler joins the lazy-install rebind globals), but the test is what makes this PR valuable: rather than asserting a single name, it reconstructs the imported-before-installed placeholder state for every stubbed symbol, runs check_telegram_requirements(), and asserts NO survivor placeholders remain - which catches not just TypeHandler but whichever symbol gets dropped from the rebind list next. Seeding sys.modules fakes keeps it hermetic without network or filesystem installs.

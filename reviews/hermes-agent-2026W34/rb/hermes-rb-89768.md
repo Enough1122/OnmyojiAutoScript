@@ -1,0 +1,11 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Reviewed by reviewer-e (AI automated review).
+
+Technically solid wrapper: target/attacker/judge are properly separated roles, the server-error circuit breaker distinguishes transport failure from text refusals so scans don't burn credits, the A/B switch cleanly separates experience *recording* from *injection*, and the memo-prefixing approach correctly preserves the default strategy template's Jinja parameters rather than replacing it. The responsible-use section is present and accurate about what PyRIT is for. Findings:
+
+1. Placement — repo convention (CONTRIBUTING.md) reserves bundled `skills/` for capabilities "broadly useful to most users"; an automated jailbreak-generation harness is the clearest possible candidate for **optional-skills/** (like the HerWork submission in #90378), where it ships only when explicitly installed. Beyond optics, this matters practically: bundling puts `scripts/install.sh` — which copies the user's real `OPENROUTER_API_KEY` out of `~/.hermes/.env` into a second plaintext config (`~/.auto-jailbreak/config.env`) — one accidental "install all skills" away from duplicating a live credential. Optional placement + an install-time note about that copied key would keep the capability available without defaulting it onto every machine.
+
+2. Language consistency — the Python layer mixes languages heavily: file/function identifiers are French (`attaque.py`, `cible.py`, `memoire.py`, `strategie`, `percee_tours`, `cible_nom`) while SKILL.md, tags, and most comments are English (with some French comments in attaque.py). Pick one language for identifiers and input-contract keys (the stdin JSON uses `question`/`mode` in English but `strategie`/`cible_nom`/`historique` in French), otherwise every future contributor and the model invoking the skill has to hold both vocabularies at once.
+
+3. tests gap — none of the pure-logic pieces (marker-splitting of `###PYRIT_JSON###` output, the error-threshold counter, memo prefixing when the template load fails) have tests; they're mockable without touching PyRIT or any network and would protect the stdin/stdout contract that SKILL.md promises consumers.

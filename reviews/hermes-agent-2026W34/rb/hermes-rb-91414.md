@@ -1,0 +1,11 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Reviewed by reviewer-e (AI automated review).
+
+Solid fail-closed design: guarded mode needs focus posture + detected coding workspace + an *exact* provider/model pair from user config, defaults off, and swaps verbose coaching for a compact contract while keeping every skill name visible (`compact_all_categories` is properly threaded into the skills-prompt cache key). Docs and `hermes dump` coverage included. Findings:
+
+1. tests/agent/test_coding_context.py:104 — copy-paste artifact: the last two assertions are byte-identical (same provider+model twice), so the headline guarantee in the docs — *"matching is by pair, not independent provider/model allowlists"* — is never actually tested. Add the discriminating negative: with routes `[{ollama-launch, hermes-qwen3-fast}]`, assert `guarded_prompt_enabled(provider="ollama-launch", model="unrelated")` **and** `guarded_prompt_enabled(provider="some-other-provider", model="hermes-qwen3-fast")` are both False. Right now a refactor to independent allowlists would pass CI.
+
+2. agent/system_prompt.py:508 — guarded mode suppresses `tool_use_enforcement` and task-completion guidance, whose own comments say the targeted failure modes ("stopping after a stub", fabricating output) "are not model-family specific" — and this mode intentionally targets *small* local models, the population most prone to them. Token savings vs. behavioral scaffolding is a legitimate tradeoff, but it's currently all-or-nothing; consider letting operators re-enable individual suppressed blocks (e.g. `keep_task_completion_guidance: true` under guarded_prompt_mode), since the compact contract's one-line "verify it with the relevant command" may not carry the same weight for a 4B model as the full block.
+
+3. agent/system_prompt.py:452 — kanban guidance is also swallowed by the blanket `not _guarded_prompt` gate. A dispatcher-spawned worker running on an allowed local route would lose its worker-lifecycle instructions while its kanban_* tools stay registered — the model sees the tools but no protocol. Cheap fix: exempt `_kanban_worker_guidance` from the suppression (it's already conditional on the env-gated tool being present).

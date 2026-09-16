@@ -1,0 +1,9 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Reviewed by reviewer-e (AI automated review).
+
+Thoughtful handling of a deceptively tricky naming surface: the custom handle composes correctly with multi-source device disambiguation (`custom` + `-device` suffix from the routed handle rather than clobbering it), `@hermes` stays a backwards-compatible alias for the local default, remote `default` rows are barred from claiming `default`/`hermes` so a peer machine can't squat the primary's identity, group-mention forms get the same reservation rules, and durable room members persist the handle so rooms survive restarts. Save-time validation covers shape, reserved words, and roster-wide collisions. Findings are minor:
+
+1. apps/desktop/src/plugins/hermes-bots/plugin.js:2940 — the validity rule exists twice with different implementations: `normalizeMentionHandle` checks `NAME_RE.test(handle)` while `botHandle`'s `validCustom` uses an inline `/^[a-z0-9][a-z0-9_-]{0,63}$/`. If NAME_RE is broader/different, a value can pass normalization in the editor yet be rejected (or worse, accepted differently) at resolution time depending on path. Extract one `isValidMentionHandle(value)` used by all three sites (normalize, botHandle, EditProfileDialog) so the contract lives once.
+
+2. apps/desktop/src/plugins/hermes-bots/plugin.js:EditProfileDialog — uniqueness is checked only against the *current* roster at save time, client-side: two desktops pointing at different gateways can both claim `@researcher`, and the conflict only shows up later as ambiguous/nulled mentions. Fine to ship as a known limitation, but say it in the dialog helper text ("handles are best-effort unique across connected machines") so users aren't surprised; a server-side registry check would be the real fix later.

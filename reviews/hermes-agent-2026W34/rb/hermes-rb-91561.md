@@ -1,0 +1,13 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Reviewed the full diff. Thoroughly built feature: the durable \`manual_ready_gate\` column with idempotent migration, \`recompute_ready\` failing closed on gated rows, \`promote_task\` gaining transaction ownership + scheduled-status support + dangling-run reclaim while clearing the gate, dashboard single/bulk Ready actions routed through the audited promotion for gated tasks (legacy transitions byte-for-byte preserved, verified by event-kind assertions), and layered tests down to the 409-atomicity case where neither events nor state move. Docs and both config knobs are covered. Points:
+
+- **hermes_cli/kanban_db.py:~7260 (specify_triage_task) — the unconditional \`manual_ready_gate = ?\` write can silently clear an existing hold.** If the function's eligibility filter ever admits a task that already carries \`manual_ready_gate = 1\` (e.g. a future re-specify flow touching non-triage rows), the \`require_manual_ready_approval=False\` default overwrites the product owner's approval with 0. Worth confirming the status guard makes that unreachable today, and/or writing \`manual_ready_gate = CASE WHEN ? THEN 1 ELSE manual_ready_gate END\` so specification can only ever *add* the gate, never remove it.
+
+- **kanban_db.py:~4570 — the gate skip also bypasses sticky-block handling.** A gated task that later becomes \`blocked\` is invisible to recompute_ready entirely, so it will not participate in any auto-recovery pass; only explicit \`unblock_task\` (which correctly lands gated tasks back at todo) or promote can move it. That looks intentional given the "durable hold" framing, but a one-line comment at the continue saying "gated tasks are deliberately opaque to ALL automatic passes, including recovery" would prevent someone from 'fixing' it later.
+
+- **Transaction contract:** the new docstring warns callers not to hold an outer transaction around \`promote_task\`, and the dashboard handlers invoke it exactly where \`unblock_task\` was previously invoked — same nesting expectations, so this should be fine, but it inherits rather than establishes that safety; worth knowing the invariant now has two enforcers instead of one.
+
+- **tests/hermes_cli/test_kanban_db_init.py:~130 — \`ALTER TABLE ... DROP COLUMN\` needs SQLite >= 3.35.** Fine for CI, just noting the floor if the suite runs anywhere older.
+
+Nit: kanban_db.py:~2697 — doubled blank lines after the new migration block; and the dashboard change edits the committed \`dist/index.js\` bundle directly, so make sure whatever generates that bundle is re-run rather than hand-patched next time.

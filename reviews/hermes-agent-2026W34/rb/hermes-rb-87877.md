@@ -1,0 +1,3 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. tools/cronjob_tools.py:`schedule` description — Positive: pushing relative-delay normalization ("in two minutes" → `2m`) down to the runtime and telling the model *not* to compute wall-clock times fixes the timezone bug at the right layer — the model can't know the gateway's configured Hermes timezone, so any absolute timestamp it derives from a relative ask is wrong the moment zones differ. The end-to-end test pins it precisely: a -4h configured clock produces `next_run_at` at configured_now + 2m with the offset preserved, plus schema-contract tests asserting the "do not calculate"/one-shot guidance stays put. No change requested.

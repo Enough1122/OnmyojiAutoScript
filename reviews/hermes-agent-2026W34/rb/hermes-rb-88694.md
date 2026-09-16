@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. gateway/kanban_watchers.py:`_safe_review_reason` — Positive: review reasons are attacker-adjacent input (they quote model/controller output), so force-redaction plus the local-path scrubber plus whitespace squeezing before external delivery is the right hygiene, and the test proves a secret-and-path-laden 300-char reason comes out as `[local path] … — reviewer @claude-qá`-style safe text with ellipsis truncation.
+
+2. Overall — Positive: the wake message does the important semantic work explicitly ("return work to the same implementation task… do not create a duplicate task", asserted to appear exactly once) since a routed wake is precisely where an agent is most likely to spawn a duplicate card. The delivery-mode matrix (notify+wake vs notify vs wake-only), send-failure retry without event loss, and cursor-advance-no-replay-after-restart are all covered. Docs updated in multi-gateway.md stating that review feedback never mutates tasks — good scope statement. No change requested.

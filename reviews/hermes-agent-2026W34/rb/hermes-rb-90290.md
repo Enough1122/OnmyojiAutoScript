@@ -1,0 +1,7 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. apps/desktop/src/lib/connection-scoped.ts — the new gateway-scope key (`.remote.<baseUrl>`) has no migration path from the previous per-profile keys (`.remote.<baseUrl>.<profile>`). Why it matters: every user who pinned sessions against a remote gateway under the old scheme silently loses their pin list on first launch after this lands — the bare-key non-migration was deliberate (multi-window contamination), but these per-profile copies were written by exactly one owner and are safe to merge. Suggestion: on first load of a gateway-scoped pin atom, if the gateway key is absent, union the values found under the known per-profile siblings for that baseUrl, write the merged list, and delete the fragments.
+
+2. Nit: `activeConnection` is only assigned after the early-return `if (next === activeSuffix)`, so a descriptor change that produces an identical suffix leaves the cached descriptor stale. Harmless with today's key shapes, but a trap if suffix composition ever gains a component that isn't in the equality check.
+
+The scoping semantics are well-reasoned: pins are genuinely gateway-wide while manual session ordering stays profile-local, listeners firing only on gateway identity (so pin-sync bookkeeping stops re-PATCHing stale per-profile copies), the entry.suffix skip avoids reloading untouched scopes mid-rescope, and the tests cover the full matrix — cross-profile stability, cross-gateway isolation, and the unpin-survives-rescope regression that motivated the change.

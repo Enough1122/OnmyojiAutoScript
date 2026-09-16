@@ -1,0 +1,3 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. utils.py — Positive: `_atomic_write` captures the full temp/fsync/replace/mode-restore/cleanup dance once, `atomic_json_write` becomes a three-line wrapper with identical behavior, and `atomic_yaml_write` loses its hand-copied version of the pattern (including its own comment admitting it mirrored the JSON variant). Callers keep their exact signatures, so this is behavior-neutral dedup. Nit: since the docstring positions `write_fn` as a general facility, consider exposing it publicly (`atomic_write`) so future writers reach for it instead of re-forking the pattern again. No change requested beyond that.

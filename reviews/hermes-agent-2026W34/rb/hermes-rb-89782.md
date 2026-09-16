@@ -1,0 +1,7 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Reviewed by reviewer-e (AI automated review).
+
+Both halves fix real spam/dupe classes carefully: watch matches coalesce into one synthetic turn **only when adjacent** in the drain queue and only on a deliberately paranoid route key — present-vs-absent metadata counts as different routes, thread/scope/user divergences block merging, and blank session keys never merge — with the interleaved-sessions test pinning that chronology (A1,B1,A2 stays three turns) survives the optimization. The provider-status suppression correctly makes the final-response rail the single owner of terminal failures, and the regex now also catches the "the request failed:" prefix variant. Findings:
+
+1. gateway/run.py:_prepare_gateway_status_message — the suppression leans on an invariant: *every* terminal provider failure eventually produces a final response through `_sanitize_gateway_final_response`. The empty-response fallback test covers the common case, but any path that dies between this lifecycle callback and the final rail (agent process crash, WS drop mid-turn, unhandled exception in response assembly) previously still delivered one sanitized status to the user and now delivers **nothing**. Consider belt-and-braces: keep suppression but arm a short timer that sends the categorized status anyway if no final lands within a few seconds — silent total failure is worse than duplicate messages.

@@ -1,0 +1,7 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. tests/cron/test_cron_drift_remediation_names_fleet_default.py — Positive beyond praise: parsing the `hermes config set` keys back out of the *emitted messages* and feeding them to `_cron_fleet_default_covers_axis` turns remediation text into a checked contract ("a remedy in a message is a promise") — the test that would have caught this staleness originally and prevents its return. Pinning the covered-axis exemption is equally sharp: it's the exact canary #89242's snapshot-skip would break for newly created inherit-mode jobs.
+
+2. Cross-PR observation (no action needed here): #89242 stops recording snapshots for fully-inherit jobs, which shrinks the guard's future population — new inherit-mode jobs will follow `cron.model`/`cron.model_provider` silently instead of fail-closing on chat-model drift. That's arguably the *intended* semantics of inherit mode, but these tests document the philosophical fork (fail-closed vs follow-default) explicitly; worth a sentence in #89242's description linking here so the two changes tell one coherent story.
+
+3. hermes_cli/config.py:`warn_unpinned_cron_jobs_after_model_config_change` — Positive: warning earlier at `config set` time (before N jobs skip) and suppressing it entirely for operators who already set the fleet default avoids both the O(n) pin advice and false alarms for the already-routed; the axis→key interpolation trap (`cron.provider` doesn't exist) is called out and tested against verbatim output.

@@ -1,0 +1,7 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. tui_gateway/server.py:`_notification_poller_loop`:~10186 — Nit: the claim-failure handler uses `print(..., file=sys.stderr)` while every other notification-path diagnostic in this loop goes through `logger`. Why it matters: deployments that capture the gateway log file (the standard operating surface) won't see repeated claim failures at all. Suggestion: `logger.warning("Parked notification claim failed: %s", _park_exc)`.
+
+2. Same function — Ordering observation (no change requested): claimed events are re-queued at the *tail* of `completion_queue`, so a returning owner receives its parked completion after any newly-produced events rather than in original emission order. For completion handoffs that's harmless today, but if a future consumer assumes FIFO across the park boundary this is where it breaks — worth a one-line comment on the re-queue site.
+
+3. Positive: the implementation gets the hard parts right — ownership-checked claiming (a foreign live poller can neither inject nor destroy), dedup-by-emission-identity making re-parking idempotent, TTL pruning under the same lock at both entry points, shutdown-drain parity, and the poller-loop placement justified in-docstring (session_key arrives on a later frame, so init is too early). The autouse fixture clearing the process-global park between tests shows appropriate paranoia about module state leaking across tests.

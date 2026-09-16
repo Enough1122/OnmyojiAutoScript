@@ -1,0 +1,9 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Reviewed by reviewer-e (AI automated review).
+
+Correct ownership-boundary hygiene: the docstring nails the tension — the env marker must stay durable (fail-closed) for genuine delegated subprocesses, so the fix scrubs it only at the three legitimate *owner* boundaries (gateway boot, both detached-restart spawners, dispatcher worker spawn) rather than weakening the guard. The regression test proving repeated checks can't flip a real child privileged is exactly the invariant worth pinning, and the restart/kanban tests assert scrubbing on the actual `Popen` env. Findings:
+
+1. gateway/run.py:30146 — `start_gateway` clears the **env** marker but not the in-process ContextVar (`_DELEGATED_CHILD_CONTEXT`). For the common case (shell/daemon launches the gateway) that's moot, but if a gateway is ever started *from inside* a live delegated child (an agent running `hermes gateway run` via a tool), the new owner process still reports `is_delegated_child_process_context() is True` through the ContextVar half of the check — the stale lineage this PR exists to remove survives by the other channel, and worse, would now be re-propagated to any child that copies `os.environ` after some later code path calls `delegated_child_subprocess_env()`. Reset both signals at this boundary (or add a comment documenting why the ContextVar can't be set on this entry path).
+
+2. hermes_cli/kanban_db.py:10745 / gateway/run.py:11356,11444 — the env-var name is hardcoded as the literal string "HERMES_DELEGATED_CHILD_CONTEXT" in three places while `agent.delegation_context` exports `DELEGATED_CHILD_ENV_MARKER` precisely for this. Import the constant; a rename upstream would otherwise silently un-scrub these boundaries while the tests (which do use the constant) keep passing against the module under test.

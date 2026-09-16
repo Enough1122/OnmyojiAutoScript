@@ -1,0 +1,5 @@
+> AI code review - automated review for reference; please use your judgment.
+
+Reviewed the diff. Right generalization: retryable 5xx responses (Cloudflare 524 being the canonical case) carry the same Retry-After signal as 429s, so scoping the header honor to rate-limits turned origin outages into retry storms. Delegating parsing to parse_retry_after_seconds, adding the structured problem-detail `retry_after` body field as a second source, keeping the 600s pathological-value ceiling and the #26293 rationale, and testing both header and body shapes plus the under-cap honor are all solid.
+
+Nit: worth confirming parse_retry_after_seconds handles HTTP-date formatted Retry-After values (RFC 7231 allows "Retry-After: <http-date>"); if it only parses numeric seconds, an HTTP-date response silently falls back to jittered backoff - acceptable, but the docstring should say seconds-only.

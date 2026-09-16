@@ -1,0 +1,11 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Well-built feature: the projection is deliberately privacy-empty (phase/ordinal/timestamps only, never content), ownership is contextvar-scoped so detached children bind `None` instead of double-publishing, sealing happens in `finally`, the registry shutdown has a real budget ladder (grace → fail-open-and-seal → cancel), and `_persist_dispatch_or_rollback` fixes a latent half-persisted-record bug on the way by. Findings:
+
+1. gateway/run.py:`_prepare_subagent_status_owner` (~6672) — lazy registry creation races: two concurrent turns on different chats both see `_subagent_status_registry is None`, each builds its own `SubagentStatusRegistry`, and the second assignment orphans the first — whose publishers then never get `shutdown()` at gateway stop (their edits can also outlive teardown). Guard creation with a lock or an `ensure_subagent_status_registry()` that's idempotent.
+2. gateway/subagent_status.py:`SubagentStatusOwner.admit_batch` (~300) — on `FutureTimeoutError`, `if response.cancel(): raise` else `return response.result()` waits *unbounded* for the loop-side admission. That's the right recovery when admission merely lost the race, but if the target loop is wedged the calling worker thread hangs forever with no diagnostic. Either keep a hard second deadline on the fallback wait or log when entering it.
+3. tools/delegate_tool.py:_batch_runner (~4217) — if the 10s `_status_start_gate` wait times out (parent died between dispatch and sink attach), the batch silently runs without status; same for `sink.finalize` no-op when the ref never landed. Both are legitimate degraded modes but deserve one debug/warning line each — today a status outage is invisible.
+4. async_delegation.py:`_finalize_status_projection` (~1190) — outcomes default to FAILED and are overwritten only by integer `task_index`es found in `combined["results"]`. Confirm every completion path populates `task_index` (schema-retry aggregators, interrupted children); otherwise a healthy child renders ❌ on Telegram. A test asserting index coverage for the retry-aggregation shape would pin it.
+5. tests/gateway/test_subagent_status_board.py — thorough board coverage; consider adding the concurrent-first-admission case from item 1 once fixed. (nit)
+
+No blocking issues found.

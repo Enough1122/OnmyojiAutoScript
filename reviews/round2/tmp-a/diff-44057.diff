@@ -1,0 +1,77 @@
+diff --git a/packages/opencode/src/provider/error.ts b/packages/opencode/src/provider/error.ts
+index cebd08145d21..3991cf350ea0 100644
+--- a/packages/opencode/src/provider/error.ts
++++ b/packages/opencode/src/provider/error.ts
+@@ -47,9 +47,14 @@ function message(providerID: ProviderV2.ID, e: APICallError) {
+ 
+     try {
+       const body = JSON.parse(e.responseBody)
+-      // try to extract common error message fields
+-      const errMsg = body.message || body.error || body.error?.message
+-      if (errMsg && typeof errMsg === "string") {
++      // Prefer string fields in order. OpenAI-shaped bodies use `{ error: { message } }`,
++      // so reading `body.error` before `body.error?.message` would grab the object and
++      // never reach the nested string.
++      const errMsg =
++        (typeof body.error?.message === "string" ? body.error.message : undefined) ??
++        (typeof body.message === "string" ? body.message : undefined) ??
++        (typeof body.error === "string" ? body.error : undefined)
++      if (errMsg) {
+         return `${msg}: ${errMsg}`
+       }
+     } catch {}
+diff --git a/packages/opencode/test/provider/error.test.ts b/packages/opencode/test/provider/error.test.ts
+index 49db2806623d..bb7a4a07d7f2 100644
+--- a/packages/opencode/test/provider/error.test.ts
++++ b/packages/opencode/test/provider/error.test.ts
+@@ -1,6 +1,50 @@
+ import { describe, expect, test } from "bun:test"
++import { APICallError } from "ai"
++import { ProviderV2 } from "@opencode-ai/core/provider"
+ import { ProviderError } from "@/provider/error"
+ 
++describe("provider api call errors", () => {
++  test("extracts nested error.message from an OpenAI-shaped body", () => {
++    const error = new APICallError({
++      message: "Too Many Requests",
++      url: "https://api.openai.com/v1/chat/completions",
++      requestBodyValues: {},
++      statusCode: 429,
++      responseHeaders: { "content-type": "application/json" },
++      responseBody: JSON.stringify({
++        error: { message: "Rate limit reached for gpt-4 in org X", code: "rate_limit" },
++      }),
++      isRetryable: true,
++    })
++
++    const parsed = ProviderError.parseAPICallError({
++      providerID: ProviderV2.ID.make("openai"),
++      error,
++    })
++
++    expect(parsed.message).toBe("Too Many Requests: Rate limit reached for gpt-4 in org X")
++  })
++
++  test("still extracts a top-level string error field", () => {
++    const error = new APICallError({
++      message: "Bad Request",
++      url: "https://example.com/v1/chat",
++      requestBodyValues: {},
++      statusCode: 400,
++      responseHeaders: { "content-type": "application/json" },
++      responseBody: JSON.stringify({ error: "model not found" }),
++      isRetryable: false,
++    })
++
++    const parsed = ProviderError.parseAPICallError({
++      providerID: ProviderV2.ID.make("openai"),
++      error,
++    })
++
++    expect(parsed.message).toBe("Bad Request: model not found")
++  })
++})
++
+ describe("provider stream errors", () => {
+   test("retries provider stream errors without a code", () => {
+     const messages = [

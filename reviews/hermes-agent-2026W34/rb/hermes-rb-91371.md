@@ -1,0 +1,11 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. apps/desktop/src/i18n/tr.ts:168 / :490 / :914 — three plural helpers have identical ternary branches: the notification counter ('bildirim' : 'bildirim'), embedsReset ('servis' : 'servis'), and archived-messages ('mesaj' : 'mesaj'). Why it matters: they are copy-paste artifacts of the English templates; Turkish does not pluralize after numerals anyway, so the conditionals are dead code that will also confuse future locale-diff tooling. Suggestion: collapse to plain interpolation (e.g. count + ' bildirim daha').
+
+2. apps/desktop/src/i18n/tr.ts:929 — autoArchiveDesc is shipped as an empty string where en carries a real sentence. Why it matters: if runtime fallback resolves only *missing* keys (typical defineLocale behavior), Turkish users get a settings row with a visible label and a blank description instead of falling back to English. Suggestion: translate it, or omit the key if partial locales are supported.
+
+3. apps/desktop/src/i18n/tr.ts — openaiRejectedApiKeyWithStatus uses (status: any) and remoteDisplayBanner.message uses (reason: any), loosening parameter types that types.ts declares concretely. Why it matters: any silently accepts signature drift when the shared interface changes. Suggestion: mirror the exact parameter types from types.ts.
+
+4. apps/desktop/src/i18n/tr.ts (general) — at 3,141 lines this clearly had mechanical assistance, and spot-checks show rough grammar: tryHint renders "term" deneyin without the accusative suffix (“X”i/“s”eneyin” forms are more natural). Why it matters: these strings ship to every Turkish user, and systematic awkwardness erodes trust faster than a missing locale. Suggestion: schedule a native-speaker proofreading pass over the highest-traffic surfaces first (boot/failure, settings nav, composer) and note its status in the PR description so maintainers know what has been human-verified.
+
+5. Nice supporting work: languages.ts gains both the display entry and input aliases (tr-tr, tr_tr, turkish) consistent with existing locales; catalog.ts and the Locale union in types.ts are both updated; and defineLocale's typing gives compile-time completeness enforcement across all 3,000+ keys.

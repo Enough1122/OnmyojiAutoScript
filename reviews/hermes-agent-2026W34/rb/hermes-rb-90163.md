@@ -1,0 +1,10 @@
+> AI code review — automated review for reference; please use your judgment.
+
+The isolation design is thorough: profile validation at both the protocol boundary and `_make_agent`, persisted `tool_profile` so a restored session can't silently regain defaults, names-only retention of client-supplied MCP servers (no credentials or argv in persistence), fork inheritance, skipping late MCP discovery for decision sessions, and the post-construction scrub of AIAgent's self-added schemas. Points:
+
+1. agent/turn-context-level residual risk: `agent.tools = []` / `valid_tool_names = set()` after construction is a point-in-time strip, and `_skip_mcp_refresh` only covers the MCP refresh path. If any turn-time injector runs outside acp_adapter/server.py — e.g. `inject_memory_provider_tools` invoked from inside run_conversation, or skill/toolset registration on first prompt — a decision-only session regains native tools mid-conversation where this PR's guards can't see it. Consider an agent-level flag (e.g. `tool_profile="decision-only"` readable by the injectors themselves) so enforcement lives at every write site instead of after construction. Worth one verification run: full turn on a decision session, dump valid_tool_names afterward.
+2. session.py:_expand_acp_enabled_toolsets — the None→["hermes-acp"] default now coexists with decision-only agents carrying `enabled_toolsets=[]`; the restore path correctly passes [] through (empty stays empty), but a future refactor "simplifying" [] back to None would silently re-arm the native toolset on decision sessions. A comment on the `[]`-is-meaningful invariant would cheaply prevent that.
+3. Error-message drift: the same invalid-profile condition produces "unsupported Hermes ACP tool profile" (server) vs "unsupported ACP tool profile" (manager). Harmless today; unify if tests ever match on text across both layers. (nit)
+4. Logging upgrade (`profile=%s toolsets=%s tools=%s` sorted) is genuinely useful for auditing constrained sessions — consider logging it at decision-session creation too, not just refreshes, so the baseline surface is recorded before any drift. (nit)
+
+No blocking issues found.

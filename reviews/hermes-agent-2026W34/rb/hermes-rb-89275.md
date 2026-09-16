@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. hermes_cli/sessions_cmd.py:`_is_paired_todo_result` + `_latest_todo_plan` — Positive: pairing each tool row to its nearest assistant's todo call by id prevents forged/unpaired tool messages from projecting a fake plan (explicitly tested), reusing `TodoStore().write()` guarantees inspection can never normalize a shape the runtime itself would reject, and honoring a latest *empty* plan as "cleared" rather than falling back to stale history matches what the agent actually did. The lineage test proves the todo survives compression-parent traversal.
+
+2. tools/delegate_tool.py:`list` — Positive: exposing the durable `session_id` alongside `subagent_id` gives out-of-band `sessions inspect` a stable handle that resolves in the session store even after the in-process agent is gone; internal fields stay excluded per the existing contract. Docs updated with the profile-flag caveat for cross-profile stores. No change requested.

@@ -1,0 +1,3 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. hermes_cli/profiles.py — Positive: adding `plugins` to the seeded-dirs list is the minimal correct fix, and the inline comment traces the exact failure chain (#88143 → _user_plugins_dir → "Unknown provider") so the entry's purpose is self-documenting. The test asserts the discovery path end-to-end (`plugins/model-providers` parent exists), not just the bare directory. No change requested.

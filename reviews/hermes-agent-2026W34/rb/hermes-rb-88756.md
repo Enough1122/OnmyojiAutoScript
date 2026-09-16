@@ -1,0 +1,5 @@
+> AI code review - automated review for reference; please use your judgment.
+
+Reviewed the diff. Right consolidation: max_tokens parsing existed in four slightly different dialects (CLI env-vs-config, gateway runtime resolution, agent_init config block, provider runtime) with divergent failure modes - centralizing on positive_output_token_cap (None-safe, bool-rejecting, positive-only) removes a whole class of "one surface accepts what another rejects" drift, and the new providers.<key>.max_output_tokens fallback fixes a real llama.cpp annoyance (server-side n_predict default monopolizing a slot long after a short answer). The requested_provider preference so an llamacpp cap survives provider-name normalization is thoughtfully handled and commented.
+
+Nits: agent_init.py picked up a stray double blank line after the imports; and the custom-provider matching loop breaks on the first id-set intersection - fine today, but if two configured providers ever share an alias the winner is dict-order-dependent.

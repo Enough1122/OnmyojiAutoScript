@@ -1,0 +1,7 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. hermes_cli/kanban_db.py:`block_task` — Positive: both changes attack real escape hatches. Routing loop-escalated cards to `triage` was self-defeating — the auto-decomposer sweeps triage unconditionally back into dispatch, so the breaker re-armed the very loop it exists to stop; keeping the card in `blocked` with a `block_loop_detected` marker makes escalation a terminal resting state for a human (tested against `list_triage_ids()`). And unconditional consecutive counting closes the subtler hole where varying the reported `kind` reset the counter to 1 forever; the inline rationale for rejecting the decay-by-one variant (arithmetically identical to reset at limit 2) shows the design was actually thought through rather than defaulted.
+
+2. Nit: the updated test-module docstring still says "A re-block with a DIFFERENT kind decays the counter but never resets it" — but the implementation has no decay at all (`prev_recurrences + 1` unconditionally); the *test* for alternating kinds asserts escalation, so only the prose is stale. One-line fix.
+
+3. Nit 2: the schema comment above `block_recurrences` was updated to match ("routed to triage" → flagged), good — double-check any user-facing docs that still describe triage-routing for loops.

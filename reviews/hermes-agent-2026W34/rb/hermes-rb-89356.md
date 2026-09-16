@@ -1,0 +1,9 @@
+> AI code review - automated review for reference; please use your judgment.
+
+Reviewed the diff. This is the right architecture for an interactive picker over an authorization-sensitive action: the runner hands the adapter the FULL origin-scoped row list (picker paginates internally instead of the text 10-cap silently hiding sessions), the adapter stays transport-only with composite (chat_id, msg_id, thread_id) state keys so forum topics and double-/sessions cannot collide, stale keyboards are rejected by msg_id before anything runs, taps get a cheap adapter-level authorization gate mirroring the approval/choice pickers, and the runner callback re-runs `_resume_target_allowed` as the authoritative IDOR check before invoking the extracted `_resume_session_by_id` funnel. The NOTE explaining why the Matrix cross-room branch must stay separate from the shared helper is exactly the kind of comment that prevents a bad DRY cleanup later. Tests cover collision safety, stale rejection, unauthorized taps, pagination rendering, current-session filtering with index integrity, and the beyond-10 list handoff.
+
+- **State lifetime:** `_sessions_picker_state` entries are removed on select/cancel but otherwise live until process exit, and each holds a closure over the runner (`on_session_selected`). The PR text references a sweeper flagging this bug class for other pickers - please confirm whatever sweeper exists covers the new dictionary too (or add a TTL like the model picker), since a busy group could accumulate dozens of dead pickers holding runner references.
+
+- Nit: `sx:noop` as a page-indicator no-op works, but a dedicated prefix (`sp:`) would keep the `sx` cancel namespace unambiguous if more nav verbs ever appear.
+
+No blocking issues found.

@@ -1,0 +1,77 @@
+diff --git a/packages/opencode/src/session/session.ts b/packages/opencode/src/session/session.ts
+index a2a91cd47b5e..a8c8e1d45e8f 100644
+--- a/packages/opencode/src/session/session.ts
++++ b/packages/opencode/src/session/session.ts
+@@ -377,9 +377,15 @@ export const getUsage = (input: { model: Provider.Model; usage: Usage; metadata?
+   }
+ 
+   const contextTokens = inputTokens
++  // a malformed tier is dropped rather than trusted: `tiers` that is not an array, a null entry or
++  // a missing `tier` each used to throw here. A non-numeric `size` must not be coerced to 0 either,
++  // or the tier would match every context instead of none.
++  const tiers = input.model.cost?.tiers
+   const costInfo =
+-    input.model.cost?.tiers
+-      ?.filter((item) => item.tier.type === "context" && contextTokens > item.tier.size)
++    (Array.isArray(tiers) ? tiers : [])
++      .filter(
++        (item) => item?.tier?.type === "context" && Number.isFinite(item.tier.size) && contextTokens > item.tier.size,
++      )
+       .sort((a, b) => b.tier.size - a.tier.size)[0] ??
+     (input.model.cost?.experimentalOver200K && contextTokens > 200_000
+       ? input.model.cost.experimentalOver200K
+diff --git a/packages/opencode/test/session/compaction.test.ts b/packages/opencode/test/session/compaction.test.ts
+index c76dd98b8614..ae8df287c2d6 100644
+--- a/packages/opencode/test/session/compaction.test.ts
++++ b/packages/opencode/test/session/compaction.test.ts
+@@ -1956,6 +1956,50 @@ describe("SessionNs.getUsage", () => {
+     },
+   )
+ 
++  test("ignores malformed cost tiers instead of throwing", () => {
++    const model = createModel({
++      context: 1_000_000,
++      output: 32_000,
++      cost: {
++        input: 3,
++        output: 15,
++        cache: { read: 0, write: 0 },
++        tiers: [
++          // a null entry
++          null,
++          // no `tier` key at all
++          { input: 5, output: 20, cache: { read: 0, write: 0 } },
++          // `tier.size` is not a number
++          { input: 7, output: 30, cache: { read: 0, write: 0 }, tier: { type: "context", size: {} } },
++        ],
++      } as unknown as Provider.Model["cost"],
++    })
++    const input = {
++      model,
++      usage: usage({ inputTokens: 1_000_000, outputTokens: 100_000, totalTokens: 1_100_000 }),
++    }
++
++    expect(() => SessionNs.getUsage(input)).not.toThrow()
++
++    // every tier discarded, so the base pricing applies
++    expect(SessionNs.getUsage(input).cost).toBe(3 + 1.5)
++  })
++
++  test("ignores a cost.tiers that is not an array", () => {
++    const model = createModel({
++      context: 1_000_000,
++      output: 32_000,
++      cost: { input: 3, output: 15, cache: { read: 0, write: 0 }, tiers: {} } as unknown as Provider.Model["cost"],
++    })
++    const input = {
++      model,
++      usage: usage({ inputTokens: 1_000_000, outputTokens: 100_000, totalTokens: 1_100_000 }),
++    }
++
++    expect(() => SessionNs.getUsage(input)).not.toThrow()
++    expect(SessionNs.getUsage(input).cost).toBe(3 + 1.5)
++  })
++
+   test("extracts cache write tokens from vertex metadata key", () => {
+     const model = createModel({ context: 100_000, output: 32_000, npm: "@ai-sdk/google-vertex/anthropic" })
+     const result = SessionNs.getUsage({

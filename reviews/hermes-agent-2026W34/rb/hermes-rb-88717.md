@@ -1,0 +1,7 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. DUPLICATE-PR FLAG: this addresses the same #88695 issue as **#88722** (also open in this batch, also titled around deriving the native threshold from the local trigger). Maintainers should consolidate — the two implementations differ materially:
+
+2. Coverage gap vs #88722: this PR fixes `resolve_compact_threshold` and `agent_init`, but leaves `hermes_cli/config_defaults.py` at `codex_responses_compact_threshold: 200000` and doesn't touch docs. Since `agent_init` reads through the merged config (where the 200000 *default* counts as an explicit value), a user who never set the key gets the old clamped-200K behavior — the follow-local path here only triggers when the key is explicitly `null` or the attribute is absent entirely. #88722 flips DEFAULT_CONFIG to `null` plus updates three doc surfaces, so its version of the fix actually reaches the affected population. This PR also keeps invalid values falling back to fixed 200K rather than following local.
+
+3. Positive: what IS here is clean — the `follows_local` branch returns `upper` directly instead of min()-ing against a fabricated default, the explicit-value clamp contract is preserved exactly (tested both directions on a 900K window), and the `SimpleNamespace` agent-without-attribute test covers the defensive getattr default. The #88695 root-cause narrative (fixed 200K predating the OAuth 900K window) is well documented. Recommend merging #88722's version and closing this one, or folding its stronger test names into it.

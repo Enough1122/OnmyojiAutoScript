@@ -1,0 +1,3 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. tools/mcp_oauth.py:`_wait_for_callback` — Positive: switching from a one-shot `handle_request` thread to `serve_forever` + explicit `shutdown()`/`join()` makes the listener teardown deterministic regardless of which path completes first — previously the paste path closed the server while the request thread's socket state could keep the fixed port bound on Linux (Errno 98 on the very next flow). Both new tests assert the *observable* contract: the port rebinds immediately after a paste, and consecutive flows reuse it. No change requested.

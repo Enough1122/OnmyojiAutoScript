@@ -1,0 +1,9 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Two subtle and correct fixes for the aux 401-recovery loop: (a) comparing the on-disk credential against the *rejected* client's token catches the case where a sibling process already rotated — re-rotating would revoke exactly the token siblings just adopted (Anthropic rotates refresh tokens), so evict-and-rebuild-from-disk is right; (b) passing `resolved_api_key=None` into the rebuilt-client resolution stops the rejected credential from being fed back in, which previously reproduced the same 401 deterministically. Both sync and async paths are covered, and the tests assert `api_key=None` on the second resolve call plus the no-re-rotation invariant. Points:
+
+1. Scope question: only the **Anthropic** branch implements the disk-newer adoption; the Codex/Copilot branches still unconditionally rotate when asked. Codex OAuth tokens are also refreshed by multiple processes elsewhere in this codebase (the desktop + CLI both hold them), so the same sibling-revocation hazard plausibly exists there. Either extend the disk-token comparison to those branches or document why they're rotation-safe.
+2. agent/auxiliary_client.py:~4806 — the adopt branch returns True after `_evict_cached_clients`, but the caller then resolves fresh credentials by provider — correct. Worth one assertion that the evicted rebuild actually reads the NEWER disk token rather than any process-local memo, since that memoization layer is exactly what went stale. (nit)
+3. `getattr(client, "api_key", "")` assumes real SDK clients always expose `.api_key`; mocked tests do, and current OpenAI clients do — fine, but a comment pinning that assumption helps future SDK upgrades. (nit)
+
+No blocking issues found beyond item 1's cross-provider scope.

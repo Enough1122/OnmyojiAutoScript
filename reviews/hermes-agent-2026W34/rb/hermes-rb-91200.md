@@ -1,0 +1,10 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Clean implementation of the per-attempt signal pattern: the notice is cleared at the very top of `compress_context` before any early return (consistent with the #58630/#69853 state rule), set only after a *confirmed* migration with a loaded goal, formatted defensively (whitespace normalization, 160-char truncate, timestamp error fallback), and consumed by both manual surfaces. Coverage across rotation-state, CLI, and gateway is appropriate. Points:
+
+1. Scope question, not a defect: the notice is only surfaced on MANUAL `/compress`. Automatic mid-conversation compression still migrates the goal silently — which is precisely the moment users are most likely to wonder whether their standing goal survived (#33618's failure mode). If injecting into model context is too invasive, an `_emit_status` line or first-user-turn preamble on the auto path would close the loop; otherwise document why manual-only is the intended surface.
+2. agent/conversation_compression.py:~3670 — `migrate_goal_to_session` returning truthy is treated as success, then `load_goal(agent.session_id)` re-reads from disk inside the same critical section. If the goals DB is momentarily locked by another process, the notice is skipped even though migration succeeded — acceptable degradation, just noting the two-step isn't atomic.
+3. gateway/slash_commands.py:4514 — adjacent lines go through the `t(...)` translation helper; the new notice line doesn't. If this surface is localized anywhere, keep it consistent or note English-only is deliberate.
+4. tests — both surface tests pre-seed the attribute rather than flowing through real migration (fine, migration is covered elsewhere), but neither asserts the negative case: with `_last_compression_goal_notice = None`, output must NOT contain "Standing goal". One assertion each would pin the no-stale-display contract that the top-of-function clear exists to guarantee. (nit)
+
+No blocking issues found.

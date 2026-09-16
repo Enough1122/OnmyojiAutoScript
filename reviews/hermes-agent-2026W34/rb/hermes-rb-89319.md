@@ -1,0 +1,7 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. apps/desktop/src/app/chat/right-rail/preview-page-extract.ts — Positive: the guest extractor handles the cases naive `innerText` grabs get wrong — ancestor overflow clipping is intersected recursively (so text hidden inside a scrolled sub-container is excluded), off-viewport and display:none/visibility:hidden nodes are filtered per text node with exact remaining-budget slicing, and every variable-length field carries an explicit cap. The test suite even executes the *serialized* script string through `Function` against jsdom fixtures with stubbed rects, so the shipped string — not a parallel copy — is what's under test.
+
+2. preview-reader.ts:`viewportContext` — Positive: re-clamping guest output reader-side (recomputing scroll_ratio instead of trusting the reported 99, clamping heading levels to 1–6, re-capping all text) makes the IPC boundary trust-free; the file-tab shape deliberately omits the new fields rather than emitting empty ones, keeping the tool's response contract honest per tab kind.
+
+3. tools/read_preview_tool.py — Positive: the description now actively steers the model ("when the user refers to 'this', 'here', or what they are reading, prefer the bounded viewport-local fields"), which is where features like this usually fail — data exists but the agent doesn't know which half answers the question. No change requested.

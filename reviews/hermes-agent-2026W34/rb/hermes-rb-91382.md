@@ -1,0 +1,9 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. gateway/platforms/base.py:5316 — the deferral applies to *every* adapter, not just relay. Why it matters: `interrupt_session_activity` previously returned only after the typing-clear completed, so callers had a happens-after guarantee they may quietly depend on (e.g., sending the final message right after an interrupt and expecting no lingering typing indicator racing it). Now ordering is best-effort everywhere to fix a relay-specific deadlock. Suggestion: either note the lost ordering guarantee explicitly in the base-class contract/docs, or scope the deferral via a capability flag so only same-loop transports (relay-style) defer.
+
+2. tests/gateway/relay/test_relay_interrupt.py:100 — both tests synchronize with the background task via `await asyncio.sleep(0.05)`. Why it matters: under a loaded CI runner the spawned task may not have been scheduled within 50 ms, producing rare false failures of "typing-clear was never sent" against correct code. Suggestion: drain deterministically — e.g. `await asyncio.gather(*list(adapter._background_tasks))` (or capture the task via a patched `create_task`) instead of sleeping.
+
+3. gateway/platforms/base.py:5320 — the swallowed `except Exception: pass` is pre-existing, but it now runs detached from any caller, so a persistently stuck transport fails invisibly forever. Why it matters: the exact hang this PR works around would otherwise be undiagnosable from logs. Suggestion: log at debug/info inside `_clear_typing`'s handler (`logger.debug("interrupt typing-clear failed", exc_info=True)`).
+
+The deadlock analysis in the docstring is excellent — root cause, why inline Event.set() must stay synchronous, and the precedent (`_send_lifecycle_ack`) are all captured where the next reader needs them. Tests cover both the hung-send and fast-path contracts.

@@ -1,0 +1,9 @@
+> AI code review — automated review; please use your judgment.
+
+Exemplary handling of a nasty provider quirk: the live bisection evidence (which exact sentence trips z.ai's disguised-429/529 filter, and which near-misses don't) is documented at the change site with a re-verify warning for anyone tempted to revert, the same failure-class link to #82154 gives reviewers context, and the fix sweeps every injection point in lockstep — prompt constants, docker/SOUL.md, `default_soul.py`, both installer templates. The tests are better than usual for a wording change: trigger-phrase absence per surface, Nous attribution retention as a scope sanity check, sync assertion between `DEFAULT_SOUL_MD` and `DEFAULT_AGENT_IDENTITY`, and — best of all — an explicit test proving the frozen `_LEGACY_TEMPLATE_SOULS` comparison strings were deliberately left untouched so upgrade detection keeps matching real files on disk.
+
+1. `hermes_cli/default_soul.py` / installers — **existing users' already-written `SOUL.md` files still contain "Hermes Agent"**, and the installer's self-healing comment says it upgrades only the old *comment-only scaffold* — so every pre-existing installation keeps the z.ai trigger phrase in its system prompt after updating, silently reproducing #89278 for them — suggestion: add a one-time migration that replaces exactly this known historical template string in user SOUL.md files (safe because it's an exact match against installer output you control), or at least surface a status hint telling affected users to edit the file.
+
+2. Nit (`tests/agent/test_prompt_builder.py:~1017`): ````assert "You run on Hermes " in ...```` couples to a trailing space; ````.startswith("You run on Hermes")```` plus an explicit ````"Hermes Agent" not in```` (already present) would be whitespace-proof.
+
+— reviewer-a · automated agent review (Hermes week-review)

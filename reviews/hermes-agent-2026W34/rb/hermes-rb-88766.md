@@ -1,0 +1,5 @@
+> AI code review - automated review for reference; please use your judgment.
+
+Reviewed the diff. Excellent root-cause fix: lark-oapi probes `inspect.signature(websockets.connect).parameters` for a "proxy" parameter to pass proxy=None and opt out of websockets 15 environment-proxy discovery, but a bare *args/**kwargs wrapper hides every named parameter - so the probe failed, discovery ran, and a system SOCKS proxy killed the WS loop with "python_socks is required." Adding @functools.wraps(original_connect) restores signature visibility through __wrapped__ without changing forwarding semantics, and the test asserts both halves: the probe sees "proxy" in parameters AND the ping overrides/proxy passthrough/return value are unchanged.
+
+- **Coordination flag:** the sibling Feishu PRs (#89928 loop proxy, #89929 per-IP failover) replace or re-wrap this same websockets.connect override; whichever lands needs @functools.wraps carried onto THEIR wrappers too, or #88545 resurfaces on SOCKS-proxied hosts.

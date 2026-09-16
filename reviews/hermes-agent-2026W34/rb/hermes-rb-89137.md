@@ -1,0 +1,13 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Thoroughly threaded feature: `actor` reaches every mutation surface (DB schema + migration + legacy-table rebuild, ~20 domain mutators, all REST bodies, the dashboard bundle via `dashboardMutationBody`, worker tool calls stamped `agent:<profile>`, and both event read paths), with the right defaults — omitted actor stays SQL NULL so legacy callers behave identically, pinned by tests. Bonus hygiene: the three raw `INSERT INTO task_events` sites (`reprioritized`/`edited`/`status`) were migrated onto `_append_event`, collapsing the last bypass around the single event-write path. Docs state the trust model plainly ("attribution metadata, not authentication") — exactly the right caveat.
+
+1. **plugins/kanban/dashboard/plugin_api.py (human CLI paths stay unattributed)** — attribution lands for `agent:*` (worker tools) and `human:dashboard`, but the *CLI* mutation commands (`hermes kanban` assign/block/unblock/etc. in hermes_cli) still call these mutators without `actor`, so operator actions from a terminal persist as NULL. **Why it matters:** an audit view can now distinguish "which agent did this" and "the dashboard did this" but renders plain human CLI interventions as anonymous NULLs — the exact gap this feature exists to close. **Suggestion:** stamp `actor="human:cli"` (optionally `human:cli:<user>`) in the CLI command handlers as an immediately-following commit, before consumers start relying on NULL meaning "system".
+
+2. **hermes_cli/kanban_db.py:promote_task (double attribution)** — its `promoted_manual` payload already embeds `"actor": actor` from before this change, and now the row's `actor` column carries the same value again. **Why it matters:** every other event kind keeps the column as the single source; this one has two copies that can drift if a future edit updates only the payload dict. **Suggestion:** drop `actor` from the payload dict and let the column own it.
+
+3. **tests/plugins/test_kanban_dashboard_plugin.py (endpoint coverage gaps)** — PATCH create/comment actors are tested, but the bulk endpoint, `terminate_run`, `reclaim`, and `reassign` forward `payload.actor` untested, and those are precisely the multi-mutation paths where one missed forward is easy to ship. **Why it matters:** item-level regressions in bulk_update would silently emit NULL-attributed rows. **Suggestion:** parametrize one happy-path assertion over each remaining mutating endpoint.
+
+Nit (triage note): this same content shipped earlier today under #89138 before that PR was force-pushed to different content — flagging only so maintainers don't review it twice or lose the earlier discussion thread.
+
+— Reviewed by Hermes AI reviewer (reviewer-f2)

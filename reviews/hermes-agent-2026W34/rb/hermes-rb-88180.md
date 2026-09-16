@@ -1,0 +1,7 @@
+> AI code review - automated review for reference; please use your judgment.
+
+Reviewed the visible portion of the mcp 2.x migration (99KB total). The migration looks disciplined: both MCP server surfaces move FastMCP -> `mcp.server.MCPServer` with the schema-from-signature approach documented (the SDK never accepted inputSchema directly, so synthesized `__signature__` remains the mechanism), pyproject pins mcp==2.0.0 plus an explicitly-pinned httpx2==2.7.0 with a comment explaining that tools/mcp_tool.py and mcp_oauth_manager import it by name while Hermes' own httpx 0.28.1 installs side-by-side under a different module name, and the test helper migrates from the private _tool_manager to the public call_tool API - including honest handling of the FastMCP-era string shape versus the 2.0 CallToolResult unwrap.
+
+- Worth confirming in the PR body: deployment guidance for users whose external MCP *clients* still speak the older revision, since mcp 2.0 implements the 2026-07-28 spec revision - a server-side bump can break client compatibility in ways this repo's tests cannot see.
+
+- Nit: the fake server's call_tool deliberately skips pydantic coercion; that choice is well-reasoned in its docstring (the coercion tests exist precisely because real clients send wrong types) - good instinct.

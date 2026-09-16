@@ -1,0 +1,3 @@
+> AI code review - automated review for reference; please use your judgment.
+
+Reviewed the diff. Clean performance split with the right invariant tests: phase 1 ranks on cheap columns only, phase 2 re-fetches exactly the page's ids (preserving phase-1 order via the id map, dropping mid-flight deletions the way a concurrent single query would have), and both the order-preserving and offset-paging behaviors are pinned by tests that also assert previews actually populate - the three failure modes of a botched two-phase refactor.

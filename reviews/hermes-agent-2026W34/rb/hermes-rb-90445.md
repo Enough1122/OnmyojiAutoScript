@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. tests/tui_gateway/test_log_exit_broken_pipe.py:`test_sw_log_guards_broken_pipe` — Nit: since `_sw_log` is nested inside `main()`, these two tests replicate its body and verify *the pattern* rather than the shipped code (the docstring admits this) — a future edit to the real `_sw_log` can silently lose the guard while tests stay green. Suggestion: add a one-line source-contract assertion against `tui_gateway/slash_worker.py` (regex for `except (BrokenPipeError, ValueError, OSError)` following the print), the same style several other tests in this repo already use.
+
+2. tui_gateway/entry.py / tui_gateway/slash_worker.py — Positive: minimal and correctly scoped — `BrokenPipeError, ValueError, OSError` covers the three realistic shutdown failures (EPIPE, closed-file, generic EBADF) without blanket-swallowing everything, both call sites stay best-effort by contract, and the healthy-pipe tests confirm logging still works. No change requested beyond item 1.

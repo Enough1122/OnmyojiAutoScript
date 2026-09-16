@@ -1,0 +1,3 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. agent/moa_loop.py:`_call_prepared_aggregator` — Positive: routing chat_completions-mode aggregators through `convert_messages` before the aux-client call closes a real wire-format leak (persistence metadata like `_db_persisted` reaching strict providers), while deliberately *deferring* sanitization for unresolved api_modes whose transports may still need replay metadata such as codex reasoning items — both behaviors pinned by tests that capture the exact wire message and assert the source dict stays untouched. The trace note placement after conversion means traces now record what was actually sent. No change requested.

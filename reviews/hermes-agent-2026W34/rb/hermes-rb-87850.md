@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. gateway/platforms/api_server.py:`_run_sync` finally block — Positive: closing the persisted session row after the active-run guard fixes the unbounded `state.db` growth from sessions whose `ended_at` stayed NULL forever, and the guard ordering (after the pops, so a run never sees itself) plus first-reason-wins `end_session` means concurrent runs sharing a session (Paperclip's resolveSessionKey reuse) can't close it out from under a sibling mid-sequence.
+
+2. gateway/platforms/api_server.py:`_run_and_close` reopen — Positive: pairing reopen-before-run with end-after-complete keeps the reused-session flow coherent across the whole lifecycle, and the comment explicitly documents the MUST-stay-paired invariant. Both directions have tests through the real HTTP surface: completed-run ends the session once with `api_run_complete`, and a pre-ended session reopens before the agent runs. No change requested.

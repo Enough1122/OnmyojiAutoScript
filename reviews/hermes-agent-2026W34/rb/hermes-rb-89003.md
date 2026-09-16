@@ -1,0 +1,10 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Useful configurability with correct precedence (env > config YAML > server default) and thoughtful lifecycle coverage: the policy is applied at initialize, on client reconnection (covering "initialize ran before the server was reachable"), pre-send in `sync_turn` (closing the auto-create-without-policy race), and on session switch — with a per-session applied-set preventing redundant POSTs. Points:
+
+1. **No tests ship with this PR**, despite the multi-point application state machine being exactly the kind of logic that regresses silently (e.g. a future refactor dropping the `sync_turn` guard would auto-create sessions without policy again, invisibly). Please add unit tests for `_resolve_memory_policy` (env/config precedence, dict vs JSON-string, invalid JSON → None) and one lifecycle test asserting the policy POST fires before the first message.
+2. plugins/memory/openviking/__init__.py:_ensure_client_locked (~3018) — `getattr(self, "_policy_applied_sessions", set())` for the membership check but `self._policy_applied_sessions.add(...)` for the write: if that attribute ever doesn't exist yet, this raises AttributeError instead of degrading. Declare `_policy_applied_sessions` in `__init`` next to `_memory_policy` (it's currently lazily created only in `initialize`) and drop the defensive getattr.
+3. The big comment block above `_apply_memory_policy` ("Only profile, preferences, entities, patterns are kept… events and cases are disabled") describes one *example* policy as if it were the module's behavior — misleading since the actual policy is fully user-configured. Rewrite it to describe the mechanism, moving the example into the existing docstring. (nit)
+4. `_apply_memory_policy`'s except lumps every failure into "session may already exist"; a genuine network error is masked to debug while the message flow continues without restriction. The multi-point retries compensate, but distinguishing 409 from connection errors would make the log actionable. (nit)
+
+No blocking issues found beyond item 1's missing tests.

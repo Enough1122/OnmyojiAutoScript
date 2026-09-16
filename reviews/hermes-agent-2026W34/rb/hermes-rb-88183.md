@@ -1,0 +1,3 @@
+> AI code review - automated review for reference; please use your judgment.
+
+Reviewed the diff. Thoughtful hygiene fix for a real class of problem: agent@Agents-Mac-mini.local vs agent@agents-Mac-mini.local differ only by case, so the pair cannot coexist on NTFS/default APFS and left Windows checkouts permanently dirty. Retiring the mixed-case twin into LEGACY_AUTHOR_MAP (whose entries the audit/workflow fallbacks still resolve) preserves attribution while unbreaking checkouts, and the two new tests cover both halves - a repo-wide case-collision guard over contributors/emails/ that names the colliding pair, and an assertion that the retired address still maps to skip-agent through the legacy map.

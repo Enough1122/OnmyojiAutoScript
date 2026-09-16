@@ -1,0 +1,3 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. apps/desktop/src/plugins/kanban/api.ts + board-switcher.tsx — Positive: the two-line fix removes the ambiguity where `''` meant "follow server current" while a dispatcher flips boards every tick — after an explicit user pick the slug is always pinned, so cards and header can no longer diverge; first paint still follows the server via the initial empty atom. The comment now documents the invariant ("never ''") at the exact place someone would reintroduce the old pattern. No change requested.

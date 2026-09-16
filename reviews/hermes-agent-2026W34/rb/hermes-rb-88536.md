@@ -1,0 +1,3 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Review of "fix(auth): honour the shortest lifetime a key_cmd helper advertises". Correct precedence inversion with the failure mode spelled out: a helper minting from its own credential cache reprints the ORIGINAL `expires_in` while its absolute `expiry` keeps counting down, so preferring the RFC field cached tokens past their real life and every request 401'd until process restart. Collecting all advertised lifetimes and honoring `min` of the positive ones is the conservative-correct semantics for a caching layer, the old "expires_in wins" test is replaced with both-direction coverage, and the lazy-import comment explains the cycle constraint. No blocking issues found.

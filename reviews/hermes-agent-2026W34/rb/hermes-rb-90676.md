@@ -1,0 +1,10 @@
+> AI code review — automated review for reference; please use your judgment.
+
+The core argument is right and worth the behavior change: a switch notice delivered *after* the fallback's answer cannot warn anyone against acting on that answer, and the old one-shot mechanism existed only to work around that self-inflicted timing. Emitting once at the switch makes "seen exactly once" hold trivially in both outcomes, kills the three-place bookkeeping (`_pending_fallback_notice`, emit-on-success, clear-on-flush), and the rewritten tests drive a real AIAgent through `try_activate_fallback` instead of poking attributes — strictly better. Points:
+
+1. Intended-behavior confirmation: switches are now visible *even when the fallback succeeds*, where the old design deliberately suppressed them on recovery. For deployments whose primary flaps daily, this turns one hidden line into recurring mid-turn status banners. If `_emit_status` is high-visibility, consider deduplicating consecutive identical switches within a turn/window so a flap-heavy setup doesn't train users to ignore the banner. Not a blocker — just make sure the noise tradeoff is chosen, not stumbled into.
+2. conversation_loop.py:~7870 — removing the buffered "↻ Switched to fallback" from the empty-content path means terminal-failure traces no longer contain any switch lines at all (the live emissions already happened, but a client that reconnects after the failure sees only the flushed retry chatter). If the flushed trace is treated as a complete post-mortem record anywhere, fold the final "ended on {model}/{provider}" line into `_flush_status_buffer`'s output so the record still ends with identity. (nit)
+3. The unified message format ("old via p → new via q") is an upgrade over the two different phrasings the old sites used. (positive)
+4. The comment claiming `_emit_status` swallows its own exceptions should ideally be enforced by a test — it's load-bearing for the "cannot cascade down the chain" argument. (nit)
+
+No blocking issues found.

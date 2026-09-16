@@ -1,0 +1,3 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. hermes_cli/config.py:`edit_config` — Positive: using `split_command_line` rather than `shlex.split` is exactly right for a value that routinely contains Windows paths with backslashes and spaces; the graceful fallbacks are correctly ordered (unbalanced quotes → literal launch so the editor's own error surfaces; empty token list → same), so no malformed $EDITOR can turn into an unhandled crash. Tests cover args, quoted paths with spaces on both platforms' semantics, plain editors, and malformed input. No change requested.

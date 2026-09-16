@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. apps/desktop/src/app/open-session.ts vs use-session-tile-delegate.ts — Inconsistency between the two paths this PR touches: the tile delegate publishes `resolved = dbCwd || snapshot || ''` — i.e., it *clears* the Files pane when a session has no workspace — while `openSession` skips publishing entirely when `openedCwd` is empty, leaving the *previous* conversation's folder pinned (the exact #76696 symptom) for any cwd-less session opened from the sidebar. Suggestion: mirror the delegate's behavior — publish an empty transient when no cwd is known so both entry points agree.
+
+2. apps/desktop/src/app/session/hooks/use-session-actions/index.ts — Positive: gating model/provider on `getCurrentModelSource() === 'manual'` fixes a real cross-session leak with the correct semantics — the composer's sticky selection stays visible for the user but stops being silently stamped into every new session unless they actually chose it. Preferring the persisted DB cwd over the warm create-time snapshot in the tile path is also the right precedence call, since the snapshot never refreshes.

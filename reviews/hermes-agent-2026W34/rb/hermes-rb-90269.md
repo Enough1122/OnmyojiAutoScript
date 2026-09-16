@@ -1,0 +1,7 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. plugins/model-providers/merge-gateway/__init__.py:fetch_models — pagination is bounded only by cursor uniqueness: a misbehaving catalog that mints a fresh cursor per page keeps this loop (and its sequential network calls) running for a very long time inside what callers treat as an ~8s-budget operation. Suggestion: cap total pages (e.g. 20) and log when the cap truncates the catalog.
+
+2. Recurring pattern worth consolidating (same note as the commandcode doctor PR): merge-gateway needed edits in THREE hand-maintained places — PROVIDER_TO_MODELS_DEV, doctor's vendor-slug set, and the HermesOverlay — plus the plugin itself. A catalog_style/aggregator flag on the provider registration that doctor and models_dev derive from would make the next aggregator a one-file change.
+
+Excellent integration hygiene otherwise: the models.dev overlay deliberately reroutes Merge's Vercel-AI-SDK endpoint to the OpenAI-compatible one with a comment explaining why, the catalog fetch filters to available tool-calling vendor routes (case-insensitive dedup across pages), custom base URLs map to their own /v1/models instead of hardcoding production, and the tests cover pagination/cursor cycles, auth headers, per-vendor availability edge cases, and — notably — two regression tests proving an UNMAPPED provider never borrows a colliding models.dev slug.

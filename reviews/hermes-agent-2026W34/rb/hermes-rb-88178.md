@@ -1,0 +1,3 @@
+> AI code review - automated review for reference; please use your judgment.
+
+Reviewed the diff. Nice simplification of agent-facing instructions: the old bot-to-bot flow required a fragile two-step dance ("send once WITHOUT -c, then sessions rename <session-id>") whenever the target had no Bot Chat yet; `--create-if-missing` collapses it into one command across all three instruction surfaces (protocol section, mention-handoff note, bot_mode_probe), and the now-dead recovery prose is removed rather than left to rot.

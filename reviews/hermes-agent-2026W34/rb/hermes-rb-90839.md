@@ -1,0 +1,9 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. apps/desktop/src/plugins/hermes-bots/plugin.js:9566 — the new GROUP_CHAT_MARKDOWN_COMPONENTS is wired into the GroupChatWorkspace Streamdown call, but the test suite never asserts that wiring: every test loads GroupChatPre in isolation via vm slicing. Why it matters: the repo's own convention elsewhere in this file is source-contract assertions (assert.match(pluginSource, ...)) precisely so a refactor of the JSX call site can't silently drop the components prop while unit tests stay green. Suggestion: add one source-contract test matching /components: GROUP_CHAT_MARKDOWN_COMPONENTS/.
+
+2. apps/desktop/src/plugins/hermes-bots/plugin.js:80 — the unwrap path only recognizes a single object child whose type is exactly 'code'. Any other Streamdown tree shape (array children, fragment-wrapped code) fails closed to horizontal scroll, which is correct, but it also means the fix silently does nothing on renderer versions that change that tree. Since sdk.isLikelyStructuredText availability already varies per build, consider logging once at debug level when a language-text block fails the shape check, so future tree drift is diagnosable instead of just looking like 'the bug came back'.
+
+3. apps/desktop/src/sdk/index.ts:1037 — exporting the shared heuristic rather than duplicating it in the plugin is the right call; worth noting in the docstring that plugins must treat its result as advisory-only (as this PR does), since wrapping genuinely structured output would degrade alignment-sensitive text like SSH configs.
+
+Solid defensive design throughout: stripping the Streamdown-internal node prop before it reaches the DOM (with an explicit test), failing closed to the old scrolling behavior for unknown shapes and legacy SDKs, and preserving props spread order so callers' classNames still win via cn().

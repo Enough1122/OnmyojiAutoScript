@@ -1,0 +1,9 @@
+> AI code review - automated review for reference; please use your judgment.
+
+Reviewed the diff. This is the inode-guard variant of the #89332 fix, and its discipline stands out: the fail-open contract is treated as the load-bearing half (unknown identity at open, unstatable path now, st_ino==0 filesystems all answer "not replaced", each pinned by a test with the reasoning spelled out), the refusal preserves the original error into the log (#89332's core complaint was that the cause was never named), a successful reconnect REBASELINES identity so a reconciled swap cannot be blamed forever, an unswapped database is proven to still reach the FTS ladder, and - rarest of all - the known limitation (cp truncate-in-place keeps its inode and is invisible to this guard) is pinned by a test whose own docstring says "rewrite me, do not delete me" if a generation stamp ever lands.
+
+- **Coordination required - three PRs now reshape the same recovery ladder.** This one keeps the reconnect rung and adds a pre-ladder refusal keyed on inode identity. PR #89364 implements the *other* #89332 variant (application_id generation stamp + transcript divert) and also guards _execute_write/_reconnect_after_notadb; PR #91585 removes the reconnect rung entirely. All three cannot merge as written. Please link them and pick the composition: this PR's scope-note test explicitly anticipates the generation stamp landing, so whichever order is chosen, the losing variant's tests need the rewrite its author already promised.
+
+- Nit: _refuse_repair_on_replaced_file logs both old and new identities plus the original error - exactly right; consider adding the session_id/db_path so multi-profile hosts can tell which store refused.
+
+No blocking issues found.

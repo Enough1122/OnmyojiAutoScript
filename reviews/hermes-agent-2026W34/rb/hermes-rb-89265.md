@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. hermes_cli/moa_config.py:`_normalize_preset` — Nit on fallback philosophy: `"abc"` and `""` fall back to **4096** while `null` falls back to uncapped. An operator who fat-fingers the value gets silently capped at 4k (the old bug's behavior) rather than inheriting the new uncapped default; falling back to `None` would keep "unparseable ≈ unset" consistent with how every other key here treats absence. Minor, but it's the one asymmetry left in an otherwise clean fix.
+
+2. Same file + docs — Positive: preserving explicit 0 as 0 (rather than falsy-coercing to default) keeps intentional zero-caps expressible, resolve/flatten paths are covered for the None case, and the doc example flips to `max_tokens: null` with a pointer at `reference_max_tokens` so readers don't confuse the two caps. No change requested beyond the nit.

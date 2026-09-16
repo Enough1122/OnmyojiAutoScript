@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. gateway/kanban_watchers.py — Positive: the write-ahead obligation ordering is correct (record → mark_attempting → send → mark_delivered, with mark_failed in the exception path), which closes the crash-between-send-and-cursor window that previously lost events permanently; routing the ping through `_send_with_retry` inherits FloodWait honoring and plain-text fallback instead of a single bare send; and every ledger failure degrades to the legacy path rather than blocking delivery. The wake-reply anchor propagation (`telegram_reply_to_message_id` into `SessionSource.message_id`) fixes the visible-thread mis anchoring with its own test asserting the source field end to end.
+
+2. Tests — Positive: `RetryObservingAdapter` distinguishes retry-path vs bare-send calls structurally, ledger state is asserted from the actual SQLite rows (all delivered), and the pre-existing five fake adapters were updated with faithful `_send_with_retry` stand-ins so the notifier's contract change can't silently break their scenarios. No change requested.

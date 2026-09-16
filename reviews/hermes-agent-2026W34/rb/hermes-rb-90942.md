@@ -1,0 +1,7 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. agent/agent_runtime_helpers.py:3378-3390 — Nit: `_TOOL_NAME_ALIASES` is rebuilt on every `repair_tool_call` invocation; it's a static literal and this helper sits on the per-malformed-call hot path for small local models that miss *repeatedly* (the loop scenario the comment describes). Suggestion: hoist to module level next to the other repair tables.
+
+2. Tests — Gap worth closing before merge: this changes repair behavior but ships without a test. Two cases pin the whole contract cheaply — `repair_tool_call(agent_with_terminal, "Shell")` returns `"terminal"` (case-insensitivity included), and returns `None`/`unchanged` when `terminal` is absent from `valid_tool_names` (the guard that keeps renamed/removal setups from being force-routed). Without them, a future refactor of `repair_tool_call` can silently drop the map.
+
+3. Same hunk — Positive: gating every alias through `alias in agent.valid_tool_names` is the right safety valve (a user's own tool literally named `run_command` still wins because repair only fires for *unknown* names), and exact-map-before-fuzzy ordering means these common misses resolve deterministically instead of riding the 0.7 cutoff. No change requested beyond items 1-2.

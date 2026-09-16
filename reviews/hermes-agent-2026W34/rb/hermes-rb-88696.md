@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. hermes_state_search.py:`_drop_mismatched_fts_vtables` — Positive: the root cause is precisely identified (`IF NOT EXISTS` silently accepting a v22 single-column vtable left by an interrupted demote) and the fix respects the existing recovery machinery rather than bypassing it — dropping mismatched shapes and resetting `fts_rebuild_progress` to 0 lets the chunked backfill repopulate from scratch while keeping markers durable across crashes *during* the repair itself. The guard placement before **any** backfill path also closes the legacy+pending combination that skipped both resume branches.
+
+2. tests — Positive: the regression builds a genuinely wrong-shaped database, first *asserts* the pre-fix failure mode (INSERT dies on the missing column) so the test can't pass vacuously, then proves full recovery — v23 shape restored, docsite counts matching messages, search returning hits, markers cleared. No change requested.

@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. Overall — Positive: a model extraction refactor. `invoke_tool`, the post-hook name set/predicate, and `dispatch_delegate_task` move to `agent/tool_dispatch.py` with legacy import paths preserved as *identity* re-exports (`legacy_invoke_tool is invoke_tool` asserted, not just equal behavior), so monkeypatching either path keeps working — and there's an explicit test proving the `run_agent.handle_function_call` patch seam still routes through the extracted implementation. The delegate background-semantics branch (top-level → background, subagent depth > 0 → synchronous) moved verbatim with its rationale comment and both directions tested.
+
+2. Nit: `agent_runtime_helpers` now imports five symbols from `tool_dispatch` purely as re-exports; if more dispatch machinery migrates later, consider making `agent_runtime_helpers` a deprecated shim rather than accumulating forwarding imports. No change requested beyond that.

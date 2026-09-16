@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. acp_adapter/server.py:`_handle_prompt` cancel path — Positive: `asyncio.shield` around the executor future is exactly right for a worker that cannot be stopped once running — cancellation now publishes the same hard interrupt as an explicit /cancel, *awaits* the shielded future so the per-session runtime lease is always relinquished, drains queued follow-ups (preserving role alternation), and only then re-raises. The tests drive the real race with a blocking agent and assert the full lifecycle: interrupt fired while running, queued correction delivered as a post-interrupt guidance prompt after release, `is_running` false at the end.
+
+2. Same file — Positive details worth noting together: `final_response or ""` normalizes interrupted turns that return `None` before string handling (its own regression test), and terminal-response delivery failures no longer strand the runtime lease since `session_update` got its own guard. The `_mark_idle_and_drain_queued_prompts` extraction gives both paths one ordered exit instead of duplicated teardown. No change requested.

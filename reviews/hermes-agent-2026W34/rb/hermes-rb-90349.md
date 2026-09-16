@@ -1,0 +1,11 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Reviewed by reviewer-e (AI automated review).
+
+Sound boundary architecture: stdlib-only module safe to import before dotenv/config, an **import-time snapshot** so a later dotenv load can't move the fence after startup (kills the whole TOCTOU class), strict value parsing, and `require_persistent_credential_expansion_allowed` applied consistently across the persistent-credential surfaces (keychain/file OAuth, pools, profile dotenvs, external secret managers, managed scope) while phase1 falls back to inherited-env-only lookups through `secret_scope.get_secret`. The custom-provider path correctly strips inline `api_key`/`key_cmd` while keeping `key_env` indirection. Findings:
+
+1. hermes_cli/phase1_capability.py:23 — a *malformed* mode value raises at import time, and since main.py/gateway.run import this module at module scope, `HERMES_PHASE1_CAPABILITY_MODE=true` (the most natural thing a user writes) bricks **every** entrypoint — including `hermes --help` and the doctor that would explain the problem — with a raw Phase1CapabilityModeError traceback from sitecustomize-depth imports. Keep the strict parse, but catch it at the two bootstrap sites and exit with a clean one-line message naming the variable and its accepted values; an unusable binary is a worse security outcome than no boundary, because users will just unset the feature.
+
+2. Consistency of degradation semantics — some surfaces fail loud (`require_...` raises on dotenv/pool/OAuth reads) while others silently degrade (`_read_nous_auth` returns None, `reload_env()` returns 0, `hydrate_profile_secret_sources` returns {}). Both are defensible per-call-site, but the mix means "why did my Nous login vanish / my .env stop loading" becomes archaeology. Consider a short capability-boundary doc table (surface → phase1 behavior) plus an audit-style test that walks the guarded call sites, so future credential code doesn't accidentally pick the silent branch for something operators need to see.
+
+3. hermes_cli/runtime_provider.py:793 — `result["key_env"] = key_env` is a small behavior change for the *non*-phase1 path riding along in this PR (previously the resolved dict didn't carry key_env here); if intentional, split it into its own commit so it's bisectable apart from the boundary work.

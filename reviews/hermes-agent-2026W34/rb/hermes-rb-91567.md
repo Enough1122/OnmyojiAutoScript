@@ -1,0 +1,13 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Reviewed the diff. Well-engineered feature: bounded LRUs on both new structures, out-of-order delivery handled via defer + cursor rewind + immediate WS resubscription, iterative (non-recursive) chain draining proven by the 500-deep test, the \`thread_require_mention\` opt-out keeps strict gating available, and docs cover both config samples plus semantics. Points:
+
+- **plugins/platforms/buzz/adapter.py:~1099 — opened threads never expire by time.** Membership lives in an LRU capped at 500 *events*, so in a busy channel a reply to an hours-old mentioned message still dispatches without a mention (the mention entry just needs to survive eviction). That may be intended continuity, but it is also a standing engagement surface in public channels: anyone allow-listed can revive any historical thread at will. Suggestion: either add a TTL alongside the cap (mirroring _PENDING_REPLY_MAX_AGE_SECONDS) or state the no-expiry choice explicitly in the docs bullet so operators can reason about it.
+
+- **adapter.py:~1282-1295 (_reply_to_event_id) — only 4-element NIP-10 \"reply\" markers are honored.** Clients emitting the legacy/root-style \`e\` tag (3-element form, or root+reply pairs where the first is root) fall through as non-replies, which fail *closed* to mention-required — safe direction, but users will report "threads sometimes need a re-mention" depending on their client. Worth either recognizing the common root-tag fallback (prefer a marker explicitly labeled reply, else treat a lone e-tag as reply target) or documenting the limitation.
+
+- **Ordering dependency worth pinning:** the allow-list check runs *before* \`_defer_thread_reply\`, so unauthorized users' replies are never parked in the pending queue — correct, but it's load-bearing sequence. One comment plus a test (unauthorized reply to a mentioned message must be neither dispatched nor deferred) would protect it from an innocent reorder.
+
+- **The WebSocket live-resubscribe branch (~917-927) has no test.** It's the piece that makes rewinds actually work on the default transport; even one scripted-socket test asserting a second REQ is sent after a pending-since change would cover the trickiest async hop in the PR.
+
+Nit: adapter.py:~99-100 — _PENDING_REPLY_LOOKBACK_SECONDS and _PENDING_REPLY_MAX_AGE_SECONDS are both 60 with independent meanings (fetch rewind vs retention); fine as separate names, but a comment cross-linking them would prevent a future one-sided tweak from silently breaking the rewind guarantee.

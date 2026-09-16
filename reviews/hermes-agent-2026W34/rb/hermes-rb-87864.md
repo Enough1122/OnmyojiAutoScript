@@ -1,0 +1,3 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. gateway/config.py:`_enable_from_env` — Positive: reading `API_SERVER_ENABLED` as a raw tri-state (unset/on/off) rather than a bool makes an explicit deployment-level `false` win over both the key-based force-enable and config.yaml `enabled: true` — the right precedence, since the env var is the outermost deployment override and a fail-safe `false` must take a listener down even when an auto-generated key exists (#87856's exact dead-switch). Unset/unrecognized values keep historical behavior, and all three states are tested through real config loads including the config-true-vs-env-false case. No change requested.

@@ -1,0 +1,3 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Review of "fix(anthropic): anchor azure.com host matching in bearer-auth/1M-beta predicates". Correct completion of the #74312 sweep inside this adapter: both Azure predicates move from raw substring matching to `base_url_host_matches`, eliminating the proxy-path and subdomain-lookalike false-positive classes (a wrong Bearer-vs-x-api-key flip or a spurious 1M-beta header are exactly the failure shapes those false positives caused), and the test file documents that the neighboring palantirfoundry check had already been anchored — making this the missed sibling. Tests pin real-host, proxy-path, and lookalike cases on both predicates. No blocking issues found.

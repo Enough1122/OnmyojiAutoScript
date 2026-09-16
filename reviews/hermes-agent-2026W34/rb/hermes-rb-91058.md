@@ -1,0 +1,11 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Reviewed the diff. Correct fix for a real conflation: the "empty message ⇒ synthetic startup wake" heuristic misclassified genuinely-empty inbound events (captionless media), and an explicit \`startup_resume\` provenance flag threaded from the scheduler through \`MessageEvent\`/\`TurnContext\` into the note builder, persistence decision, and safety-net is the right shape. Tests cover the new captionless case and assert the scheduled event carries both flags. Points:
+
+- **gateway/run.py:~1276 (`_prepare_resume_pending_message`) — whitespace-only real messages are now persisted verbatim.** \`persist_message = recovery_message if startup_resume else (message or None)\` keeps \`"   "\` as-is (truthy), whereas the old code persisted the recovery note whenever \`message.strip()\` was empty. That was exactly the mechanism protecting state.db from blank-ish user rows in #86580; a whitespace-only row can reintroduce the sanitize-on-every-call loop for real events. Suggestion: \`(message.strip() and message) or None\` so blank/whitespace real input also defers to the native path instead of persisting whitespace.
+
+- **run.py:~6262 (safety net) — narrowing to \`ctx.startup_resume\` is right, but double-check the inverse hole.** If a *synthetic* startup event somehow loses its flag between scheduling and dispatch (serialization across a queue, older queued event replayed after upgrade), the empty-text safety net no longer fires and the model gets a blank user turn. A one-line debug log when \`startup_resume and not message.strip()\` reaches dispatch would make that visible.
+
+- **Type widening ripple:** \`_prepare_resume_pending_message\` now returns \`Optional[str]\` and feeds \`_persist_user_message_override\`; worth confirming every consumer distinguishes "no override" (None) from "override with empty" — the old contract only ever produced strings.
+
+Nit: the event-flag vocabulary is growing (\`internal\`, \`synthetic\`, now \`startup_resume\`, plus \`allow_gateway_control\`) with overlapping purposes; a short table in gateway/platforms/base.py mapping flag → who sets it → what policy reads it would prevent future cross-wiring like the bug this PR fixes.

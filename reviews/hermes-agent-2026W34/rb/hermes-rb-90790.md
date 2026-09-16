@@ -1,0 +1,9 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. apps/desktop/src/app/chat/sidebar/projects/project-appearance.tsx:66 — result ranking for a query is plain substring-in-kebab-name ('terms.every(...includes...)') sliced to the first 36 hits. Why it matters: searching 'folder' ranks 'book-open-folder…' style names interleaved alphabetically ahead of the actual 'folder-*' family depending on catalogue order, so the icon the user means may not be in the capped window even though it matches. Suggestion: score matches (startsWith > word-boundary > substring) before slicing, or at least sort startsWith-first within the cap.
+
+2. Same file, zero-query view — a persisted-but-now-unknown Lucide value (renamed/deprecated upstream icon) is dropped from displayedIcons entirely, so the user's current selection becomes invisible and un-clearable in the picker while ProjectIcon quietly falls back to a codicon everywhere else. Why it matters: the user sees one glyph in the sidebar and a different 'selected' state in the picker with no way to fix it except blind re-selection. Suggestion: pin the raw stored value into the zero-query list (as done for valid selections) even when unrecognized, rendering via the same fallback path.
+
+3. Nit: when results are capped, there's no hint that more exist ('a' shows 36 arbitrary a-icons with no 'N more — keep typing'). A small count line would set expectations; the max-h-48 scroll already handles overflow visually.
+
+Well-engineered integration: DynamicIcon from lucide-react/dynamic keeps the full catalogue out of the bundle (the debounced six-row cap comment shows the import-storm concern was thought through), legacy Codicon values stay first-class with an explicit fallback path and tests, the palette adapter bridges the Tabler-shaped slot without forking render logic, and the aria story (labeled button, aria-hidden glyph) plus the unknown-icon fallback are all pinned by tests.

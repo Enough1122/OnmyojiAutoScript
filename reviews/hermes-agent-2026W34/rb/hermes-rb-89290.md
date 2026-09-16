@@ -1,0 +1,7 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. gateway/platforms/weixin.py:`WeixinMultiAccountAdapter.get_chat_info` — Nit/question: raising `RuntimeError` departs from the adapter contract where callers typically expect a best-effort dict (the smart-lobby and handoff paths call `get_chat_info` generically and treat failures as "no data"). A generic gateway feature touching the WEIXIN adapter would now crash rather than degrade. Suggestion: return `{}` with a warning, or raise a more discoverable typed error plus a docstring note listing which gateway features require an account selector.
+
+2. Same class:`connect` — Positive: partial-connect failure tears down *all* children and reports False (fail-closed) rather than running a half-configured identity split, and each child gets `_disable_env_credentials` so env vars can never leak one account's token into another's transport.
+
+3. gateway/session.py:`build_session_key` — Positive: the shared-DM key (`ns:weixin:dm:shared:<id>`) is deliberately scoped to WEIXIN+dm so the marker can't leak into other platforms' keys, `shared_session_id`/`transport_account_id` round-trip through `to_dict/from_dict` for restart recovery, and replies still route to the *actual sender's* child transport via provenance even though the conversation context is shared. The trust chain in `_registered_transport_adapter` (live-runner-created + explicitly marked + account-id match) is the right shape for admitting off-registry child adapters.

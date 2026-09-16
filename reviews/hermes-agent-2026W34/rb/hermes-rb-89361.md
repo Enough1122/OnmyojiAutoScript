@@ -1,0 +1,11 @@
+> AI code review - automated review for reference; please use your judgment.
+
+Reviewed the diff (four scanner false-positive fixes + the fixture migration they force). The engineering quality is high across the board: the malformed-exec fix correctly distrusts normalization-manufactured verdicts by re-lexing the RAW author text (with genuinely unterminated quotes still failing closed), the skeleton probe rightly counts only unquoted bytes against the separator-free ceiling, heredoc bodies are masked offset-preserving so stream-write rules stop reading report prose as redirection targets, and both tirith suppressions are shape-bounded (append-only .log under logs/, single-> still flagged, real RC dotfiles still gated). The incident-count annotations (30+ blocks, five days of live use) are exactly the context security heuristics need.
+
+- **_is_scratch_cleanup does not resolve symlinks.** Operands are checked with normpath + string-prefix against the scratch roots, but a symlink INSIDE scratch (`ln -s /etc /tmp/esc; rm -rf /tmp/esc/app.conf`) passes the prefix check while deleting outside it - and this path now auto-approves in headless/non-interactive sessions where the old flow demanded a human. Suggest resolving the final operand with os.path.realpath before the prefix test (and/or rejecting operands whose lstat reports a symlink), plus a regression test for the link-escape shape.
+
+- **Behavior change deserves a release note.** Literal-scratch `rm` is no longer even *flagged* as dangerous, which means non-interactive/headless flows skip it entirely rather than approving it - almost certainly the intent (that was the incident), but operators relying on audit trails of every rm will see them disappear. One changelog line naming the new scratch-cleanup exemption (and its fail-closed boundaries: no globs/substitutions/traversal/mixed-operands) would set expectations.
+
+- Nit: _raw_segment_lexes_cleanly duplicates the quote state machine of _shell_tokens_with_spans with different escape semantics; a comment cross-linking the two (and why they must differ on backslash handling) would prevent a future unification that reintroduces the parity-flip bug.
+
+No blocking issues found.

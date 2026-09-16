@@ -1,0 +1,3 @@
+> AI code review - automated review for reference; please use your judgment.
+
+Reviewed the diff. Correct protocol-hygiene fix: strict providers (Google AI Studio via OpenRouter) reject replayed turns when the role:"tool" message name does not exactly match the assistant's tool_call function.name - which diverges whenever bridge tools like `tool_call` unwrap internally to `mcp__*`. Building a call-id -> function-name index across the whole message list, flagging mismatches in the sanitize pre-scan, and rewriting only the name field via the existing copy-on-write path keeps dirty-history handling intact (the test asserts both the rewrite AND that the input list is not mutated).

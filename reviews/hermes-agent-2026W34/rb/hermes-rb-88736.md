@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. tests/run_agent/test_streaming.py — Positive: locking the dict-`extra_content` passthrough behind a named regression is worthwhile — the NVIDIA-NIM/MiniMax shape (payload under `model_extra` instead of a typed attribute) is exactly the kind of vendor quirk a later refactor would "clean up" into an `AttributeError`/`.model_dump()` crash, and the test drives the real `_interruptible_streaming_api_call` accumulator end to end rather than mocking the accumulation logic. No change requested.
+
+2. Same file — Nit: the docstring cites the upstream fix as landing via the `_call_chat_completions` extraction "already merged here" — once this merges, that provenance note is the only pointer between test and protected code; a one-line comment at the accumulator's passthrough branch (`# see test_tool_call_extra_content_dict_passthrough`) would complete the loop in both directions.

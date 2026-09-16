@@ -1,0 +1,3 @@
+> AI code review - automated review for reference; please use your judgment.
+
+Reviewed the diff. Right recommendation flip: pasting `eval` output into ~/.bashrc slows every shell start forever and breaks the bash-completion lazy-load convention (the anti-pattern the referenced issue warns about), while ~/.local/share/bash-completion/completions/hermes is picked up automatically and stays fast. Keeping the bashrc eval as an explicitly-labeled fallback for systems without the package, plus a test asserting the old guidance is gone while the fallback survives, is tidy.

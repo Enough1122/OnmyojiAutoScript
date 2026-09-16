@@ -1,0 +1,119 @@
+diff --git a/packages/core/src/git.ts b/packages/core/src/git.ts
+index 3c2f5fc80fde..862b02148d76 100644
+--- a/packages/core/src/git.ts
++++ b/packages/core/src/git.ts
+@@ -9,6 +9,7 @@ import { AppProcess } from "@opencode-ai/util/process"
+ import { makeGlobalNode } from "@opencode-ai/util/effect/app-node"
+ import { File } from "./file.js"
+ import { KeyedMutex } from "./effect/keyed-mutex.js"
++import { gitExecutable } from "./util/git-executable.js"
+ 
+ export class Repository extends Schema.Class<Repository>("Git.Repository")({
+   worktree: AbsolutePath,
+@@ -314,7 +315,7 @@ const layer = Layer.effect(
+     ) {
+       const result = yield* proc
+         .run(
+-          ChildProcess.make("git", repositoryArgs(repository, args), {
++          ChildProcess.make(gitExecutable, repositoryArgs(repository, args), {
+             cwd: repository.worktree,
+             env: options?.env,
+             extendEnv: true,
+@@ -449,10 +450,14 @@ const layer = Layer.effect(
+       if (!input.paths.length) return new Set<RelativePath>()
+       const result = yield* proc
+         .run(
+-          ChildProcess.make("git", repositoryArgs(input.repository, ["check-ignore", "--no-index", "--stdin", "-z"]), {
+-            cwd: input.repository.worktree,
+-            extendEnv: true,
+-          }),
++          ChildProcess.make(
++            gitExecutable,
++            repositoryArgs(input.repository, ["check-ignore", "--no-index", "--stdin", "-z"]),
++            {
++              cwd: input.repository.worktree,
++              extendEnv: true,
++            },
++          ),
+           { stdin: input.paths.join("\0") + "\0" },
+         )
+         .pipe(
+@@ -625,7 +630,7 @@ const layer = Layer.effect(
+       cwd = repository.worktree,
+     ) {
+       const result = yield* proc
+-        .run(ChildProcess.make("git", args, { cwd, extendEnv: true, stdin: "ignore" }))
++        .run(ChildProcess.make(gitExecutable, args, { cwd, extendEnv: true, stdin: "ignore" }))
+         .pipe(
+           Effect.mapError(
+             (cause) => new WorktreeError({ operation, directory: worktreeDirectory, message: cause.message, cause }),
+@@ -722,7 +727,7 @@ function execute(cwd: string, proc: AppProcess.Interface) {
+   return (args: string[]) =>
+     proc
+       .run(
+-        ChildProcess.make("git", args, {
++        ChildProcess.make(gitExecutable, args, {
+           cwd,
+           extendEnv: true,
+           stdin: "ignore",
+diff --git a/packages/core/src/util/git-executable.ts b/packages/core/src/util/git-executable.ts
+new file mode 100644
+index 000000000000..e0e4f4349bf9
+--- /dev/null
++++ b/packages/core/src/util/git-executable.ts
+@@ -0,0 +1,6 @@
++import path from "path"
++import { which } from "./which.js"
++
++const resolved = process.platform === "win32" ? which("git") : undefined
++
++export const gitExecutable = resolved ? path.resolve(resolved) : "git"
+diff --git a/packages/core/src/vcs/git.ts b/packages/core/src/vcs/git.ts
+index e09fff14a4f8..38115608c588 100644
+--- a/packages/core/src/vcs/git.ts
++++ b/packages/core/src/vcs/git.ts
+@@ -8,6 +8,7 @@ import { AppProcess } from "@opencode-ai/util/process"
+ import type { DiffOptions, Interface } from "../vcs.js"
+ import { chunksByFile, emptyPatch, MAX_PATCH_BYTES, MAX_TOTAL_PATCH_BYTES, PATCH_CONTEXT_LINES } from "./patch.js"
+ import type { Patch } from "./patch.js"
++import { gitExecutable } from "../util/git-executable.js"
+ 
+ /**
+  * Git adapter for the Vcs service. Ported from the V1 pipeline: patches are
+@@ -128,7 +129,7 @@ function makeGit(proc: AppProcess.Interface) {
+   const run = Effect.fnUntraced(
+     function* (args: string[], opts: { cwd: string; maxOutputBytes?: number }) {
+       const result = yield* proc.run(
+-        ChildProcess.make("git", [...cfg, ...args], {
++        ChildProcess.make(gitExecutable, [...cfg, ...args], {
+           cwd: opts.cwd,
+           extendEnv: true,
+           stdin: "ignore",
+diff --git a/packages/util/src/cross-spawn-spawner.ts b/packages/util/src/cross-spawn-spawner.ts
+index 6a8a412b9538..3826a3eaea85 100644
+--- a/packages/util/src/cross-spawn-spawner.ts
++++ b/packages/util/src/cross-spawn-spawner.ts
+@@ -22,6 +22,7 @@ import { makeGlobalNode } from "./effect/app-node.js"
+ import { filesystem, path } from "./effect/app-node-platform.js"
+ 
+ const toError = (err: unknown): Error => (err instanceof globalThis.Error ? err : new globalThis.Error(String(err)))
++const nativeWindowsExtensions = new Set([".com", ".exe"])
+ 
+ const toTag = (err: NodeJS.ErrnoException): PlatformError.SystemErrorTag => {
+   switch (err.code) {
+@@ -261,7 +262,14 @@ const makeCrossSpawnSpawner = Effect.gen(function* () {
+   const launchProcess = (command: ChildProcess.StandardCommand, opts: NodeChildProcess.SpawnOptions) =>
+     Effect.callback<readonly [NodeChildProcess.ChildProcess, ExitSignal], PlatformError.PlatformError>((resume) => {
+       const signal = Deferred.makeUnsafe<readonly [code: number | null, signal: NodeJS.Signals | null]>()
+-      const proc = launch(command.command, command.args, opts)
++      const native =
++        process.platform === "win32" &&
++        !opts.shell &&
++        path.isAbsolute(command.command) &&
++        nativeWindowsExtensions.has(path.extname(command.command).toLowerCase())
++      const proc = native
++        ? NodeChildProcess.spawn(command.command, command.args, opts)
++        : launch(command.command, command.args, opts)
+       let end = false
+       let exit: readonly [code: number | null, signal: NodeJS.Signals | null] | undefined
+       proc.on("error", (err) => {

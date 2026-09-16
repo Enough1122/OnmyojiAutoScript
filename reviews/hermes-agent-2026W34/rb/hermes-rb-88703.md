@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. hermes_cli/gateway.py:`_prepare_profile_gateway_update_restart` — Positive: the cmdline-replay fallback composes correctly with the existing precedence — external-supervisor still short-circuits before any launch (with a guardrail test asserting both launchers would fail if reached), profile-derived relaunch stays preferred, and the replay uses the process's *own captured argv* because an unmappable profile has no other faithful restart description. The both-paths-fail case still returns None honestly.
+
+2. hermes_cli/update_cmd.py — Positive: converting the silent `continue` into stop-and-surface fixes the worst part of #88654 — not just version mixing, but the operator having no signal at all. Excluding those PIDs from the manual sweep prevents a redundant second SIGTERM, and the warning line names profile, PID, and reason. No change requested.

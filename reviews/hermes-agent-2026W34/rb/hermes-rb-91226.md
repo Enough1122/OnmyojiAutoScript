@@ -1,0 +1,10 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Correct root-cause fix for #91147 (the launch/default profile skipped `set_secret_scope`, so `get_secret` kept serving the process-start environ snapshot), and the compute_host cleanup split actually fixes a second latent bug where a failed `reset_hermes_home_override` skipped `reset_secret_scope`. Points to consider:
+
+1. tui_gateway/server.py:10775 — the per-turn install is now unconditional, including sessions that may have an inherited/outer scope (e.g. the multiplex flows exercised in the HA tests). Please confirm `set_secret_scope` stacks (token-based push/pop) rather than overwrites: if it overwrites, a turn that expected an outer multiplex or user-installed scope silently loses it for the duration of the turn. A one-line assertion/test covering "outer scope survives after reset" would pin whichever semantic is true.
+2. server.py:2335 (`_build`) — the install is wrapped in bare `except Exception: pass`. That was tolerable when it only covered named profiles, but it now guards the default path too, and a silent failure here resurrects exactly the stale-env symptom users will report as "still broken". At minimum log the exception (logger.debug/warning with session id) so a future regression is diagnosable.
+3. tests/tui_gateway/test_launch_profile_secret_scope.py — good unit coverage of the server helpers, but the third changed call site (tui_gateway/compute_host.py:554, non-profile sessions getting a launch-home scope before the `profile_home` branch) has no test. That's the path remote/compute sessions rely on; a small test asserting the scope resolves secrets from the shared home would close the gap.
+4. compute_host.py:556 vs server.py:7955 — both sites now implement "profile_home or hermes home" scope construction independently. Folding the fallback into `build_profile_secret_scope` (or a shared `install_turn_scope(home)`) would keep the two surfaces from drifting. (nit)
+
+No blocking issues found.

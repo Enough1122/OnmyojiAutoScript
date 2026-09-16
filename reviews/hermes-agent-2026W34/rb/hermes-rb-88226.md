@@ -1,0 +1,5 @@
+> AI code review - automated review for reference; please use your judgment.
+
+Reviewed the diff. Well-rounded local-relay support: EMAIL_IMAP_SSL/EMAIL_SMTP_SSL select IMAP4 vs IMAP4_SSL and gate STARTTLS (defaulting true so remote servers keep STARTTLS), the extracted _connect_imap helper removes three duplicated constructor sites, standalone sends get the same gate, plugin.yaml documents both variables, and adding the email connection vars to conftest's credential scrubbing fixes a real test-pollution vector. The _esecret_bool fix is a genuine latent bug repair: the old form called is_truthy_value("") which ignored the default entirely whenever a variable was set-but-empty.
+
+- Nit: the port-465 branch returns smtp_ssl_cls before the STARTTLS gate, so EMAIL_SMTP_SSL=false with port 465 still uses implicit TLS; probably the right outcome (465 is implicitly-TLS by convention) but worth one comment saying the flag intentionally does not apply there.

@@ -1,0 +1,4516 @@
+diff --git a/packages/client/package.json b/packages/client/package.json
+index de12a61080ba..7c24b8ca85f5 100644
+--- a/packages/client/package.json
++++ b/packages/client/package.json
+@@ -30,7 +30,7 @@
+     "generate": "bun run script/build.ts",
+     "check:generated": "bun run generate && git diff --exit-code -- src/promise/generated src/effect/generated src/effect/api",
+     "test": "bun test --timeout 5000",
+-    "typecheck": "tsgo --noEmit"
++    "typecheck": "tsgo --noEmit && tsgo --noEmit -p tsconfig.test.json"
+   },
+   "dependencies": {
+     "@opencode-ai/schema": "workspace:*",
+diff --git a/packages/client/src/effect/api/api.ts b/packages/client/src/effect/api/api.ts
+index dbcc071fc2cb..2598d2cf6491 100644
+--- a/packages/client/src/effect/api/api.ts
++++ b/packages/client/src/effect/api/api.ts
+@@ -12,10 +12,10 @@ import type { Brand } from "effect"
+ import type { Model } from "@opencode-ai/schema/model"
+ import type { SessionMessage } from "@opencode-ai/schema/session-message"
+ import type { SessionInbox } from "@opencode-ai/schema/session-inbox"
++import type { Event } from "@opencode-ai/schema/event"
+ import type { PromptInput } from "@opencode-ai/schema/prompt-input"
+ import type { AgentAttachment } from "@opencode-ai/schema/prompt"
+ import type { Skill } from "@opencode-ai/schema/skill"
+-import type { Event } from "@opencode-ai/schema/event"
+ import type { InstructionEntry } from "@opencode-ai/schema/instruction-entry"
+ import type { Schema } from "effect"
+ import type { EventLog } from "@opencode-ai/schema/event-log"
+@@ -139,36 +139,46 @@ export type Endpoint5_5Input = { readonly sessionID: Session.ID }
+ export type Endpoint5_5Output = Session.Info
+ export type SessionGetOperation<E = never> = (input: Endpoint5_5Input) => Effect.Effect<Endpoint5_5Output, E>
+ 
+-export type Endpoint5_6Input = { readonly sessionID: Session.ID }
+-export type Endpoint5_6Output = void
+-export type SessionRemoveOperation<E = never> = (input: Endpoint5_6Input) => Effect.Effect<Endpoint5_6Output, E>
++export type Endpoint5_6Input = { readonly sessionID: Session.ID; readonly recent?: number | undefined }
++export type Endpoint5_6Output = {
++  readonly session: Session.Info
++  readonly children: ReadonlyArray<Session.Info>
++  readonly inbox: ReadonlyArray<SessionInbox.Info>
++  readonly messages: ReadonlyArray<SessionMessage.Info>
++  readonly seq: Event.Seq
++}
++export type SessionSnapshotOperation<E = never> = (input: Endpoint5_6Input) => Effect.Effect<Endpoint5_6Output, E>
+ 
+-export type Endpoint5_7Input = { readonly sessionID: Session.ID; readonly boundary: Session.ForkRequestBoundary }
+-export type Endpoint5_7Output = Session.Info
+-export type SessionForkOperation<E = never> = (input: Endpoint5_7Input) => Effect.Effect<Endpoint5_7Output, E>
++export type Endpoint5_7Input = { readonly sessionID: Session.ID }
++export type Endpoint5_7Output = void
++export type SessionRemoveOperation<E = never> = (input: Endpoint5_7Input) => Effect.Effect<Endpoint5_7Output, E>
+ 
+-export type Endpoint5_8Input = { readonly sessionID: Session.ID; readonly agent: Agent.ID }
+-export type Endpoint5_8Output = void
+-export type SessionSwitchAgentOperation<E = never> = (input: Endpoint5_8Input) => Effect.Effect<Endpoint5_8Output, E>
++export type Endpoint5_8Input = { readonly sessionID: Session.ID; readonly boundary: Session.ForkRequestBoundary }
++export type Endpoint5_8Output = Session.Info
++export type SessionForkOperation<E = never> = (input: Endpoint5_8Input) => Effect.Effect<Endpoint5_8Output, E>
+ 
+-export type Endpoint5_9Input = { readonly sessionID: Session.ID; readonly model: Model.Ref }
++export type Endpoint5_9Input = { readonly sessionID: Session.ID; readonly agent: Agent.ID }
+ export type Endpoint5_9Output = void
+-export type SessionSwitchModelOperation<E = never> = (input: Endpoint5_9Input) => Effect.Effect<Endpoint5_9Output, E>
++export type SessionSwitchAgentOperation<E = never> = (input: Endpoint5_9Input) => Effect.Effect<Endpoint5_9Output, E>
+ 
+-export type Endpoint5_10Input = { readonly sessionID: Session.ID; readonly title: string }
++export type Endpoint5_10Input = { readonly sessionID: Session.ID; readonly model: Model.Ref }
+ export type Endpoint5_10Output = void
+-export type SessionRenameOperation<E = never> = (input: Endpoint5_10Input) => Effect.Effect<Endpoint5_10Output, E>
++export type SessionSwitchModelOperation<E = never> = (input: Endpoint5_10Input) => Effect.Effect<Endpoint5_10Output, E>
+ 
+-export type Endpoint5_11Input = {
++export type Endpoint5_11Input = { readonly sessionID: Session.ID; readonly title: string }
++export type Endpoint5_11Output = void
++export type SessionRenameOperation<E = never> = (input: Endpoint5_11Input) => Effect.Effect<Endpoint5_11Output, E>
++
++export type Endpoint5_12Input = {
+   readonly sessionID: Session.ID
+   readonly directory: AbsolutePath
+   readonly workspaceID?: Workspace.ID | undefined
+   readonly delivery?: SessionInbox.Delivery | undefined
+ }
+-export type Endpoint5_11Output = void
+-export type SessionMoveOperation<E = never> = (input: Endpoint5_11Input) => Effect.Effect<Endpoint5_11Output, E>
++export type Endpoint5_12Output = void
++export type SessionMoveOperation<E = never> = (input: Endpoint5_12Input) => Effect.Effect<Endpoint5_12Output, E>
+ 
+-export type Endpoint5_12Input = {
++export type Endpoint5_13Input = {
+   readonly sessionID: Session.ID
+   readonly id?: SessionMessage.ID | undefined
+   readonly text: string
+@@ -179,10 +189,10 @@ export type Endpoint5_12Input = {
+   readonly delivery?: SessionInbox.Delivery | undefined
+   readonly resume?: boolean | undefined
+ }
+-export type Endpoint5_12Output = SessionInbox.User
+-export type SessionPromptOperation<E = never> = (input: Endpoint5_12Input) => Effect.Effect<Endpoint5_12Output, E>
++export type Endpoint5_13Output = SessionInbox.User
++export type SessionPromptOperation<E = never> = (input: Endpoint5_13Input) => Effect.Effect<Endpoint5_13Output, E>
+ 
+-export type Endpoint5_13Input = {
++export type Endpoint5_14Input = {
+   readonly sessionID: Session.ID
+   readonly id?: SessionMessage.ID | undefined
+   readonly command: string
+@@ -195,19 +205,19 @@ export type Endpoint5_13Input = {
+   readonly delivery?: SessionInbox.Delivery | undefined
+   readonly resume?: boolean | undefined
+ }
+-export type Endpoint5_13Output = SessionInbox.User
+-export type SessionCommandOperation<E = never> = (input: Endpoint5_13Input) => Effect.Effect<Endpoint5_13Output, E>
++export type Endpoint5_14Output = SessionInbox.User
++export type SessionCommandOperation<E = never> = (input: Endpoint5_14Input) => Effect.Effect<Endpoint5_14Output, E>
+ 
+-export type Endpoint5_14Input = {
++export type Endpoint5_15Input = {
+   readonly sessionID: Session.ID
+   readonly id?: SessionMessage.ID | undefined
+   readonly skill: Skill.ID
+   readonly resume?: boolean | undefined
+ }
+-export type Endpoint5_14Output = void
+-export type SessionSkillOperation<E = never> = (input: Endpoint5_14Input) => Effect.Effect<Endpoint5_14Output, E>
++export type Endpoint5_15Output = void
++export type SessionSkillOperation<E = never> = (input: Endpoint5_15Input) => Effect.Effect<Endpoint5_15Output, E>
+ 
+-export type Endpoint5_15Input = {
++export type Endpoint5_16Input = {
+   readonly sessionID: Session.ID
+   readonly id?: SessionMessage.ID | undefined
+   readonly text: string
+@@ -216,97 +226,98 @@ export type Endpoint5_15Input = {
+   readonly delivery?: SessionInbox.Delivery | undefined
+   readonly resume?: boolean | undefined
+ }
+-export type Endpoint5_15Output = SessionInbox.Synthetic
+-export type SessionSyntheticOperation<E = never> = (input: Endpoint5_15Input) => Effect.Effect<Endpoint5_15Output, E>
++export type Endpoint5_16Output = SessionInbox.Synthetic
++export type SessionSyntheticOperation<E = never> = (input: Endpoint5_16Input) => Effect.Effect<Endpoint5_16Output, E>
+ 
+-export type Endpoint5_16Input = {
++export type Endpoint5_17Input = {
+   readonly sessionID: Session.ID
+   readonly id?: Event.ID | undefined
+   readonly command: string
+ }
+-export type Endpoint5_16Output = void
+-export type SessionShellOperation<E = never> = (input: Endpoint5_16Input) => Effect.Effect<Endpoint5_16Output, E>
++export type Endpoint5_17Output = void
++export type SessionShellOperation<E = never> = (input: Endpoint5_17Input) => Effect.Effect<Endpoint5_17Output, E>
+ 
+-export type Endpoint5_17Input = {
++export type Endpoint5_18Input = {
+   readonly sessionID: Session.ID
+   readonly id?: SessionMessage.ID | undefined
+   readonly delivery?: SessionInbox.Delivery | undefined
+ }
+-export type Endpoint5_17Output = SessionInbox.Compaction
+-export type SessionCompactOperation<E = never> = (input: Endpoint5_17Input) => Effect.Effect<Endpoint5_17Output, E>
++export type Endpoint5_18Output = SessionInbox.Compaction
++export type SessionCompactOperation<E = never> = (input: Endpoint5_18Input) => Effect.Effect<Endpoint5_18Output, E>
+ 
+-export type Endpoint5_18Input = { readonly sessionID: Session.ID }
+-export type Endpoint5_18Output = void
+-export type SessionWaitOperation<E = never> = (input: Endpoint5_18Input) => Effect.Effect<Endpoint5_18Output, E>
++export type Endpoint5_19Input = { readonly sessionID: Session.ID }
++export type Endpoint5_19Output = void
++export type SessionWaitOperation<E = never> = (input: Endpoint5_19Input) => Effect.Effect<Endpoint5_19Output, E>
+ 
+-export type Endpoint5_19Input = {
++export type Endpoint5_20Input = {
+   readonly sessionID: Session.ID
+   readonly messageID: SessionMessage.ID
+   readonly files?: boolean | undefined
+ }
+-export type Endpoint5_19Output = Session.Revert
+-export type SessionRevertStageOperation<E = never> = (input: Endpoint5_19Input) => Effect.Effect<Endpoint5_19Output, E>
+-
+-export type Endpoint5_20Input = { readonly sessionID: Session.ID }
+-export type Endpoint5_20Output = void
+-export type SessionRevertClearOperation<E = never> = (input: Endpoint5_20Input) => Effect.Effect<Endpoint5_20Output, E>
++export type Endpoint5_20Output = Session.Revert
++export type SessionRevertStageOperation<E = never> = (input: Endpoint5_20Input) => Effect.Effect<Endpoint5_20Output, E>
+ 
+ export type Endpoint5_21Input = { readonly sessionID: Session.ID }
+ export type Endpoint5_21Output = void
+-export type SessionRevertCommitOperation<E = never> = (input: Endpoint5_21Input) => Effect.Effect<Endpoint5_21Output, E>
++export type SessionRevertClearOperation<E = never> = (input: Endpoint5_21Input) => Effect.Effect<Endpoint5_21Output, E>
+ 
+ export type Endpoint5_22Input = { readonly sessionID: Session.ID }
+-export type Endpoint5_22Output = ReadonlyArray<SessionMessage.Info>
+-export type SessionContextOperation<E = never> = (input: Endpoint5_22Input) => Effect.Effect<Endpoint5_22Output, E>
++export type Endpoint5_22Output = void
++export type SessionRevertCommitOperation<E = never> = (input: Endpoint5_22Input) => Effect.Effect<Endpoint5_22Output, E>
+ 
+ export type Endpoint5_23Input = { readonly sessionID: Session.ID }
+-export type Endpoint5_23Output = ReadonlyArray<SessionInbox.Info>
+-export type SessionInboxListOperation<E = never> = (input: Endpoint5_23Input) => Effect.Effect<Endpoint5_23Output, E>
++export type Endpoint5_23Output = ReadonlyArray<SessionMessage.Info>
++export type SessionContextOperation<E = never> = (input: Endpoint5_23Input) => Effect.Effect<Endpoint5_23Output, E>
+ 
+-export type Endpoint5_24Input = { readonly sessionID: Session.ID; readonly inboxID: SessionMessage.ID }
+-export type Endpoint5_24Output = void
+-export type SessionInboxCancelOperation<E = never> = (input: Endpoint5_24Input) => Effect.Effect<Endpoint5_24Output, E>
++export type Endpoint5_24Input = { readonly sessionID: Session.ID }
++export type Endpoint5_24Output = ReadonlyArray<SessionInbox.Info>
++export type SessionInboxListOperation<E = never> = (input: Endpoint5_24Input) => Effect.Effect<Endpoint5_24Output, E>
+ 
+ export type Endpoint5_25Input = { readonly sessionID: Session.ID; readonly inboxID: SessionMessage.ID }
+ export type Endpoint5_25Output = void
+-export type SessionInboxSteerOperation<E = never> = (input: Endpoint5_25Input) => Effect.Effect<Endpoint5_25Output, E>
++export type SessionInboxCancelOperation<E = never> = (input: Endpoint5_25Input) => Effect.Effect<Endpoint5_25Output, E>
+ 
+ export type Endpoint5_26Input = { readonly sessionID: Session.ID; readonly inboxID: SessionMessage.ID }
+ export type Endpoint5_26Output = void
+-export type SessionInboxQueueOperation<E = never> = (input: Endpoint5_26Input) => Effect.Effect<Endpoint5_26Output, E>
++export type SessionInboxSteerOperation<E = never> = (input: Endpoint5_26Input) => Effect.Effect<Endpoint5_26Output, E>
++
++export type Endpoint5_27Input = { readonly sessionID: Session.ID; readonly inboxID: SessionMessage.ID }
++export type Endpoint5_27Output = void
++export type SessionInboxQueueOperation<E = never> = (input: Endpoint5_27Input) => Effect.Effect<Endpoint5_27Output, E>
+ 
+-export type Endpoint5_27Input = { readonly sessionID: Session.ID }
+-export type Endpoint5_27Output = ReadonlyArray<InstructionEntry.Info>
++export type Endpoint5_28Input = { readonly sessionID: Session.ID }
++export type Endpoint5_28Output = ReadonlyArray<InstructionEntry.Info>
+ export type SessionInstructionsEntryListOperation<E = never> = (
+-  input: Endpoint5_27Input,
+-) => Effect.Effect<Endpoint5_27Output, E>
++  input: Endpoint5_28Input,
++) => Effect.Effect<Endpoint5_28Output, E>
+ 
+-export type Endpoint5_28Input = {
++export type Endpoint5_29Input = {
+   readonly sessionID: Session.ID
+   readonly key: InstructionEntry.Key
+   readonly value: Schema.Json
+ }
+-export type Endpoint5_28Output = void
+-export type SessionInstructionsEntryPutOperation<E = never> = (
+-  input: Endpoint5_28Input,
+-) => Effect.Effect<Endpoint5_28Output, E>
+-
+-export type Endpoint5_29Input = { readonly sessionID: Session.ID; readonly key: InstructionEntry.Key }
+ export type Endpoint5_29Output = void
+-export type SessionInstructionsEntryRemoveOperation<E = never> = (
++export type SessionInstructionsEntryPutOperation<E = never> = (
+   input: Endpoint5_29Input,
+ ) => Effect.Effect<Endpoint5_29Output, E>
+ 
+-export type Endpoint5_30Input = { readonly sessionID: Session.ID; readonly prompt: string }
+-export type Endpoint5_30Output = { readonly text: string }
+-export type SessionGenerateOperation<E = never> = (input: Endpoint5_30Input) => Effect.Effect<Endpoint5_30Output, E>
++export type Endpoint5_30Input = { readonly sessionID: Session.ID; readonly key: InstructionEntry.Key }
++export type Endpoint5_30Output = void
++export type SessionInstructionsEntryRemoveOperation<E = never> = (
++  input: Endpoint5_30Input,
++) => Effect.Effect<Endpoint5_30Output, E>
++
++export type Endpoint5_31Input = { readonly sessionID: Session.ID; readonly prompt: string }
++export type Endpoint5_31Output = { readonly text: string }
++export type SessionGenerateOperation<E = never> = (input: Endpoint5_31Input) => Effect.Effect<Endpoint5_31Output, E>
+ 
+-export type Endpoint5_31Input = {
++export type Endpoint5_32Input = {
+   readonly sessionID: Session.ID
+   readonly after?: Event.Seq | undefined
+   readonly follow?: boolean | undefined
++  readonly ephemeral?: boolean | undefined
+ }
+-export type Endpoint5_31Output =
++export type Endpoint5_32Output =
+   | (
+       | {
+           readonly id: Event.ID
+@@ -899,24 +910,101 @@ export type Endpoint5_31Output =
+           }
+         }
+     )
++  | {
++      readonly id: Event.ID
++      readonly created: number
++      readonly metadata?: { readonly [x: string]: unknown } | undefined
++      readonly type: "session.usage.updated"
++      readonly location?: Location.Ref | undefined
++      readonly data: {
++        readonly sessionID: Session.ID
++        readonly cost: number & Brand.Brand<"Money.USD">
++        readonly tokens: {
++          readonly input: number
++          readonly output: number
++          readonly reasoning: number
++          readonly cache: { readonly read: number; readonly write: number }
++        }
++      }
++    }
++  | {
++      readonly id: Event.ID
++      readonly created: number
++      readonly metadata?: { readonly [x: string]: unknown } | undefined
++      readonly type: "session.text.delta"
++      readonly location?: Location.Ref | undefined
++      readonly data: {
++        readonly sessionID: Session.ID
++        readonly assistantMessageID: SessionMessage.ID
++        readonly ordinal: number
++        readonly delta: string
++      }
++    }
++  | {
++      readonly id: Event.ID
++      readonly created: number
++      readonly metadata?: { readonly [x: string]: unknown } | undefined
++      readonly type: "session.reasoning.delta"
++      readonly location?: Location.Ref | undefined
++      readonly data: {
++        readonly sessionID: Session.ID
++        readonly assistantMessageID: SessionMessage.ID
++        readonly ordinal: number
++        readonly delta: string
++      }
++    }
++  | {
++      readonly id: Event.ID
++      readonly created: number
++      readonly metadata?: { readonly [x: string]: unknown } | undefined
++      readonly type: "session.tool.input.delta"
++      readonly location?: Location.Ref | undefined
++      readonly data: {
++        readonly sessionID: Session.ID
++        readonly assistantMessageID: SessionMessage.ID
++        readonly id: string
++        readonly delta: string
++      }
++    }
++  | {
++      readonly id: Event.ID
++      readonly created: number
++      readonly metadata?: { readonly [x: string]: unknown } | undefined
++      readonly type: "session.tool.progress"
++      readonly location?: Location.Ref | undefined
++      readonly data: {
++        readonly sessionID: Session.ID
++        readonly assistantMessageID: SessionMessage.ID
++        readonly id: string
++        readonly metadata: { readonly [x: string]: Schema.Json }
++      }
++    }
++  | {
++      readonly id: Event.ID
++      readonly created: number
++      readonly metadata?: { readonly [x: string]: unknown } | undefined
++      readonly type: "session.compaction.delta"
++      readonly location?: Location.Ref | undefined
++      readonly data: { readonly sessionID: Session.ID; readonly text: string }
++    }
+   | EventLog.Synced
+-export type SessionLogOperation<E = never> = (input: Endpoint5_31Input) => Stream.Stream<Endpoint5_31Output, E>
+-
+-export type Endpoint5_32Input = { readonly sessionID: Session.ID; readonly continue?: boolean | undefined }
+-export type Endpoint5_32Output = void
+-export type SessionInterruptOperation<E = never> = (input: Endpoint5_32Input) => Effect.Effect<Endpoint5_32Output, E>
++export type SessionLogOperation<E = never> = (input: Endpoint5_32Input) => Stream.Stream<Endpoint5_32Output, E>
+ 
+-export type Endpoint5_33Input = { readonly sessionID: Session.ID }
++export type Endpoint5_33Input = { readonly sessionID: Session.ID; readonly continue?: boolean | undefined }
+ export type Endpoint5_33Output = void
+-export type SessionBackgroundOperation<E = never> = (input: Endpoint5_33Input) => Effect.Effect<Endpoint5_33Output, E>
++export type SessionInterruptOperation<E = never> = (input: Endpoint5_33Input) => Effect.Effect<Endpoint5_33Output, E>
++
++export type Endpoint5_34Input = { readonly sessionID: Session.ID }
++export type Endpoint5_34Output = void
++export type SessionBackgroundOperation<E = never> = (input: Endpoint5_34Input) => Effect.Effect<Endpoint5_34Output, E>
+ 
+-export type Endpoint5_34Input = { readonly sessionID: Session.ID; readonly messageID: SessionMessage.ID }
+-export type Endpoint5_34Output = SessionMessage.Info
+-export type SessionMessageOperation<E = never> = (input: Endpoint5_34Input) => Effect.Effect<Endpoint5_34Output, E>
++export type Endpoint5_35Input = { readonly sessionID: Session.ID; readonly messageID: SessionMessage.ID }
++export type Endpoint5_35Output = SessionMessage.Info
++export type SessionMessageOperation<E = never> = (input: Endpoint5_35Input) => Effect.Effect<Endpoint5_35Output, E>
+ 
+-export type Endpoint5_35Input = { readonly sessionID: Session.ID; readonly variables: { readonly [x: string]: string } }
+-export type Endpoint5_35Output = void
+-export type SessionEnvironmentOperation<E = never> = (input: Endpoint5_35Input) => Effect.Effect<Endpoint5_35Output, E>
++export type Endpoint5_36Input = { readonly sessionID: Session.ID; readonly variables: { readonly [x: string]: string } }
++export type Endpoint5_36Output = void
++export type SessionEnvironmentOperation<E = never> = (input: Endpoint5_36Input) => Effect.Effect<Endpoint5_36Output, E>
+ 
+ export interface SessionApi<E = never> {
+   readonly list: SessionListOperation<E>
+@@ -925,6 +1013,7 @@ export interface SessionApi<E = never> {
+   readonly export: SessionExportOperation<E>
+   readonly active: SessionActiveOperation<E>
+   readonly get: SessionGetOperation<E>
++  readonly snapshot: SessionSnapshotOperation<E>
+   readonly remove: SessionRemoveOperation<E>
+   readonly fork: SessionForkOperation<E>
+   readonly switchAgent: SessionSwitchAgentOperation<E>
+diff --git a/packages/client/src/effect/generated/client.ts b/packages/client/src/effect/generated/client.ts
+index dccea27fa090..0ebc3e2d9eec 100644
+--- a/packages/client/src/effect/generated/client.ts
++++ b/packages/client/src/effect/generated/client.ts
+@@ -86,6 +86,8 @@ import type {
+   Endpoint5_34Output,
+   Endpoint5_35Input,
+   Endpoint5_35Output,
++  Endpoint5_36Input,
++  Endpoint5_36Output,
+   Endpoint6_0Input,
+   Endpoint6_0Output,
+   Endpoint7_0Input,
+@@ -350,48 +352,56 @@ const Endpoint5_5 = (raw: RawClient["server.session"]) => (input: Endpoint5_5Inp
+ 
+ const Endpoint5_6 = (raw: RawClient["server.session"]) => (input: Endpoint5_6Input) =>
+   preserveEffect<Endpoint5_6Output>()(
+-    raw["session.remove"]({ params: { sessionID: input["sessionID"] } }).pipe(Effect.mapError(mapClientError)),
++    raw["session.snapshot"]({ params: { sessionID: input["sessionID"] }, query: { recent: input["recent"] } }).pipe(
++      Effect.mapError(mapClientError),
++      Effect.map((value) => value.data),
++    ),
+   )
+ 
+ const Endpoint5_7 = (raw: RawClient["server.session"]) => (input: Endpoint5_7Input) =>
+   preserveEffect<Endpoint5_7Output>()(
+-    raw["session.fork"]({ params: { sessionID: input["sessionID"] }, payload: { boundary: input["boundary"] } }).pipe(
+-      Effect.mapError(mapClientError),
+-      Effect.map((value) => value.data),
+-    ),
++    raw["session.remove"]({ params: { sessionID: input["sessionID"] } }).pipe(Effect.mapError(mapClientError)),
+   )
+ 
+ const Endpoint5_8 = (raw: RawClient["server.session"]) => (input: Endpoint5_8Input) =>
+   preserveEffect<Endpoint5_8Output>()(
+-    raw["session.switchAgent"]({ params: { sessionID: input["sessionID"] }, payload: { agent: input["agent"] } }).pipe(
++    raw["session.fork"]({ params: { sessionID: input["sessionID"] }, payload: { boundary: input["boundary"] } }).pipe(
+       Effect.mapError(mapClientError),
++      Effect.map((value) => value.data),
+     ),
+   )
+ 
+ const Endpoint5_9 = (raw: RawClient["server.session"]) => (input: Endpoint5_9Input) =>
+   preserveEffect<Endpoint5_9Output>()(
+-    raw["session.switchModel"]({ params: { sessionID: input["sessionID"] }, payload: { model: input["model"] } }).pipe(
++    raw["session.switchAgent"]({ params: { sessionID: input["sessionID"] }, payload: { agent: input["agent"] } }).pipe(
+       Effect.mapError(mapClientError),
+     ),
+   )
+ 
+ const Endpoint5_10 = (raw: RawClient["server.session"]) => (input: Endpoint5_10Input) =>
+   preserveEffect<Endpoint5_10Output>()(
+-    raw["session.rename"]({ params: { sessionID: input["sessionID"] }, payload: { title: input["title"] } }).pipe(
++    raw["session.switchModel"]({ params: { sessionID: input["sessionID"] }, payload: { model: input["model"] } }).pipe(
+       Effect.mapError(mapClientError),
+     ),
+   )
+ 
+ const Endpoint5_11 = (raw: RawClient["server.session"]) => (input: Endpoint5_11Input) =>
+   preserveEffect<Endpoint5_11Output>()(
++    raw["session.rename"]({ params: { sessionID: input["sessionID"] }, payload: { title: input["title"] } }).pipe(
++      Effect.mapError(mapClientError),
++    ),
++  )
++
++const Endpoint5_12 = (raw: RawClient["server.session"]) => (input: Endpoint5_12Input) =>
++  preserveEffect<Endpoint5_12Output>()(
+     raw["session.move"]({
+       params: { sessionID: input["sessionID"] },
+       payload: { directory: input["directory"], workspaceID: input["workspaceID"], delivery: input["delivery"] },
+     }).pipe(Effect.mapError(mapClientError)),
+   )
+ 
+-const Endpoint5_12 = (raw: RawClient["server.session"]) => (input: Endpoint5_12Input) =>
+-  preserveEffect<Endpoint5_12Output>()(
++const Endpoint5_13 = (raw: RawClient["server.session"]) => (input: Endpoint5_13Input) =>
++  preserveEffect<Endpoint5_13Output>()(
+     raw["session.prompt"]({
+       params: { sessionID: input["sessionID"] },
+       payload: {
+@@ -410,8 +420,8 @@ const Endpoint5_12 = (raw: RawClient["server.session"]) => (input: Endpoint5_12I
+     ),
+   )
+ 
+-const Endpoint5_13 = (raw: RawClient["server.session"]) => (input: Endpoint5_13Input) =>
+-  preserveEffect<Endpoint5_13Output>()(
++const Endpoint5_14 = (raw: RawClient["server.session"]) => (input: Endpoint5_14Input) =>
++  preserveEffect<Endpoint5_14Output>()(
+     raw["session.command"]({
+       params: { sessionID: input["sessionID"] },
+       payload: {
+@@ -432,16 +442,16 @@ const Endpoint5_13 = (raw: RawClient["server.session"]) => (input: Endpoint5_13I
+     ),
+   )
+ 
+-const Endpoint5_14 = (raw: RawClient["server.session"]) => (input: Endpoint5_14Input) =>
+-  preserveEffect<Endpoint5_14Output>()(
++const Endpoint5_15 = (raw: RawClient["server.session"]) => (input: Endpoint5_15Input) =>
++  preserveEffect<Endpoint5_15Output>()(
+     raw["session.skill"]({
+       params: { sessionID: input["sessionID"] },
+       payload: { id: input["id"], skill: input["skill"], resume: input["resume"] },
+     }).pipe(Effect.mapError(mapClientError)),
+   )
+ 
+-const Endpoint5_15 = (raw: RawClient["server.session"]) => (input: Endpoint5_15Input) =>
+-  preserveEffect<Endpoint5_15Output>()(
++const Endpoint5_16 = (raw: RawClient["server.session"]) => (input: Endpoint5_16Input) =>
++  preserveEffect<Endpoint5_16Output>()(
+     raw["session.synthetic"]({
+       params: { sessionID: input["sessionID"] },
+       payload: {
+@@ -458,16 +468,16 @@ const Endpoint5_15 = (raw: RawClient["server.session"]) => (input: Endpoint5_15I
+     ),
+   )
+ 
+-const Endpoint5_16 = (raw: RawClient["server.session"]) => (input: Endpoint5_16Input) =>
+-  preserveEffect<Endpoint5_16Output>()(
++const Endpoint5_17 = (raw: RawClient["server.session"]) => (input: Endpoint5_17Input) =>
++  preserveEffect<Endpoint5_17Output>()(
+     raw["session.shell"]({
+       params: { sessionID: input["sessionID"] },
+       payload: { id: input["id"], command: input["command"] },
+     }).pipe(Effect.mapError(mapClientError)),
+   )
+ 
+-const Endpoint5_17 = (raw: RawClient["server.session"]) => (input: Endpoint5_17Input) =>
+-  preserveEffect<Endpoint5_17Output>()(
++const Endpoint5_18 = (raw: RawClient["server.session"]) => (input: Endpoint5_18Input) =>
++  preserveEffect<Endpoint5_18Output>()(
+     raw["session.compact"]({
+       params: { sessionID: input["sessionID"] },
+       payload: { id: input["id"], delivery: input["delivery"] },
+@@ -477,13 +487,13 @@ const Endpoint5_17 = (raw: RawClient["server.session"]) => (input: Endpoint5_17I
+     ),
+   )
+ 
+-const Endpoint5_18 = (raw: RawClient["server.session"]) => (input: Endpoint5_18Input) =>
+-  preserveEffect<Endpoint5_18Output>()(
++const Endpoint5_19 = (raw: RawClient["server.session"]) => (input: Endpoint5_19Input) =>
++  preserveEffect<Endpoint5_19Output>()(
+     raw["session.wait"]({ params: { sessionID: input["sessionID"] } }).pipe(Effect.mapError(mapClientError)),
+   )
+ 
+-const Endpoint5_19 = (raw: RawClient["server.session"]) => (input: Endpoint5_19Input) =>
+-  preserveEffect<Endpoint5_19Output>()(
++const Endpoint5_20 = (raw: RawClient["server.session"]) => (input: Endpoint5_20Input) =>
++  preserveEffect<Endpoint5_20Output>()(
+     raw["session.revert.stage"]({
+       params: { sessionID: input["sessionID"] },
+       payload: { messageID: input["messageID"], files: input["files"] },
+@@ -493,27 +503,19 @@ const Endpoint5_19 = (raw: RawClient["server.session"]) => (input: Endpoint5_19I
+     ),
+   )
+ 
+-const Endpoint5_20 = (raw: RawClient["server.session"]) => (input: Endpoint5_20Input) =>
+-  preserveEffect<Endpoint5_20Output>()(
+-    raw["session.revert.clear"]({ params: { sessionID: input["sessionID"] } }).pipe(Effect.mapError(mapClientError)),
+-  )
+-
+ const Endpoint5_21 = (raw: RawClient["server.session"]) => (input: Endpoint5_21Input) =>
+   preserveEffect<Endpoint5_21Output>()(
+-    raw["session.revert.commit"]({ params: { sessionID: input["sessionID"] } }).pipe(Effect.mapError(mapClientError)),
++    raw["session.revert.clear"]({ params: { sessionID: input["sessionID"] } }).pipe(Effect.mapError(mapClientError)),
+   )
+ 
+ const Endpoint5_22 = (raw: RawClient["server.session"]) => (input: Endpoint5_22Input) =>
+   preserveEffect<Endpoint5_22Output>()(
+-    raw["session.context"]({ params: { sessionID: input["sessionID"] } }).pipe(
+-      Effect.mapError(mapClientError),
+-      Effect.map((value) => value.data),
+-    ),
++    raw["session.revert.commit"]({ params: { sessionID: input["sessionID"] } }).pipe(Effect.mapError(mapClientError)),
+   )
+ 
+ const Endpoint5_23 = (raw: RawClient["server.session"]) => (input: Endpoint5_23Input) =>
+   preserveEffect<Endpoint5_23Output>()(
+-    raw["session.inbox.list"]({ params: { sessionID: input["sessionID"] } }).pipe(
++    raw["session.context"]({ params: { sessionID: input["sessionID"] } }).pipe(
+       Effect.mapError(mapClientError),
+       Effect.map((value) => value.data),
+     ),
+@@ -521,62 +523,70 @@ const Endpoint5_23 = (raw: RawClient["server.session"]) => (input: Endpoint5_23I
+ 
+ const Endpoint5_24 = (raw: RawClient["server.session"]) => (input: Endpoint5_24Input) =>
+   preserveEffect<Endpoint5_24Output>()(
+-    raw["session.inbox.cancel"]({ params: { sessionID: input["sessionID"], inboxID: input["inboxID"] } }).pipe(
++    raw["session.inbox.list"]({ params: { sessionID: input["sessionID"] } }).pipe(
+       Effect.mapError(mapClientError),
++      Effect.map((value) => value.data),
+     ),
+   )
+ 
+ const Endpoint5_25 = (raw: RawClient["server.session"]) => (input: Endpoint5_25Input) =>
+   preserveEffect<Endpoint5_25Output>()(
+-    raw["session.inbox.steer"]({ params: { sessionID: input["sessionID"], inboxID: input["inboxID"] } }).pipe(
++    raw["session.inbox.cancel"]({ params: { sessionID: input["sessionID"], inboxID: input["inboxID"] } }).pipe(
+       Effect.mapError(mapClientError),
+     ),
+   )
+ 
+ const Endpoint5_26 = (raw: RawClient["server.session"]) => (input: Endpoint5_26Input) =>
+   preserveEffect<Endpoint5_26Output>()(
+-    raw["session.inbox.queue"]({ params: { sessionID: input["sessionID"], inboxID: input["inboxID"] } }).pipe(
++    raw["session.inbox.steer"]({ params: { sessionID: input["sessionID"], inboxID: input["inboxID"] } }).pipe(
+       Effect.mapError(mapClientError),
+     ),
+   )
+ 
+ const Endpoint5_27 = (raw: RawClient["server.session"]) => (input: Endpoint5_27Input) =>
+   preserveEffect<Endpoint5_27Output>()(
+-    raw["session.instructions.entry.list"]({ params: { sessionID: input["sessionID"] } }).pipe(
++    raw["session.inbox.queue"]({ params: { sessionID: input["sessionID"], inboxID: input["inboxID"] } }).pipe(
+       Effect.mapError(mapClientError),
+-      Effect.map((value) => value.data),
+     ),
+   )
+ 
+ const Endpoint5_28 = (raw: RawClient["server.session"]) => (input: Endpoint5_28Input) =>
+   preserveEffect<Endpoint5_28Output>()(
++    raw["session.instructions.entry.list"]({ params: { sessionID: input["sessionID"] } }).pipe(
++      Effect.mapError(mapClientError),
++      Effect.map((value) => value.data),
++    ),
++  )
++
++const Endpoint5_29 = (raw: RawClient["server.session"]) => (input: Endpoint5_29Input) =>
++  preserveEffect<Endpoint5_29Output>()(
+     raw["session.instructions.entry.put"]({
+       params: { sessionID: input["sessionID"], key: input["key"] },
+       payload: { value: input["value"] },
+     }).pipe(Effect.mapError(mapClientError)),
+   )
+ 
+-const Endpoint5_29 = (raw: RawClient["server.session"]) => (input: Endpoint5_29Input) =>
+-  preserveEffect<Endpoint5_29Output>()(
++const Endpoint5_30 = (raw: RawClient["server.session"]) => (input: Endpoint5_30Input) =>
++  preserveEffect<Endpoint5_30Output>()(
+     raw["session.instructions.entry.remove"]({ params: { sessionID: input["sessionID"], key: input["key"] } }).pipe(
+       Effect.mapError(mapClientError),
+     ),
+   )
+ 
+-const Endpoint5_30 = (raw: RawClient["server.session"]) => (input: Endpoint5_30Input) =>
+-  preserveEffect<Endpoint5_30Output>()(
++const Endpoint5_31 = (raw: RawClient["server.session"]) => (input: Endpoint5_31Input) =>
++  preserveEffect<Endpoint5_31Output>()(
+     raw["session.generate"]({ params: { sessionID: input["sessionID"] }, payload: { prompt: input["prompt"] } }).pipe(
+       Effect.mapError(mapClientError),
+       Effect.map((value) => value.data),
+     ),
+   )
+ 
+-const Endpoint5_31 = (raw: RawClient["server.session"]) => (input: Endpoint5_31Input) =>
+-  preserveStream<Endpoint5_31Output>()(
++const Endpoint5_32 = (raw: RawClient["server.session"]) => (input: Endpoint5_32Input) =>
++  preserveStream<Endpoint5_32Output>()(
+     Stream.unwrap(
+       raw["session.log"]({
+         params: { sessionID: input["sessionID"] },
+-        query: { after: input["after"], follow: input["follow"] },
++        query: { after: input["after"], follow: input["follow"], ephemeral: input["ephemeral"] },
+       }).pipe(
+         Effect.mapError(mapClientError),
+         Effect.map((stream) => stream.pipe(Stream.mapError(mapClientError))),
+@@ -584,29 +594,29 @@ const Endpoint5_31 = (raw: RawClient["server.session"]) => (input: Endpoint5_31I
+     ),
+   )
+ 
+-const Endpoint5_32 = (raw: RawClient["server.session"]) => (input: Endpoint5_32Input) =>
+-  preserveEffect<Endpoint5_32Output>()(
++const Endpoint5_33 = (raw: RawClient["server.session"]) => (input: Endpoint5_33Input) =>
++  preserveEffect<Endpoint5_33Output>()(
+     raw["session.interrupt"]({
+       params: { sessionID: input["sessionID"] },
+       query: { continue: input["continue"] },
+     }).pipe(Effect.mapError(mapClientError)),
+   )
+ 
+-const Endpoint5_33 = (raw: RawClient["server.session"]) => (input: Endpoint5_33Input) =>
+-  preserveEffect<Endpoint5_33Output>()(
++const Endpoint5_34 = (raw: RawClient["server.session"]) => (input: Endpoint5_34Input) =>
++  preserveEffect<Endpoint5_34Output>()(
+     raw["session.background"]({ params: { sessionID: input["sessionID"] } }).pipe(Effect.mapError(mapClientError)),
+   )
+ 
+-const Endpoint5_34 = (raw: RawClient["server.session"]) => (input: Endpoint5_34Input) =>
+-  preserveEffect<Endpoint5_34Output>()(
++const Endpoint5_35 = (raw: RawClient["server.session"]) => (input: Endpoint5_35Input) =>
++  preserveEffect<Endpoint5_35Output>()(
+     raw["session.message"]({ params: { sessionID: input["sessionID"], messageID: input["messageID"] } }).pipe(
+       Effect.mapError(mapClientError),
+       Effect.map((value) => value.data),
+     ),
+   )
+ 
+-const Endpoint5_35 = (raw: RawClient["server.session"]) => (input: Endpoint5_35Input) =>
+-  preserveEffect<Endpoint5_35Output>()(
++const Endpoint5_36 = (raw: RawClient["server.session"]) => (input: Endpoint5_36Input) =>
++  preserveEffect<Endpoint5_36Output>()(
+     raw["session.environment"]({
+       params: { sessionID: input["sessionID"] },
+       payload: { variables: input["variables"] },
+@@ -620,29 +630,30 @@ const adaptGroup5 = (raw: RawClient["server.session"]) => ({
+   export: Endpoint5_3(raw),
+   active: Endpoint5_4(raw),
+   get: Endpoint5_5(raw),
+-  remove: Endpoint5_6(raw),
+-  fork: Endpoint5_7(raw),
+-  switchAgent: Endpoint5_8(raw),
+-  switchModel: Endpoint5_9(raw),
+-  rename: Endpoint5_10(raw),
+-  move: Endpoint5_11(raw),
+-  prompt: Endpoint5_12(raw),
+-  command: Endpoint5_13(raw),
+-  skill: Endpoint5_14(raw),
+-  synthetic: Endpoint5_15(raw),
+-  shell: Endpoint5_16(raw),
+-  compact: Endpoint5_17(raw),
+-  wait: Endpoint5_18(raw),
+-  revert: { stage: Endpoint5_19(raw), clear: Endpoint5_20(raw), commit: Endpoint5_21(raw) },
+-  context: Endpoint5_22(raw),
+-  inbox: { list: Endpoint5_23(raw), cancel: Endpoint5_24(raw), steer: Endpoint5_25(raw), queue: Endpoint5_26(raw) },
+-  instructions: { entry: { list: Endpoint5_27(raw), put: Endpoint5_28(raw), remove: Endpoint5_29(raw) } },
+-  generate: Endpoint5_30(raw),
+-  log: Endpoint5_31(raw),
+-  interrupt: Endpoint5_32(raw),
+-  background: Endpoint5_33(raw),
+-  message: Endpoint5_34(raw),
+-  environment: Endpoint5_35(raw),
++  snapshot: Endpoint5_6(raw),
++  remove: Endpoint5_7(raw),
++  fork: Endpoint5_8(raw),
++  switchAgent: Endpoint5_9(raw),
++  switchModel: Endpoint5_10(raw),
++  rename: Endpoint5_11(raw),
++  move: Endpoint5_12(raw),
++  prompt: Endpoint5_13(raw),
++  command: Endpoint5_14(raw),
++  skill: Endpoint5_15(raw),
++  synthetic: Endpoint5_16(raw),
++  shell: Endpoint5_17(raw),
++  compact: Endpoint5_18(raw),
++  wait: Endpoint5_19(raw),
++  revert: { stage: Endpoint5_20(raw), clear: Endpoint5_21(raw), commit: Endpoint5_22(raw) },
++  context: Endpoint5_23(raw),
++  inbox: { list: Endpoint5_24(raw), cancel: Endpoint5_25(raw), steer: Endpoint5_26(raw), queue: Endpoint5_27(raw) },
++  instructions: { entry: { list: Endpoint5_28(raw), put: Endpoint5_29(raw), remove: Endpoint5_30(raw) } },
++  generate: Endpoint5_31(raw),
++  log: Endpoint5_32(raw),
++  interrupt: Endpoint5_33(raw),
++  background: Endpoint5_34(raw),
++  message: Endpoint5_35(raw),
++  environment: Endpoint5_36(raw),
+ })
+ 
+ const Endpoint6_0 = (raw: RawClient["server.message"]) => (input: Endpoint6_0Input) =>
+diff --git a/packages/client/src/promise/generated/client.ts b/packages/client/src/promise/generated/client.ts
+index 3d5b02b21e03..128f5d4d65ff 100644
+--- a/packages/client/src/promise/generated/client.ts
++++ b/packages/client/src/promise/generated/client.ts
+@@ -20,6 +20,8 @@ import type {
+   SessionActiveOutput,
+   SessionGetInput,
+   SessionGetOutput,
++  SessionSnapshotInput,
++  SessionSnapshotOutput,
+   SessionRemoveInput,
+   SessionRemoveOutput,
+   SessionForkInput,
+@@ -514,6 +516,18 @@ export function make(options: ClientOptions) {
+           },
+           requestOptions,
+         ).then((value) => value.data),
++      snapshot: (input: SessionSnapshotInput, requestOptions?: RequestOptions) =>
++        request<{ readonly data: SessionSnapshotOutput }>(
++          {
++            method: "GET",
++            path: `/api/session/${encodeURIComponent(input.sessionID)}/snapshot`,
++            query: { recent: input["recent"] },
++            successStatus: 200,
++            declaredStatuses: [404, 500, 401, 400],
++            empty: false,
++          },
++          requestOptions,
++        ).then((value) => value.data),
+       remove: (input: SessionRemoveInput, requestOptions?: RequestOptions) =>
+         request<SessionRemoveOutput>(
+           {
+@@ -843,9 +857,9 @@ export function make(options: ClientOptions) {
+           {
+             method: "GET",
+             path: `/api/experimental/session/${encodeURIComponent(input.sessionID)}/log`,
+-            query: { after: input["after"], follow: input["follow"] },
++            query: { after: input["after"], follow: input["follow"], ephemeral: input["ephemeral"] },
+             successStatus: 200,
+-            declaredStatuses: [404, 401, 400],
++            declaredStatuses: [404, 409, 401, 400],
+             empty: false,
+           },
+           requestOptions,
+diff --git a/packages/client/src/promise/generated/types.ts b/packages/client/src/promise/generated/types.ts
+index 0d54ac34f990..32d5b69a7cf5 100644
+--- a/packages/client/src/promise/generated/types.ts
++++ b/packages/client/src/promise/generated/types.ts
+@@ -512,94 +512,94 @@ export type SessionRevertCommitted = {
+   data: { sessionID: string; to: string }
+ }
+ 
+-export type ModelsDevRefreshed = {
++export type SessionTextDelta = {
+   id: string
+   created: number
+   metadata?: { [x: string]: any }
+-  type: "models-dev.refreshed"
++  type: "session.text.delta"
+   location?: LocationRef
+-  data: {}
++  data: { sessionID: string; assistantMessageID: string; ordinal: number; delta: string }
+ }
+ 
+-export type IntegrationUpdated = {
++export type SessionReasoningDelta = {
+   id: string
+   created: number
+   metadata?: { [x: string]: any }
+-  type: "integration.updated"
++  type: "session.reasoning.delta"
+   location?: LocationRef
+-  data: {}
++  data: { sessionID: string; assistantMessageID: string; ordinal: number; delta: string }
+ }
+ 
+-export type IntegrationConnectionUpdated = {
++export type SessionToolInputDelta = {
+   id: string
+   created: number
+   metadata?: { [x: string]: any }
+-  type: "integration.connection.updated"
++  type: "session.tool.input.delta"
+   location?: LocationRef
+-  data: { integrationID: string }
++  data: { sessionID: string; assistantMessageID: string; id: string; delta: string }
+ }
+ 
+-export type CatalogUpdated = {
++export type SessionToolProgress = {
+   id: string
+   created: number
+   metadata?: { [x: string]: any }
+-  type: "catalog.updated"
++  type: "session.tool.progress"
+   location?: LocationRef
+-  data: {}
++  data: { sessionID: string; assistantMessageID: string; id: string; metadata: { [x: string]: JsonValue } }
+ }
+ 
+-export type AgentUpdated = {
++export type SessionCompactionDelta = {
+   id: string
+   created: number
+   metadata?: { [x: string]: any }
+-  type: "agent.updated"
++  type: "session.compaction.delta"
+   location?: LocationRef
+-  data: {}
++  data: { sessionID: string; text: string }
+ }
+ 
+-export type SessionTextDelta = {
++export type ModelsDevRefreshed = {
+   id: string
+   created: number
+   metadata?: { [x: string]: any }
+-  type: "session.text.delta"
++  type: "models-dev.refreshed"
+   location?: LocationRef
+-  data: { sessionID: string; assistantMessageID: string; ordinal: number; delta: string }
++  data: {}
+ }
+ 
+-export type SessionReasoningDelta = {
++export type IntegrationUpdated = {
+   id: string
+   created: number
+   metadata?: { [x: string]: any }
+-  type: "session.reasoning.delta"
++  type: "integration.updated"
+   location?: LocationRef
+-  data: { sessionID: string; assistantMessageID: string; ordinal: number; delta: string }
++  data: {}
+ }
+ 
+-export type SessionToolInputDelta = {
++export type IntegrationConnectionUpdated = {
+   id: string
+   created: number
+   metadata?: { [x: string]: any }
+-  type: "session.tool.input.delta"
++  type: "integration.connection.updated"
+   location?: LocationRef
+-  data: { sessionID: string; assistantMessageID: string; id: string; delta: string }
++  data: { integrationID: string }
+ }
+ 
+-export type SessionToolProgress = {
++export type CatalogUpdated = {
+   id: string
+   created: number
+   metadata?: { [x: string]: any }
+-  type: "session.tool.progress"
++  type: "catalog.updated"
+   location?: LocationRef
+-  data: { sessionID: string; assistantMessageID: string; id: string; metadata: { [x: string]: JsonValue } }
++  data: {}
+ }
+ 
+-export type SessionCompactionDelta = {
++export type AgentUpdated = {
+   id: string
+   created: number
+   metadata?: { [x: string]: any }
+-  type: "session.compaction.delta"
++  type: "agent.updated"
+   location?: LocationRef
+-  data: { sessionID: string; text: string }
++  data: {}
+ }
+ 
+ export type FilesystemChanged = {
+@@ -2001,7 +2001,15 @@ export type FormCreated = {
+   data: { form: FormInfo1 }
+ }
+ 
+-export type SessionLogItem = SessionEventDurable | EventLogSynced
++export type SessionLogItem =
++  | SessionEventDurable
++  | SessionUsageUpdated
++  | SessionTextDelta
++  | SessionReasoningDelta
++  | SessionToolInputDelta
++  | SessionToolProgress
++  | SessionCompactionDelta
++  | EventLogSynced
+ 
+ export type IntegrationOAuthMethod = { id: string; type: "oauth"; label: string; form?: FormFields }
+ 
+@@ -2011,6 +2019,16 @@ export type FormInfo = { id: string; sessionID: string; title: string; metadata?
+ 
+ export type SessionTransferData = { info: SessionInfo; messages: Array<SessionMessageInfo> }
+ 
++export type SessionSnapshotResponse = {
++  data: {
++    session: SessionInfo
++    children: Array<SessionInfo>
++    inbox: Array<SessionInboxInfo>
++    messages: Array<SessionMessageInfo>
++    seq: number
++  }
++}
++
+ export type SessionMessagesResponse = {
+   data: Array<SessionMessageInfo>
+   cursor: { previous?: string | null; next?: string | null }
+@@ -2225,6 +2243,16 @@ export const isInstructionEntryValueTooLargeError = (value: unknown): value is I
+   "_tag" in value &&
+   value["_tag"] === "InstructionEntryValueTooLargeError"
+ 
++export type SeqUnavailableError = {
++  readonly _tag: "SeqUnavailableError"
++  readonly sessionID: string
++  readonly after: number
++  readonly head?: number | undefined
++  readonly message: string
++}
++export const isSeqUnavailableError = (value: unknown): value is SeqUnavailableError =>
++  typeof value === "object" && value !== null && "_tag" in value && value["_tag"] === "SeqUnavailableError"
++
+ export type ProviderNotFoundError = {
+   readonly _tag: "ProviderNotFoundError"
+   readonly providerID: string
+@@ -3303,6 +3331,13 @@ export type SessionGetInput = { readonly sessionID: { readonly sessionID: string
+ 
+ export type SessionGetOutput = { data: SessionInfo }["data"]
+ 
++export type SessionSnapshotInput = {
++  readonly sessionID: { readonly sessionID: string }["sessionID"]
++  readonly recent?: { readonly recent?: number | undefined }["recent"]
++}
++
++export type SessionSnapshotOutput = SessionSnapshotResponse["data"]
++
+ export type SessionRemoveInput = { readonly sessionID: { readonly sessionID: string }["sessionID"] }
+ 
+ export type SessionRemoveOutput = void
+@@ -3941,8 +3976,21 @@ export type SessionGenerateOutput = SessionGenerateResponse["data"]
+ 
+ export type SessionLogInput = {
+   readonly sessionID: { readonly sessionID: string }["sessionID"]
+-  readonly after?: { readonly after?: number | undefined; readonly follow?: boolean | undefined }["after"]
+-  readonly follow?: { readonly after?: number | undefined; readonly follow?: boolean | undefined }["follow"]
++  readonly after?: {
++    readonly after?: number | undefined
++    readonly follow?: boolean | undefined
++    readonly ephemeral?: boolean | undefined
++  }["after"]
++  readonly follow?: {
++    readonly after?: number | undefined
++    readonly follow?: boolean | undefined
++    readonly ephemeral?: boolean | undefined
++  }["follow"]
++  readonly ephemeral?: {
++    readonly after?: number | undefined
++    readonly follow?: boolean | undefined
++    readonly ephemeral?: boolean | undefined
++  }["ephemeral"]
+ }
+ 
+ export type SessionLogOutput = SessionLogItem
+diff --git a/packages/client/src/solid/engine-data.ts b/packages/client/src/solid/engine-data.ts
+new file mode 100644
+index 000000000000..ddf41fac7108
+--- /dev/null
++++ b/packages/client/src/solid/engine-data.ts
+@@ -0,0 +1,248 @@
++import { batch, createSignal, onCleanup, untrack } from "solid-js"
++import type { Signal } from "solid-js"
++import type { OpenCodeClient, OpenCodeEvent, SessionPromptInput } from "../promise"
++import { isSeqUnavailableError } from "../promise"
++import { createData } from "./data"
++import type { CreateDataInput } from "./data"
++import { Engine } from "./engine/engine"
++
++type SessionApi = Pick<OpenCodeClient["session"], "snapshot" | "log" | "prompt">
++
++// The legacy layer reconciles handed-off values into its own store, mutating
++// them in place — so anything shared with it must be a copy, never engine
++// state. Engine data is plain JSON, so a recursive copy suffices.
++function clone<T>(value: T): T {
++  if (value === null || typeof value !== "object") return value
++  if (Array.isArray(value)) return value.map(clone) as T
++  const copy: Record<string, unknown> = {}
++  for (const key in value) copy[key] = clone(value[key as keyof T])
++  return copy as T
++}
++
++const ambientSessionEvents = new Set<OpenCodeEvent["type"]>([
++  "session.created",
++  "session.deleted",
++  "session.renamed",
++  "session.execution.started",
++  "session.execution.succeeded",
++  "session.execution.failed",
++  "session.execution.interrupted",
++])
++
++/** How many recent messages a session snapshot fetch requests. */
++export const SNAPSHOT_RECENT = 200
++
++export function createEngineTransport(api: () => SessionApi): Engine.SessionTransport {
++  return {
++    snapshot(sessionID) {
++      return api().snapshot({ sessionID, recent: SNAPSHOT_RECENT })
++    },
++    async *stream(sessionID, after, signal) {
++      try {
++        for await (const item of api().log(
++          { sessionID, after, follow: true, ephemeral: true },
++          signal ? { signal } : undefined,
++        )) {
++          if (item.type !== "session.forked") yield item
++        }
++      } catch (error) {
++        if (isSeqUnavailableError(error)) throw new Engine.SeqUnavailable()
++        throw error
++      }
++    },
++    async submit(input) {
++      try {
++        await api().prompt({ ...input.request, sessionID: input.sessionID, id: input.id })
++      } catch (error) {
++        if (isTypedError(error)) throw new Engine.SubmitRejected(error.message)
++        throw error
++      }
++    },
++  }
++}
++
++export function createEngineData(config: CreateDataInput) {
++  const legacy = createData({
++    ...config,
++    event: {
++      on: config.event.on,
++      listen(handler) {
++        return config.event.listen((event) => {
++          if (event.name.startsWith("session.") && !ambientSessionEvents.has(event.name)) return
++          handler(event)
++        })
++      },
++    },
++  })
++  const engines = new Map<string, Promise<Engine.SessionEngine>>()
++  const families = new Set<string>()
++  const invalidated = new Set<string>()
++  const failures = new Set<(failure: Engine.IntentFailure) => void>()
++  const cleanups = new Set<() => void>()
++  const transport = createEngineTransport(() => config.api().session)
++  let connected = false
++
++  // One signal per session holding the engine's immutable view. The fold is a
++  // persistent structure — unchanged subtrees keep their object identity
++  // across publishes — so keyed consumers get row stability from reference
++  // equality, and the engine's publish guard already drops identity-unchanged
++  // views. Reactivity is per session: any change to a session's view re-runs
++  // that session's readers.
++  const signals = new Map<string, Signal<Engine.SessionView | undefined>>()
++  const viewSignal = (sessionID: string) => {
++    const existing = signals.get(sessionID)
++    if (existing) return existing
++    const created = createSignal<Engine.SessionView | undefined>(undefined)
++    signals.set(sessionID, created)
++    return created
++  }
++  const view = (sessionID: string) => viewSignal(sessionID)[0]()
++
++  const update = (sessionID: string, next: Engine.SessionView) => {
++    const [read, write] = viewSignal(sessionID)
++    const previous = untrack(read)
++    batch(() => {
++      write(next)
++      if (next.session !== previous?.session) {
++        const current = legacy.session.get(sessionID)
++        if (!current || current.time.updated <= next.session.time.updated) {
++          legacy.session.remember(clone(next.session))
++        }
++      }
++      if (families.has(sessionID) && next.children !== previous?.children) {
++        next.children.forEach((child) => legacy.session.remember(clone(child)))
++      }
++    })
++  }
++
++  const ensure = (sessionID: string) => {
++    const existing = engines.get(sessionID)
++    if (existing) return existing
++    const created = Engine.createSessionEngine(sessionID, transport).then((engine) => {
++      update(sessionID, engine.view())
++      cleanups.add(engine.subscribe((view) => update(sessionID, view)))
++      cleanups.add(engine.subscribeFailures((failure) => failures.forEach((listener) => listener(failure))))
++      return engine
++    })
++    engines.set(sessionID, created)
++    void created.catch(() => engines.delete(sessionID))
++    return created
++  }
++
++  const sync = async (sessionID: string) => {
++    const engine = await ensure(sessionID)
++    if (invalidated.delete(sessionID)) await engine.refresh()
++    await engine.ready()
++  }
++
++  cleanups.add(
++    config.event.on("server.connected", () => {
++      if (!connected) {
++        connected = true
++        return
++      }
++      engines.forEach((engine) => void engine.then((handle) => handle.refresh()).catch(() => undefined))
++    }),
++  )
++
++  onCleanup(() => {
++    cleanups.forEach((cleanup) => cleanup())
++    engines.forEach((engine) => void engine.then((handle) => handle.stop()))
++  })
++
++  return {
++    ...legacy,
++    on: config.event.on,
++    listen: config.event.listen,
++    session: {
++      ...legacy.session,
++      async sync(sessionID: string, options?: { readonly children?: boolean }) {
++        if (options?.children) families.add(sessionID)
++        await sync(sessionID)
++        if (!options?.children) return
++        view(sessionID)?.children.forEach((child) => legacy.session.remember(clone(child)))
++      },
++      invalidate(sessionID: string) {
++        invalidated.add(sessionID)
++      },
++      status(sessionID: string) {
++        if (view(sessionID)?.active === "running") return "running"
++        return legacy.session.status(sessionID)
++      },
++      input: {
++        list(sessionID: string) {
++          return (
++            view(sessionID)
++              ?.pending.filter((item) => item.type !== "compaction")
++              .map((item) => item.id) ?? legacy.session.input.list(sessionID)
++          )
++        },
++        has(sessionID: string, inboxID: string) {
++          return (
++            view(sessionID)?.pending.some((item) => item.type !== "compaction" && item.id === inboxID) ??
++            legacy.session.input.has(sessionID, inboxID)
++          )
++        },
++      },
++      pending: {
++        list(sessionID: string) {
++          void ensure(sessionID)
++          return [...(view(sessionID)?.pending ?? [])]
++        },
++        sync(sessionID: string) {
++          return sync(sessionID)
++        },
++        invalidate(sessionID: string) {
++          invalidated.add(sessionID)
++        },
++      },
++      message: {
++        list(sessionID: string) {
++          void ensure(sessionID)
++          return [...(view(sessionID)?.messages ?? [])]
++        },
++        get(sessionID: string, messageID: string) {
++          void ensure(sessionID)
++          return view(sessionID)?.messages.find((message) => message.id === messageID)
++        },
++        sync(sessionID: string) {
++          return sync(sessionID)
++        },
++        invalidate(sessionID: string) {
++          invalidated.add(sessionID)
++        },
++      },
++      async prompt(input: SessionPromptInput) {
++        return (await ensure(input.sessionID)).submit({
++          id: input.id ?? undefined,
++          text: input.text,
++          files: input.files,
++          agents: input.agents,
++          skills: input.skills,
++          metadata: input.metadata,
++          delivery: input.delivery,
++          resume: input.resume,
++        })
++      },
++      failures: {
++        listen(listener: (failure: Engine.IntentFailure) => void) {
++          failures.add(listener)
++          return () => failures.delete(listener)
++        },
++      },
++    },
++  }
++}
++
++function isTypedError(error: unknown): error is { readonly _tag: string; readonly message: string } {
++  return (
++    typeof error === "object" &&
++    error !== null &&
++    "_tag" in error &&
++    typeof error._tag === "string" &&
++    "message" in error &&
++    typeof error.message === "string"
++  )
++}
++
++export type EngineData = ReturnType<typeof createEngineData>
+diff --git a/packages/client/src/solid/engine/engine.ts b/packages/client/src/solid/engine/engine.ts
+new file mode 100644
+index 000000000000..5d71cfe7e07c
+--- /dev/null
++++ b/packages/client/src/solid/engine/engine.ts
+@@ -0,0 +1,498 @@
++import type {
++  EventLogSynced,
++  SessionCompactionDelta,
++  SessionInboxInfo,
++  SessionInboxItem,
++  SessionMessageInfo,
++  SessionPromptInput,
++  SessionReasoningDelta,
++  SessionTextDelta,
++  SessionToolInputDelta,
++  SessionToolProgress,
++  SessionUsageUpdated,
++} from "../../promise"
++import { SessionFold } from "./fold"
++import type { DurableSessionEvent, SessionFoldState, SessionSnapshot } from "./fold"
++
++export type EphemeralSessionEvent =
++  | SessionTextDelta
++  | SessionReasoningDelta
++  | SessionToolInputDelta
++  | SessionToolProgress
++  | SessionCompactionDelta
++  | SessionUsageUpdated
++
++export type SessionStreamItem = DurableSessionEvent | EphemeralSessionEvent | EventLogSynced
++
++export type Intent = {
++  readonly id: string
++  readonly item: Extract<SessionInboxItem, { readonly type: "user" | "synthetic" }>
++  readonly request: Omit<SessionPromptInput, "sessionID" | "id">
++  readonly created: number
++}
++
++export type SubmitInput = {
++  readonly id: string
++  readonly sessionID: string
++  readonly request: Intent["request"]
++}
++
++export type IntentFailure = {
++  readonly intent: Intent
++  readonly reason: string
++}
++
++export class SubmitRejected extends Error {
++  readonly _tag = "SubmitRejected"
++
++  constructor(readonly reason: string) {
++    super(reason)
++  }
++}
++
++export class SeqUnavailable extends Error {
++  readonly _tag = "SeqUnavailable"
++}
++
++export interface SessionTransport {
++  readonly snapshot: (sessionID: string) => Promise<SessionSnapshot>
++  readonly stream: (sessionID: string, after: number, signal?: AbortSignal) => AsyncIterable<SessionStreamItem>
++  readonly submit: (input: SubmitInput) => Promise<void>
++}
++
++export type SessionView = SessionFoldState & {
++  readonly pending: ReadonlyArray<SessionInboxInfo>
++}
++
++export interface SessionEngine {
++  readonly sessionID: string
++  readonly view: () => SessionView
++  readonly submit: (input: Intent["request"] & { readonly id?: string }) => Intent
++  readonly subscribe: (listener: (view: SessionView) => void) => () => void
++  readonly subscribeFailures: (listener: (failure: IntentFailure) => void) => () => void
++  readonly ready: () => Promise<void>
++  readonly refresh: () => Promise<void>
++  readonly settled: () => Promise<void>
++  readonly stop: () => void
++}
++
++export type SessionEngineOptions = {
++  readonly makeID?: () => string
++  readonly now?: () => number
++  readonly reconnect?: () => Promise<void>
++}
++
++type Overlay = ReadonlyMap<string, OverlayEntry>
++
++type OverlayEntry =
++  | { readonly type: "text"; readonly value: string }
++  | { readonly type: "reasoning"; readonly value: string }
++  | { readonly type: "tool-input"; readonly value: string }
++  | { readonly type: "tool-progress"; readonly metadata: SessionToolProgress["data"]["metadata"] }
++  | { readonly type: "compaction"; readonly value: string }
++  | { readonly type: "usage"; readonly value: SessionUsageUpdated["data"] }
++
++type EngineState = {
++  readonly folded: SessionFoldState
++  readonly outbox: ReadonlyArray<Intent>
++  readonly overlay: Overlay
++  readonly synced: boolean
++}
++
++export async function createSessionEngine(
++  sessionID: string,
++  transport: SessionTransport,
++  options: SessionEngineOptions = {},
++): Promise<SessionEngine> {
++  let counter = 0
++  const makeID = options.makeID ?? (() => `msg_${Date.now().toString(36)}_${++counter}`)
++  const now = options.now ?? Date.now
++  const reconnect = options.reconnect ?? (() => new Promise<void>((resolve) => setTimeout(resolve, 100)))
++  let state: EngineState = {
++    folded: SessionFold.fromSnapshot(await transport.snapshot(sessionID)),
++    outbox: [],
++    overlay: new Map(),
++    synced: false,
++  }
++  const listeners = new Set<(view: SessionView) => void>()
++  const failureListeners = new Set<(failure: IntentFailure) => void>()
++  const settled = new Set<() => void>()
++  const ready = Promise.withResolvers<void>()
++  let sent: string | undefined
++  let stopped = false
++  let sending = false
++  let refreshing: Promise<void> | undefined
++  const abort = new AbortController()
++
++  const publish = (next: EngineState) => {
++    const previous = state
++    state = next
++    // Views derive from folded/outbox/overlay only, so synced flips and stale
++    // replays (where the fold returns its input) need no render or notify.
++    if (next.folded !== previous.folded || next.outbox !== previous.outbox || next.overlay !== previous.overlay) {
++      const view = render(state)
++      listeners.forEach((listener) => listener(view))
++    }
++    if (state.outbox.length > 0) return
++    settled.forEach((resolve) => resolve())
++    settled.clear()
++  }
++
++  const applySnapshot = (snapshot: SessionSnapshot, synced = false) => {
++    const folded = SessionFold.fromSnapshot(snapshot)
++    const acknowledged = new Set([
++      ...folded.messages.map((message) => message.id),
++      ...folded.inbox.map((item) => item.id),
++    ])
++    publish({
++      folded,
++      outbox: state.outbox.filter((intent) => !acknowledged.has(intent.id)),
++      overlay: new Map(),
++      synced,
++    })
++  }
++
++  const applyDurable = (event: DurableSessionEvent) => {
++    if (event.type === "session.inbox.enqueued" && sent === event.data.inboxID) sent = undefined
++    publish({
++      folded: SessionFold.apply(state.folded, event),
++      outbox:
++        event.type === "session.inbox.enqueued"
++          ? state.outbox.filter((intent) => intent.id !== event.data.inboxID)
++          : state.outbox,
++      overlay: clearOverlay(state.overlay, event),
++      synced: state.synced,
++    })
++    send()
++  }
++
++  const reject = (intent: Intent, reason: string) => {
++    publish({ ...state, outbox: state.outbox.filter((item) => item.id !== intent.id) })
++    failureListeners.forEach((listener) => listener({ intent, reason }))
++  }
++
++  const send = () => {
++    if (!state.synced || sending || stopped) return
++    const intent = state.outbox[0]
++    if (!intent || sent === intent.id) return
++    sending = true
++    sent = intent.id
++    void (async () => {
++      try {
++        await transport.submit({ id: intent.id, sessionID, request: intent.request })
++      } catch (error) {
++        if (!(error instanceof SubmitRejected)) return
++        sent = undefined
++        reject(intent, error.reason)
++      }
++    })().finally(() => {
++      sending = false
++      send()
++    })
++  }
++
++  const sync = async () => {
++    while (!stopped) {
++      try {
++        for await (const item of transport.stream(sessionID, state.folded.seq, abort.signal)) {
++          if (stopped) return
++          if (item.type === "log.synced") {
++            // A marker past the fold means the server skipped events it could not
++            // replay for this cursor; recover through a fresh snapshot.
++            if (item.seq !== undefined && item.seq > state.folded.seq) throw new SeqUnavailable()
++            sent = undefined
++            publish({ ...state, synced: true })
++            ready.resolve()
++            send()
++            continue
++          }
++          if ("durable" in item) {
++            applyDurable(item)
++            continue
++          }
++          publish({ ...state, overlay: applyOverlay(state.overlay, item) })
++        }
++      } catch (error) {
++        if (error instanceof SeqUnavailable) {
++          try {
++            applySnapshot(await transport.snapshot(sessionID))
++          } catch {
++            await reconnect()
++          }
++          continue
++        }
++      }
++      if (stopped) return
++      publish({ ...state, synced: false })
++      await reconnect()
++    }
++  }
++
++  void sync()
++
++  return {
++    sessionID,
++    view: () => render(state),
++    submit(input) {
++      const intent: Intent = {
++        id: input.id ?? makeID(),
++        created: now(),
++        request: input,
++        item: {
++          type: "user",
++          delivery: input.delivery ?? "steer",
++          payload: {
++            text: input.text,
++            agents: input.agents?.map((agent) => ({ ...agent })),
++            metadata: input.metadata,
++          },
++        },
++      }
++      publish({ ...state, outbox: [...state.outbox, intent] })
++      send()
++      return intent
++    },
++    subscribe(listener) {
++      listeners.add(listener)
++      return () => listeners.delete(listener)
++    },
++    subscribeFailures(listener) {
++      failureListeners.add(listener)
++      return () => failureListeners.delete(listener)
++    },
++    ready: () => ready.promise,
++    refresh() {
++      if (refreshing) return refreshing
++      refreshing = transport
++        .snapshot(sessionID)
++        .then((snapshot) => {
++          if (snapshot.seq < state.folded.seq) return
++          applySnapshot(snapshot, state.synced)
++          send()
++        })
++        .finally(() => {
++          refreshing = undefined
++        })
++      return refreshing
++    },
++    settled() {
++      if (state.outbox.length === 0) return Promise.resolve()
++      return new Promise<void>((resolve) => settled.add(resolve))
++    },
++    stop() {
++      stopped = true
++      abort.abort()
++      publish({ ...state, synced: false })
++    },
++  }
++}
++
++// Render runs per ephemeral event, so everything an event did not touch must
++// keep its reference: the adapter diffs consecutive views by identity to
++// decide what to write into the reactive store. Both caches key on persistent
++// inputs (a fold, outbox, or usage entry keeps its identity until it actually
++// changes), so per-delta renders only reapply the overlay.
++export function render(state: Pick<EngineState, "folded" | "outbox" | "overlay">): SessionView {
++  const base = renderBase(state.folded, state.outbox)
++  return {
++    ...state.folded,
++    session: usageSession(state.folded, state.overlay.get("usage")),
++    messages: applyOverlayToMessages(base.messages, state.overlay),
++    pending: base.pending,
++  }
++}
++
++const bases = new WeakMap<SessionFoldState, ReturnType<typeof buildBase>>()
++
++function renderBase(folded: SessionFoldState, outbox: EngineState["outbox"]) {
++  const hit = bases.get(folded)
++  if (hit && hit.outbox === outbox) return hit
++  const base = buildBase(folded, outbox)
++  bases.set(folded, base)
++  return base
++}
++
++function buildBase(folded: SessionFoldState, outbox: EngineState["outbox"]) {
++  const pending =
++    outbox.length === 0
++      ? folded.inbox
++      : [
++          ...folded.inbox,
++          ...outbox.map(
++            (intent): SessionInboxInfo => ({
++              id: intent.id,
++              sessionID: folded.session.id,
++              timeCreated: intent.created,
++              ...intent.item,
++            }),
++          ),
++        ]
++  const appended = pendingMessages(folded, pending)
++  return {
++    outbox,
++    pending,
++    messages: appended.length === 0 ? folded.messages : [...folded.messages, ...appended],
++  }
++}
++
++function pendingMessages(folded: SessionFoldState, pending: ReadonlyArray<SessionInboxInfo>) {
++  if (pending.length === 0) return []
++  const messageIDs = new Set(folded.messages.map((message) => message.id))
++  return pending.flatMap((item): ReadonlyArray<SessionMessageInfo> => {
++    if (item.type !== "compaction" && item.delivery === "queue") return []
++    if (messageIDs.has(item.id)) return []
++    const message = SessionFold.messageFromInbox(item)
++    return message ? [message] : []
++  })
++}
++
++const usageSessions = new WeakMap<
++  Extract<OverlayEntry, { type: "usage" }>,
++  { base: SessionFoldState["session"]; session: SessionFoldState["session"] }
++>()
++
++function usageSession(folded: SessionFoldState, entry: OverlayEntry | undefined) {
++  if (entry?.type !== "usage") return folded.session
++  const hit = usageSessions.get(entry)
++  if (hit && hit.base === folded.session) return hit.session
++  const session = { ...folded.session, cost: entry.value.cost, tokens: entry.value.tokens }
++  usageSessions.set(entry, { base: folded.session, session })
++  return session
++}
++
++function applyOverlay(overlay: Overlay, event: EphemeralSessionEvent): Overlay {
++  const next = new Map(overlay)
++  switch (event.type) {
++    case "session.text.delta": {
++      const key = partKey("text", event.data.assistantMessageID, event.data.ordinal)
++      const current = next.get(key)
++      next.set(key, {
++        type: "text",
++        value: (current?.type === "text" ? current.value : "") + event.data.delta,
++      })
++      return next
++    }
++    case "session.reasoning.delta": {
++      const key = partKey("reasoning", event.data.assistantMessageID, event.data.ordinal)
++      const current = next.get(key)
++      next.set(key, {
++        type: "reasoning",
++        value: (current?.type === "reasoning" ? current.value : "") + event.data.delta,
++      })
++      return next
++    }
++    case "session.tool.input.delta": {
++      const key = toolKey("tool-input", event.data.assistantMessageID, event.data.id)
++      const current = next.get(key)
++      next.set(key, {
++        type: "tool-input",
++        value: (current?.type === "tool-input" ? current.value : "") + event.data.delta,
++      })
++      return next
++    }
++    case "session.tool.progress":
++      next.set(toolKey("tool-progress", event.data.assistantMessageID, event.data.id), {
++        type: "tool-progress",
++        metadata: event.data.metadata,
++      })
++      return next
++    case "session.compaction.delta": {
++      const current = next.get("compaction")
++      next.set("compaction", {
++        type: "compaction",
++        value: (current?.type === "compaction" ? current.value : "") + event.data.text,
++      })
++      return next
++    }
++    case "session.usage.updated":
++      next.set("usage", { type: "usage", value: event.data })
++      return next
++  }
++}
++
++function clearOverlay(overlay: Overlay, event: DurableSessionEvent): Overlay {
++  switch (event.type) {
++    case "session.text.ended":
++      return removeOverlay(overlay, partKey("text", event.data.assistantMessageID, event.data.ordinal))
++    case "session.reasoning.ended":
++      return removeOverlay(overlay, partKey("reasoning", event.data.assistantMessageID, event.data.ordinal))
++    case "session.tool.input.ended":
++    case "session.tool.called":
++      return removeOverlay(overlay, toolKey("tool-input", event.data.assistantMessageID, event.data.id))
++    case "session.tool.success":
++    case "session.tool.failed":
++      return removeOverlay(overlay, toolKey("tool-progress", event.data.assistantMessageID, event.data.id))
++    case "session.compaction.ended":
++    case "session.compaction.failed":
++      return removeOverlay(overlay, "compaction")
++    case "session.step.ended":
++    case "session.step.failed":
++    case "session.usage.recorded":
++      return removeOverlay(overlay, "usage")
++    default:
++      return overlay
++  }
++}
++
++function removeOverlay(overlay: Overlay, key: string): Overlay {
++  if (!overlay.has(key)) return overlay
++  const next = new Map(overlay)
++  next.delete(key)
++  return next
++}
++
++function applyOverlayToMessages(messages: ReadonlyArray<SessionMessageInfo>, overlay: Overlay) {
++  if (overlay.size === 0) return messages
++  // Remap only the messages the overlay actually touches so everything else
++  // keeps its identity.
++  const compacting = overlay.has("compaction")
++  const touched = new Set<string>()
++  overlay.forEach((_, key) => {
++    const id = keyMessageID(key)
++    if (id) touched.add(id)
++  })
++  if (touched.size === 0 && !compacting) return messages
++  return messages.map((message): SessionMessageInfo => {
++    if (message.type === "compaction" && message.status === "running") {
++      if (!compacting) return message
++      const entry = overlay.get("compaction")
++      return entry?.type === "compaction" ? { ...message, summary: message.summary + entry.value } : message
++    }
++    if (message.type !== "assistant" || !touched.has(message.id)) return message
++    const ordinals = { text: 0, reasoning: 0 }
++    const content = message.content.map((part) => {
++      if (part.type === "text") {
++        const entry = overlay.get(partKey("text", message.id, ordinals.text++))
++        return entry?.type === "text" ? { ...part, text: part.text + entry.value } : part
++      }
++      if (part.type === "reasoning") {
++        const entry = overlay.get(partKey("reasoning", message.id, ordinals.reasoning++))
++        return entry?.type === "reasoning" ? { ...part, text: part.text + entry.value } : part
++      }
++      const input = overlay.get(toolKey("tool-input", message.id, part.id))
++      if (input?.type === "tool-input" && part.state.status === "streaming")
++        return { ...part, state: { ...part.state, input: part.state.input + input.value } }
++      const progress = overlay.get(toolKey("tool-progress", message.id, part.id))
++      if (progress?.type === "tool-progress" && part.state.status === "running")
++        return { ...part, state: { ...part.state, metadata: progress.metadata } }
++      return part
++    })
++    return content.some((part, index) => part !== message.content[index]) ? { ...message, content } : message
++  })
++}
++
++function partKey(type: "text" | "reasoning", messageID: string, ordinal: number) {
++  return `${type}:${messageID}:${ordinal}`
++}
++
++function toolKey(type: "tool-input" | "tool-progress", messageID: string, toolID: string) {
++  return `${type}:${messageID}:${toolID}`
++}
++
++// Second segment of a part or tool key; undefined for the segmentless
++// "compaction" and "usage" keys.
++function keyMessageID(key: string) {
++  return key.split(":")[1]
++}
++
++export * as Engine from "./engine"
+diff --git a/packages/client/src/solid/engine/fold.ts b/packages/client/src/solid/engine/fold.ts
+new file mode 100644
+index 000000000000..5eea0ebb8f65
+--- /dev/null
++++ b/packages/client/src/solid/engine/fold.ts
+@@ -0,0 +1,583 @@
++import type {
++  SessionEventDurable,
++  SessionInboxInfo,
++  SessionInfo,
++  SessionMessageAssistant,
++  SessionMessageAssistantTool,
++  SessionMessageInfo,
++  TokenUsageInfo,
++} from "../../promise"
++
++export type SessionFoldState = {
++  readonly session: SessionInfo
++  readonly children: ReadonlyArray<SessionInfo>
++  readonly inbox: ReadonlyArray<SessionInboxInfo>
++  readonly messages: ReadonlyArray<SessionMessageInfo>
++  readonly active: "idle" | "running"
++  readonly deleted: boolean
++  readonly seq: number
++}
++
++export type SessionSnapshot = Omit<SessionFoldState, "active" | "deleted"> & {
++  readonly active?: SessionFoldState["active"]
++}
++
++export type DurableSessionEvent = Exclude<SessionEventDurable, { readonly type: "session.forked" }>
++
++export function fromSnapshot(snapshot: SessionSnapshot): SessionFoldState {
++  return { ...snapshot, active: snapshot.active ?? "idle", deleted: false }
++}
++
++export function apply(state: SessionFoldState, event: DurableSessionEvent): SessionFoldState {
++  if (event.durable.seq <= state.seq) return state
++  const current = { ...state, seq: event.durable.seq }
++  switch (event.type) {
++    case "session.created":
++      return current
++    case "session.deleted":
++      return { ...current, deleted: true }
++    case "session.usage.recorded":
++      return { ...current, session: addUsage(state.session, event.data.cost, event.data.tokens, event.created) }
++    case "session.agent.selected":
++      return append(
++        {
++          ...current,
++          session: {
++            ...state.session,
++            agent: event.data.agent,
++            time: { ...state.session.time, updated: event.created },
++          },
++        },
++        {
++          id: messageID(event.id),
++          type: "agent-switched",
++          agent: event.data.agent,
++          previous: event.data.previous ?? state.session.agent,
++          metadata: event.metadata,
++          time: { created: event.created },
++        },
++      )
++    case "session.model.selected":
++      return append(
++        {
++          ...current,
++          session: {
++            ...state.session,
++            model: event.data.model,
++            time: { ...state.session.time, updated: event.created },
++          },
++        },
++        {
++          id: messageID(event.id),
++          type: "model-switched",
++          model: event.data.model,
++          previous: event.data.previous ?? state.session.model,
++          metadata: event.metadata,
++          time: { created: event.created },
++        },
++      )
++    case "session.moved":
++      return append(
++        {
++          ...current,
++          session: {
++            ...state.session,
++            location: event.data.location,
++            projectID: event.data.projectID,
++            subpath: event.data.subpath,
++            time: { ...state.session.time, updated: event.created },
++          },
++        },
++        {
++          id: messageID(event.id),
++          type: "location-switched",
++          location: event.data.location,
++          projectID: event.data.projectID,
++          subpath: event.data.subpath,
++          previous: {
++            location: state.session.location,
++            projectID: state.session.projectID,
++            subpath: state.session.subpath,
++          },
++          metadata: event.metadata,
++          time: { created: event.created },
++        },
++      )
++    case "session.renamed":
++      return {
++        ...current,
++        session: { ...state.session, title: event.data.title, time: { ...state.session.time, updated: event.created } },
++      }
++    case "session.inbox.enqueued":
++      return {
++        ...current,
++        session: { ...state.session, time: { ...state.session.time, updated: event.created } },
++        inbox: state.inbox.some((item) => item.id === event.data.inboxID)
++          ? state.inbox
++          : [
++              ...state.inbox,
++              {
++                id: event.data.inboxID,
++                sessionID: event.data.sessionID,
++                timeCreated: event.created,
++                ...event.data.item,
++              },
++            ],
++      }
++    case "session.inbox.delivered": {
++      const item = state.inbox.find((item) => item.id === event.data.inboxID)
++      const next = { ...current, inbox: state.inbox.filter((item) => item.id !== event.data.inboxID) }
++      if (!item) return next
++      const delivered = messageFromInbox(item, event.created)
++      return delivered ? append(next, delivered) : next
++    }
++    case "session.inbox.cancelled":
++      return { ...current, inbox: state.inbox.filter((item) => item.id !== event.data.inboxID) }
++    case "session.inbox.delivery.changed":
++      return {
++        ...current,
++        inbox: state.inbox.map((item) =>
++          item.id === event.data.inboxID ? { ...item, delivery: event.data.delivery } : item,
++        ),
++      }
++    case "session.execution.started":
++      return { ...current, active: "running" }
++    case "session.execution.succeeded":
++    case "session.execution.failed":
++    case "session.execution.interrupted":
++      return { ...updateActiveAssistant(current, (message) => without(message, "retry")), active: "idle" }
++    case "session.instructions.updated":
++      if (event.data.text === undefined) return current
++      return append(current, {
++        id: messageID(event.id),
++        type: "system",
++        text: event.data.text,
++        description: `Instructions updated: ${Object.keys(event.data.delta).join(", ")}`,
++        metadata: event.metadata,
++        time: { created: event.created },
++      })
++    case "session.synthetic":
++      return append(current, {
++        id: messageID(event.id),
++        type: "synthetic",
++        text: event.data.text,
++        description: event.data.description,
++        metadata: event.data.metadata,
++        time: { created: event.created },
++      })
++    case "session.skill.activated":
++      return append(current, {
++        id: messageID(event.id),
++        type: "skill",
++        skill: event.data.id,
++        name: event.data.name,
++        text: event.data.text,
++        metadata: event.metadata,
++        time: { created: event.created },
++      })
++    case "session.shell.started":
++      return append(current, {
++        id: messageID(event.id),
++        type: "shell",
++        shellID: event.data.shell.id,
++        command: event.data.shell.command,
++        status: event.data.shell.status,
++        metadata: event.metadata,
++        time: { created: event.created },
++      })
++    case "session.shell.ended":
++      return updateMessage(
++        current,
++        (message) => message.type === "shell" && message.shellID === event.data.shell.id,
++        (message) => {
++          if (message.type !== "shell") return message
++          return {
++            ...message,
++            status: event.data.shell.status,
++            exit: event.data.shell.exit,
++            output: event.data.output,
++            time: { ...message.time, completed: event.created },
++          }
++        },
++        true,
++      )
++    case "session.step.started": {
++      const existing = state.messages.some((message) => message.id === event.data.assistantMessageID)
++      if (existing)
++        return updateAssistant(current, event.data.assistantMessageID, (message) => ({
++          ...without(message, "retry", "error", "finish"),
++          agent: event.data.agent,
++          model: event.data.model,
++          time: without(message.time, "completed"),
++          snapshot: event.data.snapshot ? { ...message.snapshot, start: event.data.snapshot } : message.snapshot,
++        }))
++      return append(
++        updateActiveAssistant(current, (message) => ({
++          ...without(message, "retry"),
++          time: { ...message.time, completed: event.created },
++        })),
++        {
++          id: event.data.assistantMessageID,
++          type: "assistant",
++          agent: event.data.agent,
++          model: event.data.model,
++          metadata: event.metadata,
++          content: [],
++          snapshot: event.data.snapshot ? { start: event.data.snapshot } : undefined,
++          time: { created: event.created },
++        },
++      )
++    }
++    case "session.step.ended":
++      return withUsage(
++        updateAssistant(current, event.data.assistantMessageID, (message) => ({
++          ...message,
++          finish: event.data.finish,
++          cost: event.data.cost,
++          tokens: event.data.tokens,
++          time: { ...message.time, completed: event.created },
++          snapshot:
++            event.data.snapshot || event.data.files
++              ? { ...message.snapshot, end: event.data.snapshot, files: event.data.files }
++              : message.snapshot,
++        })),
++        event.data.cost,
++        event.data.tokens,
++        event.created,
++      )
++    case "session.step.failed": {
++      const failed = updateAssistant(current, event.data.assistantMessageID, (message) => ({
++        ...without(message, "retry"),
++        finish: "error",
++        error: event.data.error,
++        cost: event.data.cost ?? message.cost,
++        tokens: event.data.tokens ?? message.tokens,
++        time: { ...message.time, completed: event.created },
++        snapshot:
++          event.data.snapshot || event.data.files
++            ? { ...message.snapshot, end: event.data.snapshot, files: event.data.files }
++            : message.snapshot,
++      }))
++      if (event.data.cost === undefined || event.data.tokens === undefined) return failed
++      return withUsage(failed, event.data.cost, event.data.tokens, event.created)
++    }
++    case "session.text.started":
++      return updateAssistant(current, event.data.assistantMessageID, (message) => ({
++        ...message,
++        content: insertOrdinal(message.content, "text", event.data.ordinal, { type: "text", text: "" }),
++      }))
++    case "session.text.ended":
++      return updateContent(current, event.data.assistantMessageID, "text", event.data.ordinal, (part) => {
++        const next = { ...part, text: event.data.text }
++        return event.data.state === undefined ? without(next, "state") : { ...next, state: event.data.state }
++      })
++    case "session.reasoning.started":
++      return updateAssistant(current, event.data.assistantMessageID, (message) => ({
++        ...message,
++        content: insertOrdinal(message.content, "reasoning", event.data.ordinal, {
++          type: "reasoning",
++          text: "",
++          state: event.data.state,
++          time: { created: event.created },
++        }),
++      }))
++    case "session.reasoning.ended":
++      return updateContent(current, event.data.assistantMessageID, "reasoning", event.data.ordinal, (part) => ({
++        ...part,
++        text: event.data.text,
++        state: event.data.state ?? part.state,
++        time: { created: part.time?.created ?? event.created, completed: event.created },
++      }))
++    case "session.tool.input.started":
++      return updateAssistant(current, event.data.assistantMessageID, (message) => ({
++        ...message,
++        content: [
++          ...message.content,
++          {
++            type: "tool",
++            id: event.data.id,
++            name: event.data.name,
++            state: { status: "streaming", input: "" },
++            time: { created: event.created },
++          },
++        ],
++      }))
++    case "session.tool.input.ended":
++      return updateTool(current, event.data.assistantMessageID, event.data.id, (part) =>
++        part.state.status === "streaming" ? { ...part, state: { ...part.state, input: event.data.text } } : part,
++      )
++    case "session.tool.called":
++      return updateTool(current, event.data.assistantMessageID, event.data.id, (part) => ({
++        ...part,
++        executed: event.data.executed,
++        providerState: event.data.state,
++        state: { status: "running", input: event.data.input, metadata: {} },
++        time: { ...part.time, ran: event.created },
++      }))
++    case "session.tool.success":
++      return updateTool(current, event.data.assistantMessageID, event.data.id, (part) => {
++        if (part.state.status !== "running") return part
++        return {
++          ...part,
++          executed: event.data.executed || part.executed === true,
++          providerResultState: event.data.resultState,
++          state: {
++            status: "completed",
++            input: part.state.input,
++            content: event.data.content,
++            metadata: event.data.metadata,
++          },
++          time: { ...part.time, completed: event.created },
++        }
++      })
++    case "session.tool.failed":
++      return updateTool(current, event.data.assistantMessageID, event.data.id, (part) => {
++        if (part.state.status !== "streaming" && part.state.status !== "running") return part
++        return {
++          ...part,
++          executed: event.data.executed || part.executed === true,
++          providerResultState: event.data.resultState,
++          state: {
++            status: "error",
++            error: event.data.error,
++            input: typeof part.state.input === "string" ? {} : part.state.input,
++            content: event.data.content,
++            metadata: event.data.metadata,
++          },
++          time: { ...part.time, completed: event.created },
++        }
++      })
++    case "session.retry.scheduled":
++      return updateAssistant(current, event.data.assistantMessageID, (message) => ({
++        ...message,
++        retry: { attempt: event.data.attempt, at: event.data.at, error: event.data.error },
++      }))
++    case "session.compaction.started":
++      return append(
++        {
++          ...current,
++          inbox: event.data.inputID ? state.inbox.filter((item) => item.id !== event.data.inputID) : state.inbox,
++        },
++        {
++          id: event.data.inputID ?? messageID(event.id),
++          type: "compaction",
++          status: "running",
++          reason: event.data.reason,
++          summary: "",
++          recent: event.data.recent,
++          metadata: event.metadata,
++          time: { created: event.created },
++        },
++      )
++    case "session.compaction.ended": {
++      const running = state.messages.findLast(
++        (message) => message.type === "compaction" && message.status === "running",
++      )
++      if (!running)
++        return append(current, {
++          id: messageID(event.id),
++          type: "compaction",
++          status: "completed",
++          reason: event.data.reason,
++          summary: event.data.text,
++          recent: event.data.recent,
++          metadata: event.metadata,
++          time: { created: event.created },
++        })
++      return updateMessage(
++        current,
++        (message) => message.id === running.id,
++        (message) => ({
++          ...message,
++          type: "compaction",
++          status: "completed",
++          reason: event.data.reason,
++          summary: event.data.text,
++          recent: event.data.recent,
++        }),
++      )
++    }
++    case "session.compaction.failed": {
++      const running = state.messages.findLast(
++        (message) => message.type === "compaction" && message.status === "running",
++      )
++      const failed = {
++        id: running?.id ?? event.data.inputID ?? messageID(event.id),
++        type: "compaction" as const,
++        status: "failed" as const,
++        reason: event.data.reason,
++        error: event.data.error,
++        metadata: running?.metadata ?? event.metadata,
++        time: running?.time ?? { created: event.created },
++      }
++      const next = {
++        ...current,
++        inbox: event.data.inputID ? state.inbox.filter((item) => item.id !== event.data.inputID) : state.inbox,
++      }
++      return running
++        ? updateMessage(
++            next,
++            (message) => message.id === running.id,
++            () => failed,
++          )
++        : append(next, failed)
++    }
++    case "session.revert.staged":
++      return {
++        ...current,
++        session: {
++          ...state.session,
++          revert: event.data.revert,
++          time: { ...state.session.time, updated: event.created },
++        },
++      }
++    case "session.revert.cleared":
++      return {
++        ...current,
++        session: without({ ...state.session, time: { ...state.session.time, updated: event.created } }, "revert"),
++      }
++    case "session.revert.committed":
++      return {
++        ...current,
++        session: without({ ...state.session, time: { ...state.session.time, updated: event.created } }, "revert"),
++        messages: state.messages.filter((message) => message.id < event.data.to),
++        inbox: state.inbox.filter((item) => item.id < event.data.to),
++      }
++  }
++}
++
++function messageID(eventID: string) {
++  return eventID.replace(/^evt_/, "msg_")
++}
++
++// Clearing a field must delete the key, not assign undefined: fold state
++// round-trips through JSON snapshots, which cannot represent undefined-valued
++// keys, so replay and fromSnapshot must agree on key presence.
++function without<T extends object, K extends keyof T>(value: T, ...keys: ReadonlyArray<K>): Omit<T, K> {
++  const next = { ...value }
++  for (const key of keys) delete next[key]
++  return next
++}
++
++export function messageFromInbox(item: SessionInboxInfo, created = item.timeCreated): SessionMessageInfo | undefined {
++  if (item.type === "user") return { id: item.id, type: "user", ...item.payload, time: { created } }
++  if (item.type === "synthetic") return { id: item.id, type: "synthetic", ...item.payload, time: { created } }
++}
++
++function append(state: SessionFoldState, item: SessionMessageInfo) {
++  if (state.messages.some((message) => message.id === item.id)) return state
++  return { ...state, messages: [...state.messages, item] }
++}
++
++function updateMessage(
++  state: SessionFoldState,
++  predicate: (message: SessionMessageInfo) => boolean,
++  update: (message: SessionMessageInfo) => SessionMessageInfo,
++  last = false,
++) {
++  const index = last ? state.messages.findLastIndex(predicate) : state.messages.findIndex(predicate)
++  if (index < 0) return state
++  return {
++    ...state,
++    messages: state.messages.map((message, position) => (position === index ? update(message) : message)),
++  }
++}
++
++function updateAssistant(
++  state: SessionFoldState,
++  messageID: string,
++  update: (message: SessionMessageAssistant) => SessionMessageAssistant,
++) {
++  return updateMessage(
++    state,
++    (message) => message.id === messageID && message.type === "assistant",
++    (message) => (message.type === "assistant" ? update(message) : message),
++  )
++}
++
++function updateActiveAssistant(
++  state: SessionFoldState,
++  update: (message: SessionMessageAssistant) => SessionMessageAssistant,
++) {
++  return updateMessage(
++    state,
++    (message) => message.type === "assistant" && message.time.completed === undefined,
++    (message) => (message.type === "assistant" ? update(message) : message),
++    true,
++  )
++}
++
++function updateContent<Type extends "text" | "reasoning">(
++  state: SessionFoldState,
++  messageID: string,
++  type: Type,
++  ordinal: number,
++  update: (
++    part: Extract<SessionMessageAssistant["content"][number], { readonly type: Type }>,
++  ) => Extract<SessionMessageAssistant["content"][number], { readonly type: Type }>,
++) {
++  return updateAssistant(state, messageID, (message) => {
++    const position = message.content.flatMap((part, index) => (part.type === type ? [index] : []))[ordinal]
++    const part = position === undefined ? undefined : message.content[position]
++    if (!part || part.type !== type) return message
++    return {
++      ...message,
++      content: message.content.map((item, index) =>
++        index === position
++          ? update(part as Extract<SessionMessageAssistant["content"][number], { readonly type: Type }>)
++          : item,
++      ),
++    }
++  })
++}
++
++function updateTool(
++  state: SessionFoldState,
++  messageID: string,
++  toolID: string,
++  update: (part: SessionMessageAssistantTool) => SessionMessageAssistantTool,
++) {
++  return updateAssistant(state, messageID, (message) => {
++    const index = message.content.findLastIndex((part) => part.type === "tool" && part.id === toolID)
++    if (index < 0) return message
++    return {
++      ...message,
++      content: message.content.map((part, position) =>
++        position === index && part.type === "tool" ? update(part) : part,
++      ),
++    }
++  })
++}
++
++function insertOrdinal<Type extends SessionMessageAssistant["content"][number]["type"]>(
++  content: SessionMessageAssistant["content"],
++  type: Type,
++  ordinal: number,
++  part: Extract<SessionMessageAssistant["content"][number], { readonly type: Type }>,
++) {
++  if (content.filter((item) => item.type === type)[ordinal]) return content
++  return [...content, part]
++}
++
++function addUsage(session: SessionInfo, cost: number, tokens: TokenUsageInfo, updated: number): SessionInfo {
++  return {
++    ...session,
++    cost: session.cost + cost,
++    tokens: {
++      input: session.tokens.input + tokens.input,
++      output: session.tokens.output + tokens.output,
++      reasoning: session.tokens.reasoning + tokens.reasoning,
++      cache: {
++        read: session.tokens.cache.read + tokens.cache.read,
++        write: session.tokens.cache.write + tokens.cache.write,
++      },
++    },
++    time: { ...session.time, updated },
++  }
++}
++
++function withUsage(state: SessionFoldState, cost: number, tokens: TokenUsageInfo, updated: number) {
++  return { ...state, session: addUsage(state.session, cost, tokens, updated) }
++}
++
++export * as SessionFold from "./fold"
+diff --git a/packages/client/src/solid/index.ts b/packages/client/src/solid/index.ts
+index 9fd41baf55a5..b417cb0c1de5 100644
+--- a/packages/client/src/solid/index.ts
++++ b/packages/client/src/solid/index.ts
+@@ -1,2 +1,3 @@
+ export * from "./data"
+ export * from "./connection"
++export * from "./engine-data"
+diff --git a/packages/client/test/engine-data.test.ts b/packages/client/test/engine-data.test.ts
+new file mode 100644
+index 000000000000..6316520eab55
+--- /dev/null
++++ b/packages/client/test/engine-data.test.ts
+@@ -0,0 +1,145 @@
++// Proves the generated-client wiring the engine laws take for granted: the
++// adapter in src/solid/engine-data.ts must speak the real snapshot/log/prompt
++// API shapes and translate the generated typed errors into the engine's own
++// (the SeqUnavailable path is what laws 7-9 in test/sync-engine-laws.test.ts
++// rely on in production).
++import { describe, expect, test } from "bun:test"
++import { createRoot } from "solid-js"
++import { Engine } from "../src/solid/engine/engine"
++import { SNAPSHOT_RECENT, createEngineData, createEngineTransport } from "../src/solid/engine-data"
++import { FakeSessionServer } from "./fixture/sync-engine"
++
++describe("engine data transport", () => {
++  test("uses snapshot and ephemeral follow log contracts", async () => {
++    const server = new FakeSessionServer("ses_transport")
++    const calls: Array<unknown> = []
++    const transport = createEngineTransport(() => ({
++      async snapshot(input) {
++        calls.push(input)
++        // The generated client returns mutable arrays; the fixture's snapshot
++        // is readonly, so mirror the wire shape here.
++        const value = server.snapshotValue()
++        return { ...value, children: [...value.children], inbox: [...value.inbox], messages: [...value.messages] }
++      },
++      async *log(input) {
++        calls.push(input)
++        yield { type: "log.synced" as const, aggregateID: input.sessionID, seq: 0 }
++      },
++      async prompt() {
++        throw new Error("unused")
++      },
++    }))
++
++    expect(await transport.snapshot(server.sessionID)).toEqual(server.snapshotValue())
++    const items: Array<Engine.SessionStreamItem> = []
++    for await (const item of transport.stream(server.sessionID, 0)) items.push(item)
++
++    expect(items).toEqual([{ type: "log.synced", aggregateID: server.sessionID, seq: 0 }])
++    expect(calls).toEqual([
++      { sessionID: server.sessionID, recent: SNAPSHOT_RECENT },
++      { sessionID: server.sessionID, after: 0, follow: true, ephemeral: true },
++    ])
++  })
++
++  test("preserves the prompt request and client-minted ID", async () => {
++    const requests: Array<unknown> = []
++    const transport = createEngineTransport(() => ({
++      async snapshot() {
++        throw new Error("unused")
++      },
++      async *log() {
++        throw new Error("unused")
++      },
++      async prompt(input) {
++        requests.push(input)
++        return {
++          id: input.id!,
++          sessionID: input.sessionID,
++          timeCreated: 1,
++          type: "user",
++          payload: { text: input.text },
++          delivery: input.delivery ?? "steer",
++        }
++      },
++    }))
++
++    await transport.submit({
++      id: "msg_client",
++      sessionID: "ses_submit",
++      request: {
++        text: "hello",
++        files: [{ uri: "file:///tmp/example.txt", name: "example.txt" }],
++        delivery: "queue",
++      },
++    })
++
++    expect(requests).toEqual([
++      {
++        id: "msg_client",
++        sessionID: "ses_submit",
++        text: "hello",
++        files: [{ uri: "file:///tmp/example.txt", name: "example.txt" }],
++        delivery: "queue",
++      },
++    ])
++  })
++
++  test("a failed initial attach does not poison the session cache", async () => {
++    const server = new FakeSessionServer("ses_attach_retry")
++    server.faults.loseSnapshots = 1
++    const api = {
++      session: {
++        snapshot: (input: { sessionID: string }) => server.snapshot(input.sessionID),
++        log: (input: { sessionID: string; after: number }) => server.stream(input.sessionID, input.after),
++        prompt: () => Promise.reject(new Error("unused")),
++      },
++    }
++    await createRoot(async (dispose) => {
++      const data = createEngineData({
++        api: () => api as never,
++        directory: "/workspace",
++        event: { on: () => () => {}, listen: () => () => {} },
++      })
++
++      // The server is down when the session first opens…
++      await expect(data.session.sync(server.sessionID)).rejects.toThrow("snapshot lost")
++      // …and the next sync attaches with a fresh engine instead of a cached rejection.
++      await data.session.sync(server.sessionID)
++
++      expect(data.session.get(server.sessionID)?.id).toBe(server.sessionID)
++      dispose()
++    })
++  })
++
++  test("translates generated typed failures", async () => {
++    // These literals mirror the generated client's error DTO shapes
++    // (SeqUnavailableError / InvalidRequestError in src/promise/generated);
++    // they must change if the generated error schema does.
++    const transport = createEngineTransport(() => ({
++      async snapshot() {
++        throw new Error("unused")
++      },
++      async *log() {
++        throw { _tag: "SeqUnavailableError", sessionID: "ses_errors", after: 2, head: 1, message: "gone" }
++      },
++      async prompt() {
++        throw { _tag: "InvalidRequestError", message: "invalid" }
++      },
++    }))
++
++    const streamError = await collectError(transport.stream("ses_errors", 2))
++    expect(streamError).toBeInstanceOf(Engine.SeqUnavailable)
++    await expect(
++      transport.submit({ id: "msg_client", sessionID: "ses_errors", request: { text: "invalid" } }),
++    ).rejects.toEqual(new Engine.SubmitRejected("invalid"))
++  })
++})
++
++async function collectError(iterable: AsyncIterable<unknown>) {
++  try {
++    for await (const item of iterable) void item
++  } catch (error) {
++    return error
++  }
++  throw new Error("stream did not fail")
++}
+diff --git a/packages/client/test/fixture/sync-engine.ts b/packages/client/test/fixture/sync-engine.ts
+new file mode 100644
+index 000000000000..64f767324d54
+--- /dev/null
++++ b/packages/client/test/fixture/sync-engine.ts
+@@ -0,0 +1,231 @@
++// In-memory model of the server's session log, used by the engine laws
++// (sync-engine-laws.test.ts), the chaos simulation (sync-engine-sim.test.ts),
++// and the legacy bug catalog (legacy-divergence.test.ts). It folds with the
++// REAL SessionFold, so `truth()` is the same interpretation of events a
++// converged client must reach, and its admission dedupes by inbox ID exactly
++// like the server's inbox projector. Faults are injected per call through the
++// `faults` record; `cutConnections` and `prune` model disconnects and lost
++// retention.
++import type { SessionInfo, SessionMessageInfo } from "../../src/promise"
++import { Engine } from "../../src/solid/engine/engine"
++import type { DurableSessionEvent, SessionFoldState, SessionSnapshot } from "../../src/solid/engine/fold"
++import { SessionFold } from "../../src/solid/engine/fold"
++
++export class FakeSessionServer implements Engine.SessionTransport {
++  readonly events: Array<DurableSessionEvent> = []
++  readonly admitted: Array<string> = []
++  readonly faults = {
++    loseRequests: 0,
++    loseResponses: 0,
++    loseSnapshots: 0,
++    reject: 0,
++    latency: 0,
++  }
++
++  private folded: SessionFoldState
++  private readonly tails = new Set<AsyncQueue<Engine.SessionStreamItem>>()
++  private eventCounter = 0
++
++  constructor(
++    readonly sessionID: string,
++    readonly time = 1_717_171_717_000,
++  ) {
++    this.folded = SessionFold.fromSnapshot(emptySnapshot(sessionID, time))
++  }
++
++  async snapshot(sessionID: string) {
++    await this.pause()
++    this.assertSession(sessionID)
++    if (this.faults.loseSnapshots > 0) {
++      this.faults.loseSnapshots--
++      throw new Error("snapshot lost")
++    }
++    return this.snapshotValue()
++  }
++
++  async *stream(sessionID: string, after: number, signal?: AbortSignal): AsyncIterable<Engine.SessionStreamItem> {
++    await this.pause()
++    this.assertSession(sessionID)
++    if (after > this.folded.seq) throw new Engine.SeqUnavailable()
++    const replay = this.events.filter((event) => event.durable.seq > after)
++    // Honest replay contract: a cursor is only admitted when retained events fully cover (after, seq].
++    if (replay.length < this.folded.seq - after) throw new Engine.SeqUnavailable()
++    const queue = new AsyncQueue<Engine.SessionStreamItem>()
++    const abort = () => queue.fail(new Error("stream aborted"))
++    signal?.addEventListener("abort", abort, { once: true })
++    this.tails.add(queue)
++    try {
++      for (const event of replay) yield event
++      yield { type: "log.synced", aggregateID: sessionID, seq: this.folded.seq }
++      while (true) yield await queue.take()
++    } finally {
++      signal?.removeEventListener("abort", abort)
++      this.tails.delete(queue)
++    }
++  }
++
++  async submit(input: Engine.SubmitInput) {
++    await this.pause()
++    this.assertSession(input.sessionID)
++    const existing = this.events.find(
++      (event) => event.type === "session.inbox.enqueued" && event.data.inboxID === input.id,
++    )
++    if (existing) return
++    if (this.faults.loseRequests > 0) {
++      this.faults.loseRequests--
++      throw new Error("request lost")
++    }
++    if (this.faults.reject > 0) {
++      this.faults.reject--
++      throw new Engine.SubmitRejected("rejected")
++    }
++    this.admitted.push(input.id)
++    this.publish({
++      id: `evt_${String(++this.eventCounter).padStart(8, "0")}`,
++      created: this.time,
++      type: "session.inbox.enqueued",
++      durable: { aggregateID: this.sessionID, seq: this.folded.seq + 1, version: 1 },
++      data: {
++        sessionID: this.sessionID,
++        inboxID: input.id,
++        item: {
++          type: "user",
++          delivery: input.request.delivery ?? "steer",
++          payload: {
++            text: input.request.text,
++            agents: input.request.agents?.map((agent) => ({ ...agent })),
++            metadata: input.request.metadata,
++          },
++        },
++      },
++    })
++    if (this.faults.loseResponses > 0) {
++      this.faults.loseResponses--
++      throw new Error("response lost")
++    }
++  }
++
++  cutConnections() {
++    this.tails.forEach((tail) => tail.fail(new Error("connection cut")))
++  }
++
++  /** Drop retained event history, simulating `events.persist` off or pruned retention. */
++  prune() {
++    this.events.length = 0
++  }
++
++  /** Clear every injected fault. */
++  heal() {
++    for (const fault of Object.keys(this.faults) as Array<keyof FakeSessionServer["faults"]>) this.faults[fault] = 0
++  }
++
++  seq() {
++    return this.folded.seq
++  }
++
++  truth() {
++    return Engine.render({ folded: this.folded, outbox: [], overlay: new Map() })
++  }
++
++  snapshotValue(): SessionSnapshot {
++    return {
++      session: this.folded.session,
++      children: this.folded.children,
++      inbox: this.folded.inbox,
++      messages: this.folded.messages,
++      seq: this.folded.seq,
++      active: this.folded.active,
++    }
++  }
++
++  private publish(event: DurableSessionEvent) {
++    this.events.push(event)
++    this.folded = SessionFold.apply(this.folded, event)
++    this.tails.forEach((tail) => tail.offer(event))
++  }
++
++  private assertSession(sessionID: string) {
++    if (sessionID !== this.sessionID) throw new Error(`unknown session: ${sessionID}`)
++  }
++
++  private async pause() {
++    for (let step = 0; step < this.faults.latency; step++) await Promise.resolve()
++  }
++}
++
++/**
++ * Reconnect option that holds the engine's first reconnect until released,
++ * so a test can advance the server "while disconnected". Later reconnects
++ * pass through instantly.
++ */
++export function reconnectGate() {
++  let open = false
++  let release: (() => void) | undefined
++  return {
++    reconnect: () =>
++      new Promise<void>((resolve) => {
++        if (open) return resolve()
++        release = () => {
++          open = true
++          resolve()
++        }
++      }),
++    holding: () => release !== undefined,
++    release: () => release!(),
++  }
++}
++
++export async function until(check: () => boolean, message = "condition did not become true") {
++  for (let attempt = 0; attempt < 500; attempt++) {
++    if (check()) return
++    await Bun.sleep(1)
++  }
++  throw new Error(message)
++}
++
++export function userMessages(messages: ReadonlyArray<SessionMessageInfo>) {
++  return messages.filter(
++    (message): message is Extract<SessionMessageInfo, { readonly type: "user" }> => message.type === "user",
++  )
++}
++
++function emptySnapshot(sessionID: string, time: number): SessionSnapshot {
++  const session: SessionInfo = {
++    id: sessionID,
++    projectID: "project",
++    cost: 0,
++    tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
++    time: { created: time, updated: time },
++    location: { directory: "/workspace" },
++  }
++  return { session, children: [], inbox: [], messages: [], seq: 0 }
++}
++
++class AsyncQueue<Value> {
++  private readonly values: Array<Value> = []
++  private readonly waiting: Array<{
++    readonly resolve: (value: Value) => void
++    readonly reject: (error: Error) => void
++  }> = []
++  private error?: Error
++
++  offer(value: Value) {
++    const waiter = this.waiting.shift()
++    if (waiter) {
++      waiter.resolve(value)
++      return
++    }
++    this.values.push(value)
++  }
++
++  fail(error: Error) {
++    this.error = error
++    this.waiting.splice(0).forEach((waiter) => waiter.reject(error))
++  }
++
++  take() {
++    if (this.values.length) return Promise.resolve(this.values.shift()!)
++    if (this.error) return Promise.reject(this.error)
++    return new Promise<Value>((resolve, reject) => this.waiting.push({ resolve, reject }))
++  }
++}
+diff --git a/packages/client/test/legacy-divergence.test.ts b/packages/client/test/legacy-divergence.test.ts
+new file mode 100644
+index 000000000000..0b0363387c21
+--- /dev/null
++++ b/packages/client/test/legacy-divergence.test.ts
+@@ -0,0 +1,258 @@
++// Divergence catalog: weird states the legacy data layer (createData) can get
++// into that the sync engine cannot. Each test drives the REAL legacy layer —
++// or, for the retry test, its raw ID-less prompt protocol — and PASSES by
++// demonstrating the bug, with a pointer to the engine law or mechanism that
++// rules the same state out. If a test here starts failing, the legacy layer
++// got fixed — celebrate and delete the test.
++//
++// Companion clean-behavior proofs: test/sync-engine-laws.test.ts.
++
++import { describe, expect, test } from "bun:test"
++import { createRoot } from "solid-js"
++import { createData } from "../src/solid/data"
++import type { CreateDataInput } from "../src/solid/data"
++import type { OpenCodeEvent, SessionMessageInfo } from "../src/promise"
++import { FakeSessionServer } from "./fixture/sync-engine"
++
++const sessionID = "ses_legacy"
++const assistantID = "msg_assistant"
++
++describe("legacy data layer divergence catalog", () => {
++  test("a dropped durable event desyncs the transcript silently and forever", async () => {
++    // Server truth: the assistant message finished with text "FINAL".
++    // The client misses only the `session.text.ended` event (blip mid-stream).
++    const legacy = await hydrated()
++    legacy.dispatch(textStarted())
++    for (let index = 0; index < 5; index++) legacy.dispatch(textDelta("x"))
++    // ...the `ended` event with the durable final text never arrives.
++
++    // The transcript is stuck on accumulated deltas, disagreeing with the
++    // server, and nothing in the layer can ever notice: there is no sequence
++    // cursor, no gap check, no recovery path. Only a manual refetch heals it.
++    expect(legacy.text()).toBe("xxxxx")
++    legacy.dispose()
++    // Engine: durable events carry seqs; a gap surfaces as SeqUnavailable or a
++    // marker past the fold, forcing snapshot recovery (laws 7 and 8).
++  })
++
++  test("a late delta corrupts a completed message", async () => {
++    // Events delivered slightly out of order: the final text lands, then a
++    // straggling delta from the finished stream arrives.
++    const legacy = await hydrated()
++    legacy.dispatch(textStarted())
++    legacy.dispatch(textDelta("Hel"))
++    legacy.dispatch(textEnded("Hello"))
++    legacy.dispatch(textDelta("lo"))
++
++    // The handler appends onto whatever text part it finds — including a
++    // completed one. The final message is permanently corrupted.
++    expect(legacy.text()).toBe("Hellolo")
++    legacy.dispose()
++    // Engine: deltas are ephemeral overlay entries cleared by the durable
++    // lifecycle events, and the ordered log cannot deliver a delta after its
++    // own `ended` — there is no durable state for a straggler to corrupt.
++  })
++
++  test("a slow fetch rewinds the store past already-rendered live events", async () => {
++    // The initial message fetch is in flight when a live prompt admission
++    // arrives. The user's message renders... then the stale fetch resolves.
++    let resolveFetch: ((messages: SessionMessageInfo[]) => void) | undefined
++    const legacy = makeLegacy({
++      list: () => new Promise<SessionMessageInfo[]>((resolve) => (resolveFetch = resolve)),
++    })
++    const syncing = legacy.data.session.message.sync(sessionID)
++    legacy.dispatch(inboxEnqueued("msg_user"))
++    expect(legacy.data.session.message.get(sessionID, "msg_user")).toBeDefined()
++
++    resolveFetch!([]) // the fetch was served before the admission — stale
++    await syncing
++
++    // The message the user just watched appear is gone. It returns only if
++    // some later event or refetch happens to bring it back.
++    expect(legacy.data.session.message.get(sessionID, "msg_user")).toBeUndefined()
++    legacy.dispose()
++    // Engine: hydration is a seq-stamped snapshot, and a stale refresh cannot
++    // move the fold behind the live log (law 10, refresh monotonicity).
++  })
++
++  test("delivered-before-enqueued leaves a phantom pending row forever", async () => {
++    // Reordered delivery: the `delivered` event arrives before its `enqueued`.
++    const legacy = await hydrated()
++    legacy.dispatch(inboxDelivered("msg_user")) // no-op: nothing to deliver yet
++    legacy.dispatch(inboxEnqueued("msg_user")) // adds the pending row
++
++    // The delivered event was already consumed, so the row the server has
++    // long since promoted sits in "pending" until a manual refetch.
++    expect(legacy.data.session.pending.list(sessionID).map((item) => item.id)).toEqual(["msg_user"])
++    legacy.dispose()
++    // Engine: the transport is a single ordered log, so this ordering cannot
++    // be observed live; a reconnect replays from the seq cursor, and any gap
++    // fails the cursor check and recovers via snapshot (laws 7 and 8).
++  })
++
++  test("a retry after a lost response admits the prompt twice", async () => {
++    // Both protocols drive the same server admission logic (FakeSessionServer
++    // dedupes by inbox ID exactly like the real projector). The only
++    // difference is who mints the ID.
++
++    // Legacy protocol: the request carries no ID, so the server mints a fresh
++    // one per attempt and cannot recognize a retry. The response to the first
++    // send is lost, the user presses enter again — the transcript now has the
++    // prompt twice.
++    const legacyServer = new FakeSessionServer(sessionID)
++    legacyServer.faults.loseResponses = 1
++    let minted = 0
++    const legacySend = (text: string) =>
++      legacyServer.submit({ id: `msg_minted_${++minted}`, sessionID, request: { text } })
++    await legacySend("hello").catch(() => {})
++    await legacySend("hello")
++    expect(legacyServer.admitted).toHaveLength(2)
++
++    // Engine protocol: the retry reuses the client-minted ID and the same
++    // server admits exactly once. (Law 1 proves this end-to-end through the
++    // real engine retry loop; this is the raw protocol contrast.)
++    const engineServer = new FakeSessionServer(sessionID)
++    engineServer.faults.loseResponses = 1
++    const engineSend = () => engineServer.submit({ id: "msg_client", sessionID, request: { text: "hello" } })
++    await engineSend().catch(() => {})
++    await engineSend()
++    expect(engineServer.admitted).toEqual(["msg_client"])
++  })
++
++  test("a dropped execution event leaves an interrupted session spinning forever", async () => {
++    // The user hits interrupt; the server stops the run; the terminal
++    // `session.execution.interrupted` event is lost in a reconnect blip.
++    const legacy = await hydrated()
++    legacy.dispatch(executionStarted())
++
++    // Status only ever changes on the terminal event (lost) or a full
++    // reconnect's active-session refetch — until one of those happens the
++    // spinner spins over a session the server already stopped.
++    expect(legacy.data.session.status(sessionID)).toBe("running")
++    legacy.dispose()
++    // Engine: activity is folded durable state behind the seq cursor, so the
++    // gap itself is detected and snapshot recovery resyncs activity with the
++    // server (laws 7 and 8 pin the mechanism).
++  })
++})
++
++// Also part of the catalog, straight from the legacy source: the layer
++// documents its own event-vs-fetch race — see the session.created "band-aid"
++// comment in src/solid/data.ts (skipping racy initial reads so live events
++// are not overwritten by stale fetches).
++
++function makeLegacy(overrides: { list?: () => Promise<SessionMessageInfo[]> } = {}) {
++  let handler: ((event: { name: OpenCodeEvent["type"]; details: OpenCodeEvent }) => void) | undefined
++  const api = {
++    session: {
++      get: async () => ({
++        id: sessionID,
++        projectID: "project",
++        cost: 0,
++        tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
++        time: { created: 1, updated: 2 },
++        location: { directory: "/workspace" },
++      }),
++    },
++    message: {
++      list: async () => ({
++        data: overrides.list ? await overrides.list() : transcript().toReversed(),
++        cursor: {},
++      }),
++    },
++  } as unknown as ReturnType<CreateDataInput["api"]>
++  return createRoot((dispose) => {
++    const data = createData({
++      api: () => api,
++      directory: "/workspace",
++      event: {
++        on: () => () => {},
++        listen(next) {
++          handler = next
++          return () => {}
++        },
++      },
++    })
++    return {
++      data,
++      dispose,
++      dispatch(event: { type: OpenCodeEvent["type"] } & Record<string, unknown>) {
++        handler?.({ name: event.type, details: event as unknown as OpenCodeEvent })
++      },
++      text() {
++        const message = data.session.message.get(sessionID, assistantID)
++        const part =
++          message?.type === "assistant" ? message.content.findLast((item) => item.type === "text") : undefined
++        return part?.type === "text" ? part.text : undefined
++      },
++    }
++  })
++}
++
++async function hydrated() {
++  const legacy = makeLegacy()
++  await legacy.data.session.sync(sessionID)
++  await legacy.data.session.message.sync(sessionID)
++  return legacy
++}
++
++function transcript(): SessionMessageInfo[] {
++  return [
++    { id: "msg_earlier", type: "user", text: "earlier", time: { created: 1 } },
++    {
++      id: assistantID,
++      type: "assistant",
++      time: { created: 2 },
++      agent: "build",
++      model: { id: "model", providerID: "provider" },
++      content: [],
++    },
++  ]
++}
++
++const textStarted = () => ({
++  id: "evt_start",
++  created: 3,
++  type: "session.text.started" as const,
++  data: { sessionID, assistantMessageID: assistantID, ordinal: 0 },
++})
++
++let deltaCount = 0
++const textDelta = (delta: string) => ({
++  id: `evt_delta_${++deltaCount}`,
++  created: 4,
++  type: "session.text.delta" as const,
++  data: { sessionID, assistantMessageID: assistantID, ordinal: 0, delta },
++})
++
++const textEnded = (text: string) => ({
++  id: "evt_end",
++  created: 5,
++  type: "session.text.ended" as const,
++  data: { sessionID, assistantMessageID: assistantID, ordinal: 0, text },
++})
++
++const inboxEnqueued = (inboxID: string) => ({
++  id: "evt_enqueued",
++  created: 6,
++  type: "session.inbox.enqueued" as const,
++  data: {
++    sessionID,
++    inboxID,
++    item: { type: "user", delivery: "steer", payload: { text: "hello" } },
++  },
++})
++
++const inboxDelivered = (inboxID: string) => ({
++  id: "evt_delivered",
++  created: 7,
++  type: "session.inbox.delivered" as const,
++  data: { sessionID, inboxID },
++})
++
++const executionStarted = () => ({
++  id: "evt_execution",
++  created: 8,
++  type: "session.execution.started" as const,
++  data: { sessionID },
++})
+diff --git a/packages/client/test/sync-engine-laws.test.ts b/packages/client/test/sync-engine-laws.test.ts
+new file mode 100644
+index 000000000000..878c96808a04
+--- /dev/null
++++ b/packages/client/test/sync-engine-laws.test.ts
+@@ -0,0 +1,201 @@
++// Laws of the session sync engine: each test pins one property the engine
++// must hold under transport faults. Cited by number from
++// test/legacy-divergence.test.ts (the legacy bug catalog these laws rule out)
++// and stress-tested together by test/sync-engine-sim.test.ts. The server
++// model lives in test/fixture/sync-engine.ts and folds with the real
++// SessionFold, so `server.truth()` is the state a converged client must show.
++import { describe, expect, test } from "bun:test"
++import { readFileSync } from "node:fs"
++import { Engine } from "../src/solid/engine/engine"
++import { FakeSessionServer, reconnectGate, until, userMessages } from "./fixture/sync-engine"
++
++describe("session sync engine laws", () => {
++  test("1. idempotency: lost responses converge to one admitted message", async () => {
++    const server = new FakeSessionServer("ses_idempotency")
++    server.faults.loseResponses = 1
++    const engine = await Engine.createSessionEngine(server.sessionID, server, {
++      now: () => server.time,
++      reconnect: async () => {},
++    })
++
++    engine.submit({ id: "msg_1", text: "hello" })
++    await until(() => engine.view().seq === 1)
++    // The admit landed but the response was lost; the reconnect makes the
++    // engine resend the same client-minted ID — that resend is what
++    // idempotency must absorb.
++    server.cutConnections()
++    await engine.settled()
++
++    expect(server.admitted).toEqual(["msg_1"])
++    expect(userMessages(engine.view().messages)).toHaveLength(1)
++    engine.stop()
++  })
++
++  test("2. echo determinism: folding the echo does not change rendered messages", async () => {
++    const server = new FakeSessionServer("ses_echo")
++    const engine = await Engine.createSessionEngine(server.sessionID, server, { now: () => server.time })
++    await engine.ready()
++
++    // The "echo" is the server's inbox.enqueued event for our own submit:
++    // folding it over the optimistic render must be invisible — no flicker.
++    engine.submit({ id: "msg_1", text: "instant" })
++    const before = engine.view().messages
++    await engine.settled()
++
++    expect(engine.view().messages).toEqual(before)
++    engine.stop()
++  })
++
++  test("3. sync opacity: the fold cannot see intents or the engine", () => {
++    const source = readFileSync(new URL("../src/solid/engine/fold.ts", import.meta.url), "utf8")
++    const code = source.replace(/\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "")
++
++    expect(code).not.toMatch(/\boutbox\b/)
++    expect(code).not.toContain("./engine")
++    expect(code).not.toMatch(/\bintents?\b/i)
++  })
++
++  test("4. ordering: a burst admits in submission order", async () => {
++    const server = new FakeSessionServer("ses_ordering")
++    const engine = await Engine.createSessionEngine(server.sessionID, server)
++
++    for (const value of [1, 2, 3, 4, 5]) engine.submit({ id: `msg_${value}`, text: `m${value}` })
++    await engine.settled()
++
++    expect(server.admitted).toEqual(["msg_1", "msg_2", "msg_3", "msg_4", "msg_5"])
++    engine.stop()
++  })
++
++  test("5. convergence: drained clients equal the server fold", async () => {
++    const server = new FakeSessionServer("ses_convergence")
++    const a = await Engine.createSessionEngine(server.sessionID, server, { makeID: () => "msg_a" })
++    const b = await Engine.createSessionEngine(server.sessionID, server, { makeID: () => "msg_b" })
++
++    a.submit({ text: "from a" })
++    b.submit({ text: "from b" })
++    await Promise.all([a.settled(), b.settled()])
++    await until(() => a.view().seq === server.seq() && b.view().seq === server.seq())
++
++    expect(a.view()).toEqual(server.truth())
++    expect(b.view()).toEqual(server.truth())
++    a.stop()
++    b.stop()
++  })
++
++  test("6. failure atomicity: typed rejection removes and surfaces the intent", async () => {
++    const server = new FakeSessionServer("ses_failure")
++    server.faults.reject = 1
++    const engine = await Engine.createSessionEngine(server.sessionID, server)
++    const failures: Array<Engine.IntentFailure> = []
++    engine.subscribeFailures((failure) => failures.push(failure))
++    const before = engine.view()
++
++    const intent = engine.submit({ id: "msg_1", text: "doomed" })
++    expect(userMessages(engine.view().messages)).toHaveLength(1)
++    await until(() => failures.length === 1)
++
++    expect(engine.view()).toEqual(before)
++    expect(failures).toEqual([{ intent, reason: "rejected" }])
++    engine.stop()
++  })
++
++  test("7. lossy history: reconnect without retained events recovers via snapshot", async () => {
++    const server = new FakeSessionServer("ses_lossy")
++    const gate = reconnectGate()
++    const engine = await Engine.createSessionEngine(server.sessionID, server, {
++      now: () => server.time,
++      reconnect: gate.reconnect,
++    })
++    engine.submit({ id: "msg_1", text: "first" })
++    await engine.settled()
++
++    server.cutConnections()
++    await until(gate.holding)
++    // While disconnected the session advances, then history is dropped: the
++    // reconnect cursor cannot be replayed and must recover via snapshot.
++    await server.submit({ id: "msg_2", sessionID: server.sessionID, request: { text: "second" } })
++    server.prune()
++    gate.release()
++
++    await until(() => engine.view().seq === 2)
++    expect(engine.view()).toEqual(server.truth())
++    engine.stop()
++  })
++
++  test("8. attach gaps: a synced marker past the fold forces snapshot recovery", async () => {
++    const server = new FakeSessionServer("ses_marker_gap")
++    await server.submit({ id: "msg_1", sessionID: server.sessionID, request: { text: "hello" } })
++    const stale = { ...server.snapshotValue(), messages: [], inbox: [], seq: 0 }
++    let attempts = 0
++    const engine = await Engine.createSessionEngine(
++      server.sessionID,
++      {
++        snapshot: (sessionID) => (attempts === 0 ? Promise.resolve(stale) : server.snapshot(sessionID)),
++        async *stream(sessionID, after, signal) {
++          attempts++
++          if (attempts === 1) {
++            // Dishonest attach: the marker admits the cursor but skips the replay range.
++            yield { type: "log.synced" as const, aggregateID: sessionID, seq: server.snapshotValue().seq }
++            return
++          }
++          yield* server.stream(sessionID, after, signal)
++        },
++        submit: (input) => server.submit(input),
++      },
++      { reconnect: async () => {} },
++    )
++    await engine.ready()
++
++    expect(attempts).toBe(2)
++    expect(engine.view()).toEqual(server.truth())
++    engine.stop()
++  })
++
++  test("9. outage recovery: failed recovery snapshots retry until the server returns", async () => {
++    const server = new FakeSessionServer("ses_outage")
++    const gate = reconnectGate()
++    const engine = await Engine.createSessionEngine(server.sessionID, server, {
++      now: () => server.time,
++      reconnect: gate.reconnect,
++    })
++    engine.submit({ id: "msg_1", text: "first" })
++    await engine.settled()
++
++    server.cutConnections()
++    await until(gate.holding)
++    // A server restart while disconnected: history is gone, and the server
++    // stays unreachable for the first snapshot attempts of the recovery.
++    await server.submit({ id: "msg_2", sessionID: server.sessionID, request: { text: "second" } })
++    server.prune()
++    server.faults.loseSnapshots = 3
++    gate.release()
++
++    await until(() => engine.view().seq === 2)
++    expect(server.faults.loseSnapshots).toBe(0)
++    expect(engine.view()).toEqual(server.truth())
++    engine.stop()
++  })
++
++  test("10. refresh monotonicity: a stale snapshot refresh cannot move the fold behind the live log", async () => {
++    const server = new FakeSessionServer("ses_refresh_race")
++    const stale = server.snapshotValue()
++    let refresh = false
++    const transport: Engine.SessionTransport = {
++      snapshot: (sessionID) => (refresh ? Promise.resolve(stale) : server.snapshot(sessionID)),
++      stream: (sessionID, after) => server.stream(sessionID, after),
++      submit: (input) => server.submit(input),
++    }
++    const engine = await Engine.createSessionEngine(server.sessionID, transport)
++    await engine.ready()
++
++    engine.submit({ id: "msg_1", text: "newer than snapshot" })
++    await until(() => engine.view().seq === 1)
++    refresh = true
++    await engine.refresh()
++
++    expect(engine.view().seq).toBe(1)
++    // ...and the un-echoed intent survives the rejected refresh.
++    expect(engine.view().pending.map((item) => item.id)).toEqual(["msg_1"])
++    engine.stop()
++  })
++})
+diff --git a/packages/client/test/sync-engine-sim.test.ts b/packages/client/test/sync-engine-sim.test.ts
+new file mode 100644
+index 000000000000..25fc70afbac3
+--- /dev/null
++++ b/packages/client/test/sync-engine-sim.test.ts
+@@ -0,0 +1,127 @@
++// Seeded chaos simulation: two engine clients share one FakeSessionServer
++// while every fault the fixture can inject is thrown at them at random, then
++// all faults heal and both clients must converge exactly to the server's
++// truth. This stress-tests the laws of test/sync-engine-laws.test.ts in
++// combination; failures reproduce deterministically from the seed.
++import { describe, expect, test } from "bun:test"
++import { Engine } from "../src/solid/engine/engine"
++import { FakeSessionServer, until, userMessages } from "./fixture/sync-engine"
++
++type Client = {
++  readonly name: string
++  readonly engine: Engine.SessionEngine
++  readonly submitted: Array<string>
++  readonly rejected: Set<string>
++  readonly views: Array<Engine.SessionView>
++}
++
++describe("session sync engine simulation", () => {
++  for (const seed of [1, 2, 3, 42, 1337, 90210]) {
++    test(`seed ${seed}: two clients converge through chaotic transport faults`, async () => {
++      const random = mulberry32(seed)
++      const server = new FakeSessionServer(`ses_sim_${seed}`)
++      const clients = await Promise.all([makeClient("a", server), makeClient("b", server)])
++
++      // Chaos phase. Per step: 45% submit from a random client, 10% cut all
++      // connections, 10% lose a response, 8% lose a burst of requests,
++      // 7% reject an admission, 7% lose a snapshot fetch, 13% shift latency.
++      for (let step = 0; step < 80; step++) {
++        const roll = random()
++        if (roll < 0.45) {
++          const client = pick(clients, random)
++          const intent = client.engine.submit({ text: `step-${step}` })
++          client.submitted.push(intent.id)
++        } else if (roll < 0.55) {
++          server.cutConnections()
++        } else if (roll < 0.65) {
++          server.faults.loseResponses++
++        } else if (roll < 0.73) {
++          server.faults.loseRequests += 1 + Math.floor(random() * 2)
++        } else if (roll < 0.8) {
++          server.faults.reject++
++        } else if (roll < 0.87) {
++          server.faults.loseSnapshots++
++        } else {
++          server.faults.latency = Math.floor(random() * 6)
++        }
++        await advance(2 + Math.floor(random() * 8))
++      }
++
++      // Drain phase: heal all faults, then repeatedly cut connections —
++      // reconnecting is what makes the engine resend intents whose responses
++      // were lost, so every submitted ID ends up admitted or rejected.
++      server.heal()
++      for (let attempt = 0; attempt < 100; attempt++) {
++        server.cutConnections()
++        await advance(4)
++        const accounted = clients.every(
++          (client) =>
++            client.submitted.filter((id) => server.admitted.includes(id) || client.rejected.has(id)).length ===
++            client.submitted.length,
++        )
++        if (accounted) break
++      }
++      await until(
++        () => clients.every((client) => client.engine.view().seq === server.seq()),
++        `seed ${seed} did not converge`,
++      )
++
++      expect(new Set(server.admitted).size).toBe(server.admitted.length)
++      for (const client of clients) {
++        const expected = client.submitted.filter((id) => !client.rejected.has(id))
++        const observed = server.admitted.filter((id) => client.submitted.includes(id))
++        expect(observed).toEqual(expected)
++        expect(client.engine.view()).toEqual(server.truth())
++        assertNoFlicker(client.views, server.admitted, `${seed}/${client.name}`)
++        client.engine.stop()
++      }
++    })
++  }
++})
++
++async function makeClient(name: string, server: FakeSessionServer): Promise<Client> {
++  let counter = 0
++  const engine = await Engine.createSessionEngine(server.sessionID, server, {
++    makeID: () => `msg_${name}${String(++counter).padStart(4, "0")}`,
++    now: () => server.time,
++    reconnect: async () => {},
++  })
++  const client: Client = { name, engine, submitted: [], rejected: new Set(), views: [engine.view()] }
++  engine.subscribe((view) => client.views.push(view))
++  engine.subscribeFailures((failure) => client.rejected.add(failure.intent.id))
++  return client
++}
++
++// Once an admitted message first renders, it appears exactly once in every
++// subsequent view — it never disappears or duplicates.
++function assertNoFlicker(views: ReadonlyArray<Engine.SessionView>, admitted: ReadonlyArray<string>, label: string) {
++  for (const id of admitted) {
++    const first = views.findIndex((view) => userMessages(view.messages).some((message) => message.id === id))
++    expect(first, `${label}: ${id} never rendered`).toBeGreaterThanOrEqual(0)
++    for (const view of views.slice(first)) {
++      const rows = userMessages(view.messages).filter((message) => message.id === id)
++      expect(rows, `${label}: ${id} disappeared or duplicated`).toHaveLength(1)
++    }
++  }
++}
++
++// One "step" is one microtask turn — each fixture `pause()` under
++// `faults.latency` consumes one — followed by a macrotask flush.
++async function advance(steps: number) {
++  for (let step = 0; step < steps; step++) await Promise.resolve()
++  await Bun.sleep(0)
++}
++
++function pick<Value>(values: ReadonlyArray<Value>, random: () => number) {
++  return values[Math.floor(random() * values.length)]!
++}
++
++function mulberry32(seed: number) {
++  return () => {
++    seed |= 0
++    seed = (seed + 0x6d2b79f5) | 0
++    const first = Math.imul(seed ^ (seed >>> 15), 1 | seed)
++    const second = (first + Math.imul(first ^ (first >>> 7), 61 | first)) ^ first
++    return ((second ^ (second >>> 14)) >>> 0) / 4294967296
++  }
++}
+diff --git a/packages/client/tsconfig.test.json b/packages/client/tsconfig.test.json
+new file mode 100644
+index 000000000000..0f3990da5032
+--- /dev/null
++++ b/packages/client/tsconfig.test.json
+@@ -0,0 +1,13 @@
++{
++  "$schema": "https://json.schemastore.org/tsconfig",
++  "extends": "./tsconfig.json",
++  "include": [
++    "src",
++    "script",
++    "test/fixture",
++    "test/engine-data.test.ts",
++    "test/legacy-divergence.test.ts",
++    "test/sync-engine-laws.test.ts",
++    "test/sync-engine-sim.test.ts"
++  ]
++}
+diff --git a/packages/core/src/bus.ts b/packages/core/src/bus.ts
+index 837b5a4df502..ced05f0ecf74 100644
+--- a/packages/core/src/bus.ts
++++ b/packages/core/src/bus.ts
+@@ -44,6 +44,21 @@ export const reserveSequence = Effect.fn("Bus.reserveSequence")(function* (
+     .pipe(Effect.orDie)
+ })
+ 
++export const retainedCount = Effect.fn("Bus.retainedCount")(function* (
++  db: Database.Interface["db"],
++  aggregateID: string,
++  after: number,
++  through: number,
++) {
++  const row = yield* db
++    .select({ count: sql<number>`count(*)` })
++    .from(EventTable)
++    .where(and(eq(EventTable.aggregate_id, aggregateID), gt(EventTable.seq, after), lte(EventTable.seq, through)))
++    .get()
++    .pipe(Effect.orDie)
++  return row?.count ?? 0
++})
++
+ export type SerializedEvent = {
+   readonly id: Event.ID
+   readonly type: string
+@@ -150,6 +165,7 @@ export interface Interface {
+     readonly aggregateID: string
+     readonly after?: number
+     readonly follow?: boolean
++    readonly includeLive?: (event: Event.Payload) => boolean
+   }) => Stream.Stream<LogItem>
+   /** @deprecated Use `subscribe()` and consume the returned stream. */
+   readonly listen: (listener: Subscriber) => Effect.Effect<Unsubscribe>
+@@ -768,6 +784,7 @@ export function configured(options?: Options) {
+           readonly aggregateID: string
+           readonly after?: number
+           readonly follow?: boolean
++          readonly includeLive?: (event: Event.Payload) => boolean
+         }): Stream.Stream<LogItem> =>
+           Stream.unwrap(
+             Effect.gen(function* () {
+@@ -791,7 +808,8 @@ export function configured(options?: Options) {
+                 )
+               // Subscribing before the historical read means events committed during
+               // replay either appear in the read or arrive through a post-marker wake.
+-              const wakes = input.follow ? yield* subscribeDurable(input.aggregateID) : undefined
++              const subscription = input.follow && input.includeLive ? yield* PubSub.subscribe(pubsub.live) : undefined
++              const wakes = input.follow && !subscription ? yield* subscribeDurable(input.aggregateID) : undefined
+               const target = yield* latestSequence(db, input.aggregateID)
+               const marker: EventLog.Synced = {
+                 type: "log.synced",
+@@ -802,6 +820,14 @@ export function configured(options?: Options) {
+                 Stream.map((event): LogItem => event),
+                 Stream.concat(Stream.make(marker)),
+               )
++              if (subscription && input.includeLive) {
++                const follow: Stream.Stream<LogItem> = Stream.fromSubscription(subscription).pipe(
++                  Stream.filter(input.includeLive),
++                  Stream.filter((event) => !event.durable || event.durable.seq > target),
++                  Stream.map((event): LogItem => event),
++                )
++                return Stream.concat(replay, follow)
++              }
+               if (!wakes) return replay
+               const live: Stream.Stream<LogItem> = Stream.fromSubscription(wakes).pipe(
+                 Stream.mapEffect(() => latestSequence(db, input.aggregateID)),
+diff --git a/packages/core/src/session.ts b/packages/core/src/session.ts
+index 9fcaa94b7f01..fbf67bbfeba2 100644
+--- a/packages/core/src/session.ts
++++ b/packages/core/src/session.ts
+@@ -141,6 +141,11 @@ export class InboxConflictError extends Schema.TaggedError<InboxConflictError>()
+   sessionID: SessionSchema.ID,
+   inboxID: SessionMessage.ID,
+ }) {}
++export class SeqUnavailableError extends Schema.TaggedError<SeqUnavailableError>()("Session.SeqUnavailableError", {
++  sessionID: SessionSchema.ID,
++  after: Event.Seq,
++  head: Schema.optional(Event.Seq),
++}) {}
+ type InboxItemRef = { readonly sessionID: SessionSchema.ID; readonly inboxID: SessionMessage.ID }
+ export class SkillNotFoundError extends Schema.TaggedError<SkillNotFoundError>()("Session.SkillNotFoundError", {
+   skill: Skill.ID,
+@@ -194,13 +199,33 @@ export interface Interface {
+    * unhandled compaction barriers.
+    */
+   readonly inbox: (sessionID: SessionSchema.ID) => Effect.Effect<SessionInbox.Info[], NotFoundError>
++  readonly snapshot: (input: {
++    sessionID: SessionSchema.ID
++    recent?: number
++  }) => Effect.Effect<
++    {
++      readonly session: SessionSchema.Info
++      readonly children: SessionSchema.Info[]
++      readonly inbox: SessionInbox.Info[]
++      readonly messages: SessionMessage.Info[]
++      readonly seq: Event.Seq
++    },
++    NotFoundError | MessageDecodeError
++  >
+   readonly cancelInbox: (input: InboxItemRef) => Effect.Effect<void, NotFoundError | InboxConflictError>
+   readonly steerInbox: (input: InboxItemRef) => Effect.Effect<void, NotFoundError | InboxConflictError>
+   readonly queueInbox: (input: InboxItemRef) => Effect.Effect<void, NotFoundError | InboxConflictError>
++  readonly openLog: (input: {
++    sessionID: SessionSchema.ID
++    after?: number
++    follow?: boolean
++    ephemeral?: boolean
++  }) => Effect.Effect<Stream.Stream<SessionEvent.Event | EventLog.Synced>, NotFoundError | SeqUnavailableError>
+   /**
+-   * Durable, ordered session log read. Replays durable session bus after
+-   * the exclusive `after` cursor, emits a `Synced` marker at the captured
+-   * replay watermark, then continues live when `follow` is set.
++   * Ordered session log read. Replays durable session events after the
++   * exclusive `after` cursor, emits a `Synced` marker at the captured replay
++   * watermark, then continues live when `follow` is set. Ephemeral events are
++   * included only in the live phase when explicitly requested.
+    * The marker's seq may exceed the last emitted event because other durable
+    * bus share the aggregate's sequence space.
+    */
+@@ -208,7 +233,8 @@ export interface Interface {
+     sessionID: SessionSchema.ID
+     after?: number
+     follow?: boolean
+-  }) => Stream.Stream<SessionEvent.DurableEvent | EventLog.Synced, NotFoundError>
++    ephemeral?: boolean
++  }) => Stream.Stream<SessionEvent.Event | EventLog.Synced, NotFoundError | SeqUnavailableError>
+   readonly switchAgent: (input: { sessionID: SessionSchema.ID; agent: Agent.ID }) => Effect.Effect<void, NotFoundError>
+   readonly switchModel: (input: { sessionID: SessionSchema.ID; model: Model.Ref }) => Effect.Effect<void, NotFoundError>
+   readonly rename: (input: { sessionID: SessionSchema.ID; title: string }) => Effect.Effect<void, NotFoundError>
+@@ -326,6 +352,7 @@ const layer = Layer.effect(
+     })
+     const decodeMessage = Schema.decodeUnknownEffect(SessionMessage.Info)
+     const isDurableSessionEvent = Schema.is(SessionEvent.Durable)
++    const isSessionEvent = Schema.is(SessionEvent.All)
+     const persistProject = (project: Project.Resolved) => upsertProject(db, project).pipe(Effect.orDie)
+     const decode = (row: typeof SessionMessageTable.$inferSelect) =>
+       decodeMessage({ ...row.data, id: row.id, type: row.type }).pipe(
+@@ -557,20 +584,90 @@ const layer = Layer.effect(
+         yield* result.get(sessionID)
+         return yield* SessionInbox.list(db, sessionID)
+       }),
++      snapshot: Effect.fn("Session.snapshot")(function* (input) {
++        return yield* db
++          .transaction(() =>
++            Effect.gen(function* () {
++              const row = yield* db
++                .select()
++                .from(SessionTable)
++                .where(eq(SessionTable.id, input.sessionID))
++                .get()
++                .pipe(Effect.orDie)
++              if (!row) return yield* new NotFoundError({ sessionID: input.sessionID })
++              const children = yield* db
++                .select()
++                .from(SessionTable)
++                .where(eq(SessionTable.parent_id, input.sessionID))
++                .orderBy(desc(SessionTable.time_updated), desc(SessionTable.id))
++                .all()
++                .pipe(Effect.orDie)
++              const inbox = yield* SessionInbox.list(db, input.sessionID)
++              const messages = yield* db
++                .select()
++                .from(SessionMessageTable)
++                .where(eq(SessionMessageTable.session_id, input.sessionID))
++                .orderBy(desc(SessionMessageTable.seq))
++                .limit(input.recent ?? 200)
++                .all()
++                .pipe(Effect.orDie)
++              const seq = yield* Bus.latestSequence(db, input.sessionID)
++              if (seq < 0) return yield* Effect.die(new Error(`Session ${input.sessionID} has no event sequence`))
++              return {
++                session: fromRow(row),
++                children: children.map(fromRow),
++                inbox,
++                messages: yield* Effect.forEach(messages.toReversed(), decode),
++                seq: Event.Seq.make(seq),
++              }
++            }),
++          )
++          .pipe(Effect.catchTag("SqlError", Effect.die))
++      }),
+       cancelInbox: Effect.fn("Session.cancelInbox")((input) => mutatePending(input, SessionInbox.cancel)),
+       steerInbox: Effect.fn("Session.steerInbox")((input) => mutatePending(input, SessionInbox.steer, true)),
+       queueInbox: Effect.fn("Session.queueInbox")((input) => mutatePending(input, SessionInbox.queue)),
+-      log: (input) =>
+-        Stream.unwrap(
+-          result
+-            .get(input.sessionID)
+-            .pipe(Effect.as(bus.log({ aggregateID: input.sessionID, after: input.after, follow: input.follow }))),
+-        ).pipe(
+-          Stream.filter(
+-            (item): item is SessionEvent.DurableEvent | EventLog.Synced =>
+-              Bus.isSynced(item) || isDurableSessionEvent(item),
+-          ),
+-        ),
++      openLog: Effect.fn("Session.openLog")(function* (input) {
++        yield* result.get(input.sessionID)
++        if (input.after !== undefined) {
++          const head = yield* Bus.latestSequence(db, input.sessionID)
++          if (input.after > head)
++            return yield* new SeqUnavailableError({
++              sessionID: input.sessionID,
++              after: Event.Seq.make(input.after),
++              head: head >= 0 ? Event.Seq.make(head) : undefined,
++            })
++          // A cursor claims the caller already holds everything through `after`, so
++          // replay of (after, head] must be provably complete. Without retained rows
++          // covering the range (events.persist off, or pruned history) replaying
++          // nothing would silently desync the caller; fail so it re-snapshots instead.
++          if (input.after < head) {
++            const retained = yield* Bus.retainedCount(db, input.sessionID, input.after, head)
++            if (retained < head - input.after)
++              return yield* new SeqUnavailableError({
++                sessionID: input.sessionID,
++                after: Event.Seq.make(input.after),
++                head: Event.Seq.make(head),
++              })
++          }
++        }
++        return bus
++          .log({
++            aggregateID: input.sessionID,
++            after: input.after,
++            follow: input.follow,
++            includeLive: input.ephemeral
++              ? (event) => isSessionEvent(event) && event.data.sessionID === input.sessionID
++              : undefined,
++          })
++          .pipe(
++            Stream.filter(
++              (item): item is SessionEvent.Event | EventLog.Synced =>
++                Bus.isSynced(item) || (input.ephemeral ? isSessionEvent(item) : isDurableSessionEvent(item)),
++            ),
++          )
++      }),
++      log: (input) => Stream.unwrap(result.openLog(input)),
+       prompt: Effect.fn("Session.prompt")((input) =>
+         Effect.uninterruptible(
+           Effect.gen(function* () {
+diff --git a/packages/core/test/session-log.test.ts b/packages/core/test/session-log.test.ts
+index 1a7dc4a4c727..1887e135b719 100644
+--- a/packages/core/test/session-log.test.ts
++++ b/packages/core/test/session-log.test.ts
+@@ -4,8 +4,10 @@ import { Database } from "@opencode-ai/core/database/database"
+ import { Agent } from "@opencode-ai/core/agent"
+ import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
+ import { LayerNode } from "@opencode-ai/util/effect/layer-node"
++import { and, eq } from "drizzle-orm"
+ import { Bus } from "@opencode-ai/core/bus"
+ import { Event } from "@opencode-ai/schema/event"
++import { EventTable } from "@opencode-ai/core/event/sql"
+ import { Location } from "@opencode-ai/core/location"
+ import { Project } from "@opencode-ai/core/project"
+ import { ProjectTable } from "@opencode-ai/core/project/sql"
+@@ -15,6 +17,8 @@ import { SessionProjector } from "@opencode-ai/core/session/projector"
+ import { SessionExecution } from "@opencode-ai/core/session/execution"
+ import { SessionStore } from "@opencode-ai/core/session/store"
+ import { SessionTable } from "@opencode-ai/core/session/sql"
++import { SessionEvent } from "@opencode-ai/core/session/event"
++import { SessionMessage } from "@opencode-ai/core/session/message"
+ import { testEffect } from "./lib/effect"
+ import { globalProjectLayer } from "./lib/project"
+ 
+@@ -28,6 +32,16 @@ const it = testEffect(
+     ],
+   ),
+ )
++// Default bus: durable payloads are not retained (`events.persist` off).
++const itVolatile = testEffect(
++  AppNodeBuilder.build(
++    LayerNode.group([Database.node, Bus.node, SessionProjector.node, SessionStore.node, Session.node]),
++    [
++      [Project.node, globalProjectLayer],
++      [SessionExecution.node, SessionExecution.noopLayer],
++    ],
++  ),
++)
+ const location = Location.Ref.make({ directory: AbsolutePath.make("/project") })
+ 
+ describe("Session.log", () => {
+@@ -60,6 +74,43 @@ describe("Session.log", () => {
+     }),
+   )
+ 
++  it.effect("accepts a cursor exactly at the aggregate head", () =>
++    Effect.gen(function* () {
++      const session = yield* Session.Service
++      const created = yield* session.create({ location })
++
++      const items = Array.from(
++        yield* Stream.runCollect(session.log({ sessionID: created.id, after: Event.Seq.make(0) })),
++      )
++
++      expect(items).toEqual([{ type: "log.synced", aggregateID: created.id, seq: Event.Seq.make(0) }])
++    }),
++  )
++
++  it.effect("fails with SeqUnavailable when the cursor is beyond the aggregate head", () =>
++    Effect.gen(function* () {
++      const session = yield* Session.Service
++      const created = yield* session.create({ location })
++
++      const errors = yield* Effect.forEach([1, 10], (after) =>
++        Effect.flip(Stream.runCollect(session.log({ sessionID: created.id, after: Event.Seq.make(after) }))),
++      )
++
++      expect(errors.map((error) => error._tag)).toEqual([
++        "Session.SeqUnavailableError",
++        "Session.SeqUnavailableError",
++      ])
++      expect(errors.map((error) => (error._tag === "Session.SeqUnavailableError" ? error.after : undefined))).toEqual([
++        Event.Seq.make(1),
++        Event.Seq.make(10),
++      ])
++      expect(errors.map((error) => (error._tag === "Session.SeqUnavailableError" ? error.head : undefined))).toEqual([
++        Event.Seq.make(0),
++        Event.Seq.make(0),
++      ])
++    }),
++  )
++
+   it.effect("fails with NotFound for an unknown session", () =>
+     Effect.gen(function* () {
+       const session = yield* Session.Service
+@@ -68,6 +119,109 @@ describe("Session.log", () => {
+     }),
+   )
+ 
++  it.effect("orders live ephemeral deltas after their durable start", () =>
++    Effect.gen(function* () {
++      const session = yield* Session.Service
++      const bus = yield* Bus.Service
++      const created = yield* session.create({ location })
++      const assistantMessageID = SessionMessage.ID.create()
++      const fiber = yield* session
++        .log({ sessionID: created.id, after: Event.Seq.make(0), follow: true, ephemeral: true })
++        .pipe(Stream.take(3), Stream.runCollect, Effect.forkScoped)
++      yield* Effect.yieldNow
++
++      yield* bus.publish(SessionEvent.Text.Started, {
++        sessionID: created.id,
++        assistantMessageID,
++        ordinal: 0,
++      })
++      yield* bus.publish(SessionEvent.Text.Delta, {
++        sessionID: created.id,
++        assistantMessageID,
++        ordinal: 0,
++        delta: "hello",
++      })
++
++      expect(Array.from(yield* Fiber.join(fiber)).map((item) => item.type)).toEqual([
++        "log.synced",
++        "session.text.started",
++        "session.text.delta",
++      ])
++    }),
++  )
++
++  it.effect("never includes ephemeral events in replay", () =>
++    Effect.gen(function* () {
++      const session = yield* Session.Service
++      const bus = yield* Bus.Service
++      const created = yield* session.create({ location })
++      const assistantMessageID = SessionMessage.ID.create()
++      yield* bus.publish(SessionEvent.Text.Started, {
++        sessionID: created.id,
++        assistantMessageID,
++        ordinal: 0,
++      })
++      yield* bus.publish(SessionEvent.Text.Delta, {
++        sessionID: created.id,
++        assistantMessageID,
++        ordinal: 0,
++        delta: "not retained",
++      })
++      yield* bus.publish(SessionEvent.Text.Ended, {
++        sessionID: created.id,
++        assistantMessageID,
++        ordinal: 0,
++        text: "complete",
++      })
++
++      const items = Array.from(yield* Stream.runCollect(session.log({ sessionID: created.id, ephemeral: true })))
++
++      expect(items.map((item) => item.type)).toEqual([
++        "session.created",
++        "session.text.started",
++        "session.text.ended",
++        "log.synced",
++      ])
++    }),
++  )
++
++  it.effect("keeps the default follow stream durable-only", () =>
++    Effect.gen(function* () {
++      const session = yield* Session.Service
++      const bus = yield* Bus.Service
++      const created = yield* session.create({ location })
++      const assistantMessageID = SessionMessage.ID.create()
++      const fiber = yield* session
++        .log({ sessionID: created.id, after: Event.Seq.make(0), follow: true })
++        .pipe(Stream.take(3), Stream.runCollect, Effect.forkScoped)
++      yield* Effect.yieldNow
++
++      yield* bus.publish(SessionEvent.Text.Started, {
++        sessionID: created.id,
++        assistantMessageID,
++        ordinal: 0,
++      })
++      yield* bus.publish(SessionEvent.Text.Delta, {
++        sessionID: created.id,
++        assistantMessageID,
++        ordinal: 0,
++        delta: "filtered",
++      })
++      yield* bus.publish(SessionEvent.Text.Ended, {
++        sessionID: created.id,
++        assistantMessageID,
++        ordinal: 0,
++        text: "complete",
++      })
++
++      expect(Array.from(yield* Fiber.join(fiber)).map((item) => item.type)).toEqual([
++        "log.synced",
++        "session.text.started",
++        "session.text.ended",
++      ])
++    }),
++  )
++
+   it.effect("reads across undecodable gaps in aggregate order and marks the true log position", () =>
+     Effect.gen(function* () {
+       const GapEvent = Bus.durable({
+@@ -87,12 +241,33 @@ describe("Session.log", () => {
+       const items = Array.from(yield* Stream.runCollect(session.log({ sessionID: created.id, after: 1 })))
+ 
+       expect(
+-        items.map((item): number | string | undefined => (Bus.isSynced(item) ? item.type : item.durable?.seq)),
++        items.map((item): number | string | undefined =>
++          Bus.isSynced(item) ? item.type : "durable" in item ? item.durable.seq : undefined,
++        ),
+       ).toEqual([3, 4, "log.synced"])
+       expect(items.at(-1)).toEqual({ type: "log.synced", aggregateID: created.id, seq: Event.Seq.make(4) })
+     }),
+   )
+ 
++  it.effect("fails with SeqUnavailable when the replay range is only partially retained", () =>
++    Effect.gen(function* () {
++      const db = (yield* Database.Service).db
++      const session = yield* Session.Service
++      const created = yield* session.create({ location })
++      yield* session.rename({ sessionID: created.id, title: "pruned" })
++      yield* db
++        .delete(EventTable)
++        .where(and(eq(EventTable.aggregate_id, created.id), eq(EventTable.seq, 1)))
++        .run()
++
++      const error = yield* Effect.flip(
++        Stream.runCollect(session.log({ sessionID: created.id, after: Event.Seq.make(0) })),
++      )
++
++      expect(error._tag).toBe("Session.SeqUnavailableError")
++    }),
++  )
++
+   it.effect("completes with a bare synced marker for a migrated Session with no event sequence", () =>
+     Effect.gen(function* () {
+       const db = (yield* Database.Service).db
+@@ -121,3 +296,46 @@ describe("Session.log", () => {
+     }),
+   )
+ })
++
++describe("Session.log without retained events", () => {
++  itVolatile.effect("accepts a cursor exactly at the head", () =>
++    Effect.gen(function* () {
++      const session = yield* Session.Service
++      const created = yield* session.create({ location })
++      yield* session.rename({ sessionID: created.id, title: "at head" })
++
++      const items = Array.from(
++        yield* Stream.runCollect(session.log({ sessionID: created.id, after: Event.Seq.make(1) })),
++      )
++
++      expect(items).toEqual([{ type: "log.synced", aggregateID: created.id, seq: Event.Seq.make(1) }])
++    }),
++  )
++
++  itVolatile.effect("fails with SeqUnavailable for a cursor behind the head", () =>
++    Effect.gen(function* () {
++      const session = yield* Session.Service
++      const created = yield* session.create({ location })
++      yield* session.rename({ sessionID: created.id, title: "behind head" })
++
++      const error = yield* Effect.flip(
++        Stream.runCollect(session.log({ sessionID: created.id, after: Event.Seq.make(0) })),
++      )
++
++      expect(error._tag).toBe("Session.SeqUnavailableError")
++      expect(error._tag === "Session.SeqUnavailableError" ? error.head : undefined).toEqual(Event.Seq.make(1))
++    }),
++  )
++
++  itVolatile.effect("replays nothing but stays live for a cursorless read", () =>
++    Effect.gen(function* () {
++      const session = yield* Session.Service
++      const created = yield* session.create({ location })
++      yield* session.rename({ sessionID: created.id, title: "cursorless" })
++
++      const items = Array.from(yield* Stream.runCollect(session.log({ sessionID: created.id })))
++
++      expect(items).toEqual([{ type: "log.synced", aggregateID: created.id, seq: Event.Seq.make(1) }])
++    }),
++  )
++})
+diff --git a/packages/core/test/session-snapshot.test.ts b/packages/core/test/session-snapshot.test.ts
+new file mode 100644
+index 000000000000..6c5c1ddf5bcf
+--- /dev/null
++++ b/packages/core/test/session-snapshot.test.ts
+@@ -0,0 +1,87 @@
++import { describe, expect } from "bun:test"
++import { Effect } from "effect"
++import { Database } from "@opencode-ai/core/database/database"
++import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
++import { LayerNode } from "@opencode-ai/util/effect/layer-node"
++import { Bus } from "@opencode-ai/core/bus"
++import { Location } from "@opencode-ai/core/location"
++import { Project } from "@opencode-ai/core/project"
++import { AbsolutePath } from "@opencode-ai/core/schema"
++import { Session } from "@opencode-ai/core/session"
++import { SessionProjector } from "@opencode-ai/core/session/projector"
++import { SessionExecution } from "@opencode-ai/core/session/execution"
++import { SessionStore } from "@opencode-ai/core/session/store"
++import { SessionEvent } from "@opencode-ai/core/session/event"
++import { Event } from "@opencode-ai/schema/event"
++import { testEffect } from "./lib/effect"
++import { globalProjectLayer } from "./lib/project"
++
++const it = testEffect(
++  AppNodeBuilder.build(
++    LayerNode.group([Database.node, Bus.node, SessionProjector.node, SessionStore.node, Session.node]),
++    [
++      [Bus.node, Bus.configured({ persist: true })],
++      [Project.node, globalProjectLayer],
++      [SessionExecution.node, SessionExecution.noopLayer],
++    ],
++  ),
++)
++const location = Location.Ref.make({ directory: AbsolutePath.make("/project") })
++
++describe("Session.snapshot", () => {
++  it.effect("returns an empty projected session at its aggregate watermark", () =>
++    Effect.gen(function* () {
++      const sessions = yield* Session.Service
++      const created = yield* sessions.create({ location })
++
++      expect(yield* sessions.snapshot({ sessionID: created.id })).toEqual({
++        session: created,
++        children: [],
++        inbox: [],
++        messages: [],
++        seq: Event.Seq.make(0),
++      })
++    }),
++  )
++
++  it.effect("returns the most recent messages in aggregate order", () =>
++    Effect.gen(function* () {
++      const sessions = yield* Session.Service
++      const bus = yield* Bus.Service
++      const created = yield* sessions.create({ location })
++      yield* Effect.forEach(["first", "second", "third"], (text) =>
++        bus.publish(SessionEvent.Synthetic, { sessionID: created.id, text }),
++      )
++
++      const snapshot = yield* sessions.snapshot({ sessionID: created.id, recent: 2 })
++
++      expect(snapshot.messages.map((message) => (message.type === "synthetic" ? message.text : message.type))).toEqual([
++        "second",
++        "third",
++      ])
++      expect(snapshot.seq).toBe(Event.Seq.make(3))
++    }),
++  )
++
++  it.effect("keeps rows and watermark consistent during concurrent publication", () =>
++    Effect.gen(function* () {
++      const sessions = yield* Session.Service
++      const bus = yield* Bus.Service
++      const created = yield* sessions.create({ location })
++      const publish = Effect.forEach(
++        Array.from({ length: 40 }, (_, index) => index + 1),
++        (index) => bus.publish(SessionEvent.Synthetic, { sessionID: created.id, text: String(index) }),
++      )
++      const read = Effect.forEach(Array.from({ length: 40 }), () => sessions.snapshot({ sessionID: created.id }))
++
++      const [, snapshots] = yield* Effect.all([publish, read], { concurrency: "unbounded" })
++
++      snapshots.forEach((snapshot) => {
++        expect(snapshot.messages).toHaveLength(snapshot.seq)
++        expect(
++          snapshot.messages.map((message) => (message.type === "synthetic" ? Number(message.text) : -1)),
++        ).toEqual(Array.from({ length: snapshot.seq }, (_, index) => index + 1))
++      })
++    }),
++  )
++})
+diff --git a/packages/protocol/src/errors.ts b/packages/protocol/src/errors.ts
+index f3240fa5c541..f342fb17ab10 100644
+--- a/packages/protocol/src/errors.ts
++++ b/packages/protocol/src/errors.ts
+@@ -1,5 +1,6 @@
+ import { Schema } from "effect"
+ import { Skill } from "@opencode-ai/schema/skill"
++import { Event } from "@opencode-ai/schema/event"
+ 
+ export class InvalidRequestError extends Schema.TaggedError<InvalidRequestError>()(
+   "InvalidRequestError",
+@@ -35,6 +36,17 @@ export class SessionBusyError extends Schema.TaggedError<SessionBusyError>()(
+   { httpApiStatus: 409 },
+ ) {}
+ 
++export class SeqUnavailableError extends Schema.TaggedError<SeqUnavailableError>()(
++  "SeqUnavailableError",
++  {
++    sessionID: Schema.String,
++    after: Event.Seq,
++    head: Schema.optional(Event.Seq),
++    message: Schema.String,
++  },
++  { httpApiStatus: 409 },
++) {}
++
+ export class ServiceUnavailableError extends Schema.TaggedError<ServiceUnavailableError>()(
+   "ServiceUnavailableError",
+   {
+diff --git a/packages/protocol/src/groups/session.ts b/packages/protocol/src/groups/session.ts
+index 5c6c9eb18b81..5e82aec5bb79 100644
+--- a/packages/protocol/src/groups/session.ts
++++ b/packages/protocol/src/groups/session.ts
+@@ -18,6 +18,7 @@ import {
+   InvalidRequestError,
+   MessageNotFoundError,
+   ServiceUnavailableError,
++  SeqUnavailableError,
+   SessionBusyError,
+   SessionNotFoundError,
+   SkillNotFoundError,
+@@ -219,6 +220,30 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S>(sessionLo
+         }),
+       ),
+     )
++    .add(
++      HttpApiEndpoint.get("session.snapshot", "/api/session/:sessionID/snapshot", {
++        params: { sessionID: Session.ID },
++        query: {
++          recent: Schema.NumberFromString.pipe(Schema.decodeTo(PositiveInt), Schema.optional),
++        },
++        success: Schema.Struct({
++          data: Schema.Struct({
++            session: Session.Info,
++            children: Schema.Array(Session.Info),
++            inbox: Schema.Array(SessionInbox.Info),
++            messages: Schema.Array(SessionMessage.Info),
++            seq: Event.Seq,
++          }),
++        }).annotate({ identifier: "SessionSnapshotResponse" }),
++        error: [SessionNotFoundError, UnknownError],
++      }).annotateMerge(
++        OpenApi.annotations({
++          identifier: "v2.session.snapshot",
++          summary: "Snapshot session state",
++          description: "Retrieve projected session state and its aggregate sequence from one consistent read.",
++        }),
++      ),
++    )
+     .add(
+       HttpApiEndpoint.delete("session.remove", "/api/session/:sessionID", {
+         params: { sessionID: Session.ID },
+@@ -633,17 +658,18 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S>(sessionLo
+         query: {
+           after: Schema.NumberFromString.pipe(Schema.decodeTo(Event.Seq), Schema.optional),
+           follow: BooleanFromString.pipe(Schema.optional),
++          ephemeral: BooleanFromString.pipe(Schema.optional),
+         },
+         success: HttpApiSchema.StreamSse({
+-          data: Schema.Union([SessionEvent.Durable, EventLog.Synced]).annotate({ identifier: "SessionLogItem" }),
++          data: Schema.Union([SessionEvent.All, EventLog.Synced]).annotate({ identifier: "SessionLogItem" }),
+         }),
+-        error: SessionNotFoundError,
++        error: [SessionNotFoundError, SeqUnavailableError],
+       }).annotateMerge(
+         OpenApi.annotations({
+           identifier: "v2.session.log",
+           summary: "Read the session log",
+           description:
+-            "Experimental durable session event log. Reads events after an exclusive aggregate sequence and continues with live events when follow=true.",
++            "Experimental session event log. Replay is durable-only; follow mode can opt into live ephemeral events.",
+         }),
+       ),
+     )
+diff --git a/packages/server/src/handlers/session.ts b/packages/server/src/handlers/session.ts
+index e5e71eef3125..7059a6da33e2 100644
+--- a/packages/server/src/handlers/session.ts
++++ b/packages/server/src/handlers/session.ts
+@@ -1,7 +1,7 @@
+ import { Session } from "@opencode-ai/core/session"
+ import { SessionTransfer } from "@opencode-ai/core/session/transfer"
+ import { InstructionEntry } from "@opencode-ai/core/session/instruction-entry"
+-import { DateTime, Effect, Stream } from "effect"
++import { DateTime, Effect } from "effect"
+ import { HttpApiBuilder, HttpApiSchema } from "effect/unstable/httpapi"
+ import { Api } from "../api"
+ import { SessionsCursor } from "@opencode-ai/protocol/groups/session"
+@@ -13,6 +13,7 @@ import {
+   InvalidCursorError,
+   MessageNotFoundError,
+   ServiceUnavailableError,
++  SeqUnavailableError,
+   SessionBusyError,
+   SessionNotFoundError,
+   SkillNotFoundError,
+@@ -26,16 +27,23 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
+   Effect.gen(function* () {
+     const session = yield* Session.Service
+     const transfer = yield* SessionTransfer.Service
++    const sessionNotFound = (error: Session.NotFoundError) =>
++      new SessionNotFoundError({
++        sessionID: error.sessionID,
++        message: `Session not found: ${error.sessionID}`,
++      })
++    const messageDecodeFailed = (error: Session.MessageDecodeError) => {
++      const ref = `err_${crypto.randomUUID().slice(0, 8)}`
++      return Effect.logError("failed to decode session message").pipe(
++        Effect.annotateLogs({ ref, sessionID: error.sessionID, messageID: error.messageID }),
++        Effect.andThen(
++          Effect.fail(new UnknownError({ message: "Unexpected server error. Check server logs for details.", ref })),
++        ),
++      )
++    }
+     const pendingMutation = (effect: ReturnType<typeof session.cancelInbox>, conflict: string) =>
+       effect.pipe(
+-        Effect.catchTag(
+-          "Session.NotFoundError",
+-          (error) =>
+-            new SessionNotFoundError({
+-              sessionID: error.sessionID,
+-              message: `Session not found: ${error.sessionID}`,
+-            }),
+-        ),
++        Effect.catchTag("Session.NotFoundError", sessionNotFound),
+         Effect.catchTag(
+           "Session.InboxConflictError",
+           (error) => new ConflictError({ resource: error.inboxID, message: `${conflict}: ${error.inboxID}` }),
+@@ -131,25 +139,8 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
+         Effect.fn(function* (ctx) {
+           return {
+             data: yield* transfer.export({ sessionID: ctx.params.sessionID, sanitize: ctx.query.sanitize }).pipe(
+-              Effect.catchTag(
+-                "Session.NotFoundError",
+-                (error) =>
+-                  new SessionNotFoundError({
+-                    sessionID: error.sessionID,
+-                    message: `Session not found: ${error.sessionID}`,
+-                  }),
+-              ),
+-              Effect.catchTag("Session.MessageDecodeError", (error) => {
+-                const ref = `err_${crypto.randomUUID().slice(0, 8)}`
+-                return Effect.logError("failed to decode session message").pipe(
+-                  Effect.annotateLogs({ ref, sessionID: error.sessionID, messageID: error.messageID }),
+-                  Effect.andThen(
+-                    Effect.fail(
+-                      new UnknownError({ message: "Unexpected server error. Check server logs for details.", ref }),
+-                    ),
+-                  ),
+-                )
+-              }),
++              Effect.catchTag("Session.NotFoundError", sessionNotFound),
++              Effect.catchTag("Session.MessageDecodeError", messageDecodeFailed),
+             ),
+           }
+         }),
+@@ -180,6 +171,19 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
+           }
+         }),
+       )
++      .handle(
++        "session.snapshot",
++        Effect.fn(function* (ctx) {
++          return {
++            data: yield* session
++              .snapshot({ sessionID: ctx.params.sessionID, recent: ctx.query.recent })
++              .pipe(
++                Effect.catchTag("Session.NotFoundError", sessionNotFound),
++                Effect.catchTag("Session.MessageDecodeError", messageDecodeFailed),
++              ),
++          }
++        }),
++      )
+       .handle(
+         "session.remove",
+         Effect.fn(function* (ctx) {
+@@ -664,25 +668,8 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
+         Effect.fn(function* (ctx) {
+           return {
+             data: yield* session.context(ctx.params.sessionID).pipe(
+-              Effect.catchTag("Session.NotFoundError", (error) =>
+-                Effect.fail(
+-                  new SessionNotFoundError({
+-                    sessionID: error.sessionID,
+-                    message: `Session not found: ${error.sessionID}`,
+-                  }),
+-                ),
+-              ),
+-              Effect.catchTag("Session.MessageDecodeError", (error) => {
+-                const ref = `err_${crypto.randomUUID().slice(0, 8)}`
+-                return Effect.logError("failed to decode session message").pipe(
+-                  Effect.annotateLogs({ ref, sessionID: error.sessionID, messageID: error.messageID }),
+-                  Effect.andThen(
+-                    Effect.fail(
+-                      new UnknownError({ message: "Unexpected server error. Check server logs for details.", ref }),
+-                    ),
+-                  ),
+-                )
+-              }),
++              Effect.catchTag("Session.NotFoundError", sessionNotFound),
++              Effect.catchTag("Session.MessageDecodeError", messageDecodeFailed),
+             ),
+           }
+         }),
+@@ -773,19 +760,25 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
+       .handle(
+         "session.log",
+         Effect.fn(function* (ctx) {
+-          yield* session.get(ctx.params.sessionID).pipe(
+-            Effect.catchTag(
+-              "Session.NotFoundError",
+-              (error) =>
+-                new SessionNotFoundError({
+-                  sessionID: error.sessionID,
+-                  message: `Session not found: ${error.sessionID}`,
+-                }),
+-            ),
+-          )
+-          return session
+-            .log({ sessionID: ctx.params.sessionID, after: ctx.query.after, follow: ctx.query.follow })
+-            .pipe(Stream.orDie)
++          return yield* session
++            .openLog({
++              sessionID: ctx.params.sessionID,
++              after: ctx.query.after,
++              follow: ctx.query.follow,
++              ephemeral: ctx.query.ephemeral,
++            })
++            .pipe(
++              Effect.mapError((error) =>
++                error._tag === "Session.NotFoundError"
++                  ? sessionNotFound(error)
++                  : new SeqUnavailableError({
++                      sessionID: error.sessionID,
++                      after: error.after,
++                      head: error.head,
++                      message: `Session log is unavailable after sequence ${error.after}`,
++                    }),
++              ),
++            )
+         }),
+       )
+       .handle(
+diff --git a/packages/tui/src/component/prompt/index.tsx b/packages/tui/src/component/prompt/index.tsx
+index e3e37358a8d6..9061db812016 100644
+--- a/packages/tui/src/component/prompt/index.tsx
++++ b/packages/tui/src/component/prompt/index.tsx
+@@ -208,6 +208,11 @@ export function Prompt(props: PromptProps) {
+   const config = useConfig().data
+   const dialog = useDialog()
+   const toast = useToast()
++  onCleanup(
++    data.session.failures.listen((failure) => {
++      toast.show({ title: "Prompt rejected", message: failure.reason, variant: "error" })
++    }),
++  )
+   const status = createMemo(() => data.session.status(props.sessionID ?? ""))
+   const history = usePromptHistory()
+   const stash = usePromptStash()
+@@ -1304,7 +1309,7 @@ export function Prompt(props: PromptProps) {
+           return false
+         }
+       }
+-      const error = await client.api.session
++      const error = await data.session
+         .prompt({
+           sessionID,
+           text: inputText,
+diff --git a/packages/tui/src/context/data.tsx b/packages/tui/src/context/data.tsx
+index fa164735e4ef..0285d31e413e 100644
+--- a/packages/tui/src/context/data.tsx
++++ b/packages/tui/src/context/data.tsx
+@@ -1,4 +1,4 @@
+-import { createData } from "@opencode-ai/client/solid"
++import { createEngineData } from "@opencode-ai/client/solid"
+ import type { Plugin } from "@opencode-ai/plugin/tui"
+ import { createSimpleContext } from "./helper"
+ import { useClient } from "./client"
+@@ -10,7 +10,7 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
+   name: "Data",
+   init: () => {
+     const client = useClient()
+-    const data = createData({
++    const data = createEngineData({
+       api: () => client.api,
+       event: client.event,
+       connection: client.connection,
+diff --git a/packages/tui/src/routes/session/rows.ts b/packages/tui/src/routes/session/rows.ts
+index e1e0efe78a2a..663342415d9b 100644
+--- a/packages/tui/src/routes/session/rows.ts
++++ b/packages/tui/src/routes/session/rows.ts
+@@ -213,13 +213,25 @@ export function createSessionRows(sessionID: Accessor<string>, onSynced?: (sessi
+   const input = (event: SessionInboxEnqueued) => {
+     if (
+       event.data.sessionID === sessionID() &&
++      event.data.item.delivery !== "queue" &&
+       (event.data.item.type === "user" ||
+         (event.data.item.type === "synthetic" && event.data.item.payload.description?.trim()))
+     )
+       appendMessage(event.data.inboxID)
+   }
++  const delivery = (event: { data: { sessionID: string; inboxID: string; delivery: "steer" | "queue" } }) => {
++    if (event.data.sessionID !== sessionID()) return
++    if (event.data.delivery === "steer") return appendMessage(event.data.inboxID)
++    setRows(
++      produce((draft) => {
++        const index = draft.findIndex((row) => row.type === "message" && row.messageID === event.data.inboxID)
++        if (index !== -1) draft.splice(index, 1)
++      }),
++    )
++  }
+   const subscriptions = [
+     data.on("session.inbox.enqueued", input),
++    data.on("session.inbox.delivery.changed", delivery),
+     data.on("session.compaction.started", (event) => {
+       if (event.data.sessionID === sessionID()) appendMessage(event.data.inputID ?? event.id.replace(/^evt_/, "msg_"))
+     }),
+diff --git a/packages/tui/test/cli/tui/data.test.tsx b/packages/tui/test/cli/tui/data.test.tsx
+index 4f7a3b852119..0b4e6077d9f1 100644
+--- a/packages/tui/test/cli/tui/data.test.tsx
++++ b/packages/tui/test/cli/tui/data.test.tsx
+@@ -2592,18 +2592,7 @@ test("reconciles active session forms when the event stream reconnects", async (
+ 
+ test("settles pending tools when a live failure arrives", async () => {
+   const events = createEventStream()
+-  const calls = createFetch((url) => {
+-    if (url.pathname === "/api/session/session-1/message/msg_model_1")
+-      return json({
+-        data: {
+-          id: "msg_model_1",
+-          type: "model-switched",
+-          previous: { id: "model-1", providerID: "provider-1", variant: "medium" },
+-          model: { id: "model-1", providerID: "provider-1", variant: "high" },
+-          time: { created: 0 },
+-        },
+-      })
+-  }, events)
++  const calls = createFetch(undefined, events)
+   let sync!: ReturnType<typeof useData>
+   let ready!: () => void
+   const mounted = new Promise<void>((resolve) => {
+@@ -2630,6 +2619,7 @@ test("settles pending tools when a live failure arrives", async () => {
+ 
+   try {
+     await mounted
++    await sync.session.message.sync("session-1")
+     emitEvent(events, {
+       id: "evt_agent_1",
+       created: 0,
+@@ -2645,6 +2635,7 @@ test("settles pending tools when a live failure arrives", async () => {
+       data: {
+         sessionID: "session-1",
+         model: { id: "model-1", providerID: "provider-1", variant: "high" },
++        previous: { id: "model-1", providerID: "provider-1", variant: "medium" },
+       },
+     })
+     emitEvent(events, {
+diff --git a/packages/tui/test/cli/tui/dialog-session-list.test.tsx b/packages/tui/test/cli/tui/dialog-session-list.test.tsx
+index 9722416ad6e5..460d5a9c8af5 100644
+--- a/packages/tui/test/cli/tui/dialog-session-list.test.tsx
++++ b/packages/tui/test/cli/tui/dialog-session-list.test.tsx
+@@ -27,7 +27,10 @@ test("scopes sessions to the active session location", async () => {
+   const active = "/tmp/opencode/project-b"
+   const events = createEventStream()
+   const requestedProjects: string[] = []
+-  const calls = createFetch((url) => {
++  const calls = createFetch((url, request) => {
++    // The fixture's snapshot synthesizer reads through this handler; only app
++    // traffic belongs in the scoping assertions.
++    if (request.headers.get("x-fixture-synthetic")) return undefined
+     if (url.pathname === "/api/location") {
+       const directory = url.searchParams.get("location[directory]") ?? process.cwd()
+       const project = directory === active ? "proj_b" : "proj_a"
+diff --git a/packages/tui/test/fixture/tui-client.ts b/packages/tui/test/fixture/tui-client.ts
+index 5fcb6f4bbd14..5945a6ddff59 100644
+--- a/packages/tui/test/fixture/tui-client.ts
++++ b/packages/tui/test/fixture/tui-client.ts
+@@ -16,6 +16,9 @@ export function createEventStream() {
+   const encoder = new TextEncoder()
+   const v2 = new Set<ReadableStreamDefaultController<Uint8Array>>()
+   const pending: Uint8Array[] = []
++  const logs = new Map<string, Set<ReadableStreamDefaultController<Uint8Array>>>()
++  const logSeq = new Map<string, number>()
++  const logHistory = new Map<string, Array<{ readonly seq: number; readonly event: unknown }>>()
+   const response = (
+     controllers: Set<ReadableStreamDefaultController<Uint8Array>>,
+     queued: Uint8Array[],
+@@ -27,7 +30,8 @@ export function createEventStream() {
+         start(controller) {
+           current = controller
+           controllers.add(controller)
+-          if (initial) controller.enqueue(encoder.encode(`data: ${JSON.stringify(initial)}\n\n`))
++          const values = Array.isArray(initial) ? initial : initial ? [initial] : []
++          for (const value of values) controller.enqueue(encoder.encode(`data: ${JSON.stringify(value)}\n\n`))
+           for (const chunk of queued.splice(0)) controller.enqueue(chunk)
+         },
+         cancel() {
+@@ -53,13 +57,47 @@ export function createEventStream() {
+   return {
+     emit(event: OpenCodeEvent) {
+       send(v2, pending, event)
++      const sessionID =
++        "durable" in event
++          ? event.durable.aggregateID
++          : "sessionID" in event.data && typeof event.data.sessionID === "string"
++            ? event.data.sessionID
++            : undefined
++      if (!sessionID) return
++      const seq = (logSeq.get(sessionID) ?? 0) + 1
++      const item = "durable" in event ? { ...event, durable: { ...event.durable, seq } } : event
++      if ("durable" in event) {
++        logSeq.set(sessionID, seq)
++        logHistory.set(sessionID, [...(logHistory.get(sessionID) ?? []), { seq, event: item }])
++      }
++      const controllers = logs.get(sessionID)
++      if (controllers) send(controllers, [], item)
+     },
+     v2() {
+       return response(v2, pending, { id: "evt_connected", type: "server.connected", data: {} })
+     },
++    log(sessionID: string, after: number) {
++      const controllers = logs.get(sessionID) ?? new Set<ReadableStreamDefaultController<Uint8Array>>()
++      logs.set(sessionID, controllers)
++      return response(
++        controllers,
++        [],
++        [
++          ...(logHistory.get(sessionID) ?? []).filter((entry) => entry.seq > after).map((entry) => entry.event),
++          { type: "log.synced", aggregateID: sessionID, seq: logSeq.get(sessionID) ?? 0 },
++        ],
++      )
++    },
++    seq(sessionID: string) {
++      return logSeq.get(sessionID) ?? 0
++    },
+     disconnect() {
+       for (const controller of v2) controller.close()
+       v2.clear()
++      for (const controllers of logs.values()) {
++        for (const controller of controllers) controller.close()
++        controllers.clear()
++      }
+     },
+   }
+ }
+@@ -68,6 +106,8 @@ export type FetchHandler = (url: URL, request: Request) => Response | undefined
+ 
+ export function createFetch(override?: FetchHandler, events?: ReturnType<typeof createEventStream>) {
+   const session = [] as URL[]
++  const sessionEvents = events ?? createEventStream()
++  const snapshots = new Map<string, number>()
+   async function fetch(input: RequestInfo | URL, init?: RequestInit) {
+     const request = input instanceof Request ? input : new Request(input, init)
+     const url = new URL(request.url)
+@@ -75,6 +115,47 @@ export function createFetch(override?: FetchHandler, events?: ReturnType<typeof
+     const overridden = await override?.(url, request)
+     if (overridden) return overridden
+     if (url.pathname === "/api/event" && events) return events.v2()
++    const snapshot = url.pathname.match(/^\/api\/session\/([^/]+)\/snapshot$/)
++    if (snapshot) {
++      const sessionID = decodeURIComponent(snapshot[1])
++      const count = snapshots.get(sessionID) ?? 0
++      snapshots.set(sessionID, count + 1)
++      // Synthetic sub-reads reuse the test override as the data source but are
++      // not app traffic; the marker header lets request-observing tests skip them.
++      const read = async (path: string, fallback: unknown) => {
++        const target = new URL(path, url)
++        const response = await override?.(target, new Request(target, { headers: { "x-fixture-synthetic": "snapshot" } }))
++        if (!response) return fallback
++        const body = await response.json()
++        if (typeof body !== "object" || body === null || !("data" in body)) return fallback
++        return body.data
++      }
++      const children = await read(`/api/session?parentID=${encodeURIComponent(sessionID)}`, [])
++      const messages = await read(`/api/session/${encodeURIComponent(sessionID)}/message`, [])
++      return json({
++        data: {
++          session: await read(`/api/session/${encodeURIComponent(sessionID)}`, {
++            id: sessionID,
++            projectID: "proj_test",
++            location: { directory },
++            cost: 0,
++            tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
++            time: { created: 0, updated: 0 },
++          }),
++          children: Array.isArray(children)
++            ? children.filter(
++                (child) =>
++                  typeof child === "object" && child !== null && "parentID" in child && child.parentID === sessionID,
++              )
++            : [],
++          inbox: await read(`/api/session/${encodeURIComponent(sessionID)}/inbox`, []),
++          messages: Array.isArray(messages) ? messages.toReversed() : [],
++          seq: count === 0 ? 0 : sessionEvents.seq(sessionID),
++        },
++      })
++    }
++    const log = url.pathname.match(/^\/api\/experimental\/session\/([^/]+)\/log$/)
++    if (log) return sessionEvents.log(decodeURIComponent(log[1]), Number(url.searchParams.get("after") ?? 0))
+ 
+     if (
+       [

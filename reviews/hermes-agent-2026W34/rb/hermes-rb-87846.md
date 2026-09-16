@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. Overall — Positive: coherent security sweep — Electron 40→42 (GHSA-9f4c-93c8-jc8g) with package.json, `electronVersion`, the override map and lockfile all moved together including the @electron/get 5.x / @electron-internal/extract-zip swap-out; nanoid/dompurify/mermaid bumps each carry their GHSA reference in the min-release-age excludes so the freshness policy documents itself. The new `brace-expansion@^5` scoped-override syntax correctly targets only the v5 hoisted copy.
+
+2. Ops note: an Electron *major* jump in a desktop app is worth a manual smoke pass over the packaged build (window lifecycle, tray, native modules via stage-native-deps) beyond CI green — the repo floor Node ≥22.22 comfortably satisfies the new ≥22.12 engine requirement, so no compat concern there. No change requested.

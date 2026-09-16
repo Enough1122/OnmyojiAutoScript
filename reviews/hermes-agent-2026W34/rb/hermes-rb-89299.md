@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. agent/conversation_loop.py — Nit: `bool(_trunc_reasoning)` treats a whitespace-only `reasoning_content` as evidence of reasoning spend; combined with empty visible content that misclassifies a *zero-output* length cut as thinking-budget exhaustion (different remediation hint). Suggestion: `bool(str(_trunc_reasoning or "").strip())` to match how the structured branch already strips content.
+
+2. Same hunk — Positive: keeping the two detection shapes separate (`_inline_thinking_exhausted` for <think> streams vs `_structured_thinking_exhausted` for out-of-band `reasoning_content`) preserves the original inline semantics exactly while extending coverage to providers like MiniMax that return reasoning out of band, and the shared `not _trunc_has_tool_calls` guard correctly keeps mid-turn tool calls out of scope. The regression test asserts the full user-facing contract (single API call, error text, /thinkon guidance). No change requested beyond item 1.

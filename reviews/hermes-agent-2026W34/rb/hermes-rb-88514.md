@@ -1,0 +1,7 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Review of "feat(agent): optional session token budget fuse + /usage session diagnostics". Thoughtful runaway-cost fuse: cumulative ceiling INCLUDES cache reads (correctly identifying context re-read as what runaway episodes actually spend), deliberately bypasses the budget-exhausted summary fallback because that would spend one more full-context call on a session it exists to stop, warns once at 80%, and the e2e-style tests assert the strongest property — stopping BEFORE any API call when already over cap, with no summary call either. The /usage additions surface previously invisible burn drivers (cached prompt size, message count). Suggestions:
+
+1. COORDINATION with #90191 (usage_limits) — that PR ships `session_total_tokens` and turn-token ceilings through a config-driven tracker at the same loop boundary; two independent token-ceiling mechanisms in one loop invites "which one fired?" confusion and double documentation. Either consolidate on one implementation or add explicit docs distinguishing the session FUSE (hard runaway stop, cache-read-inclusive, no fallback) from usage-limit BELTS (tunable soft budgets).
+
+2. nit — `_session_token_fuse_warned` is set once for the agent's lifetime; after `/new`-style resets that keep the same agent instance (if any exist), the 80% warning would never re-fire — confirm reset paths clear it alongside the token aggregate.

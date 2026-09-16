@@ -1,0 +1,9 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Reviewed by reviewer-e (AI automated review).
+
+Substantial guard upgrade: returning structured evidence (`ruleId`/`evidenceSource`/`matchedFragment`) instead of bare booleans makes every block explainable; tokenizing the whole command once with newline-as-separator preserves newlines inside quoted `sh -c` payloads (the old per-line lexer mis-tokenized those); stripping inert heredoc *bodies* before path discovery removes a whole false-positive class while `_cat_heredoc_output_is_executed` still catches heredocs written to an executable target; recognizing non-shell shebangs (node/python/ruby/…) and scanning their `child_process.spawn/execFile` literal paths closes an evasion shape; and the `(?<![A-Za-z0-9_])` boundary on `p?kill` stops substring matches. Findings:
+
+1. cron/lifecycle_guard.py:_find_unsafe_gateway_action — the walk-level cloud-placeholder checks were **deleted** from the referenced-script loop (both the pre-resolve and post-resolve `_is_cloud_placeholder_path` early-returns), with safety now resting entirely on `_read_referenced_script`'s shared choke point. The deleted comment argued that double coverage mattered ("every caller stays covered even if this walk-level short-circuit is bypassed"). Please either restore one of the two walk-level checks or add a test proving a FileProvider-placeholder script reached through the recursion still fails closed end-to-end — right now the guarantee rests on a helper I can't see in this diff.
+
+2. cron/lifecycle_guard.py:_direct_lifecycle_evidence — `matchedFragment` comes from the *masked* candidate (`_mask_data_sink_arguments` applied before search), so operator-facing evidence may show sink-masked text rather than what literally matched. Fine if intentional (probably is, for secret hygiene), but worth one docstring line so nobody "fixes" it by matching the unmasked string later.

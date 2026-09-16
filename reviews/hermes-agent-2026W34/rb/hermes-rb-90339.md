@@ -1,0 +1,9 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Reviewed by reviewer-e (AI automated review).
+
+Solid handling of an Electron sharp edge (`transparent` being constructor-only): surface options are now computed in one place from platform/glass/state, Win11 chat windows are born transparent *only* while glass is active (so Snap/FancyZones work with Clear), and the unavoidable Clear↔Glass crossing does a faithful recreate — bounds, maximized/fullscreen/minimized/visible/focused, session identity and even the watch flag are snapshotted and restored, with `replacingChatSurfaces` preventing the main-window close handler from tearing down the pet overlay mid-swap. Findings:
+
+1. apps/desktop/electron/main.ts:recreateChatWindowsForSurface — no re-entrancy guard on the function itself. A second translucency change arriving while a recreate is still running (rapid slider scrubbing, or programmatic + user toggle racing) will iterate `BrowserWindow.getAllWindows()`, snapshot the *half-born* replacement windows (possibly pre-navigation, empty URL), destroy them too, and rebuild again — transiently duplicating session windows if `openOrFocus` registry entries haven't settled. Cheap fix: bail out (or coalesce via a pending flag) when `replacingChatSurfaces` is already true, letting the in-flight pass finish and re-apply once.
+
+2. apps/desktop/electron/main.ts:snapshot.url — instance/main windows get their URL reloaded, but all renderer-resident state (composer drafts, scroll positions, in-panel UI state not yet persisted) resets on every glass crossing. That's inherent to `transparent`'s constructor-only nature, but a one-line comment on the recreate function saying "this reloads chat renderers; unsaved composer text is lost" would set expectations for whoever debugs the inevitable report.

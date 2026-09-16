@@ -1,0 +1,13 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Reviewed the diff. Both halves are real fixes: preserving the installed RunAtLoad on regeneration (instead of silently re-enabling login start on every refresh) and booting the existing label out before a forced bootstrap instead of misreading EIO as an unsupported domain (#91549). The new tests pin order-of-operations nicely. Points:
+
+- **hermes_cli/gateway.py:~7784 — verify the argparse default for \`--start-on-login\` is None, not False.** The whole preservation contract hinges on the tri-state: \`getattr(args, "start_on_login", None)\` forwards whatever the parser produced, and if the argument is defined with \`default=False\`, every *ordinary* reinstall (user never touched the flag) flips RunAtLoad to false — the exact truthfulness bug this PR fixes, reintroduced one layer up. A parser-level test asserting the untouched-flag case yields None would lock this. (Not visible in the diff, hence flagging rather than asserting.)
+
+- **gateway.py:~5116-5122 — exit-code 5 remains ambiguous between the two failure classes.** launchctl reports both "unsupported domain" and "Input/output error" via status 5; \`_launchctl_domain_unsupported(returncode)\` alone cannot tell them apart. After a successful bootout, a bootstrap that still fails with 5 (e.g. the old process hadn't fully exited within the drain window) will now unlink the freshly written plist and silently fall back to a bare background process — arguably wrong when the cause was transient EIO. Suggestion: disambiguate on stderr text ("Input/output error" vs "Operation not permitted") inside the handler, or retry bootstrap once after the wait before declaring the domain unsupported.
+
+- **gateway.py:~5107 — the bootout result is discarded entirely.** \`check=False\` is right (label may legitimately not exist), but a genuine bootout failure (permissions, hung job) currently vanishes; a debug/warning log with returncode+stderr makes forced-reinstall diagnoses possible after the fact.
+
+- **Test gaps:** force-install where no plist exists yet (bootout of a never-loaded label must be a clean no-op through the new path), and the stderr-distinction case above once implemented.
+
+Otherwise well-scoped: the fallback path now cleaning up the orphaned plist keeps on-disk state truthful, and \`_launchd_plist_run_at_load\`'s fail-open-to-True default matches historical behavior for unreadable plists.

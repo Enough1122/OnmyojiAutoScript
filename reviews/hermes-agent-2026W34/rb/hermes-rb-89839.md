@@ -1,0 +1,7 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. Tests — Gap: the PR ships no tests, and its two most testable units are pure: `mergeGaugeUsage` (measured-wins vs breakdown-fills-unmeasured) and `refreshSessionGoal`'s generation-guarded retry ladder (`HYDRATION_RETRY_MS` backoff, stale-generation early return, never-clear semantics via `applyGoalHydrationText`). Both encode subtle regression-prone contracts — e.g., a future edit reintroducing a turn-end refetch would silently restore estimate-over-measured flicker. Suggestion: vitest cases for those two plus `useHeldTrue` (fake timers: blip under 800ms held, longer gap released).
+
+2. apps/desktop/src/store/goals.ts:`applyGoalHydrationText` — Positive: never-clear hydration is the right default for a best-effort read that may resolve a different live session post-compression; pairing it server-side with `_goal_manager_for_session`'s agent-id → session_key → requested fallback (first non-cleared wins) fixes the actual root cause rather than only masking it client-side.
+
+3. Overall — Positive: the busy-churn fixes attack distinct sources independently and correctly: `useHeldTrue` rides out sub-800ms gaps while raw `busy` still gates submit/queue (so queueing semantics don't shift), goal-loop liveness keeps the stop glyph honest during judge turns, `pauseWhenUnfocused: false` stops decorative blink for unattended sessions while hidden/minimized still pause, and gauge precedence flips to measured-streamed-wins so a chars/4 estimate can't overwrite real usage after turn end.

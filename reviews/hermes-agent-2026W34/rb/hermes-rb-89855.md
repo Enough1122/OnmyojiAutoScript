@@ -1,0 +1,3 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. cron/jobs.py:`_compute_provider_model_snapshots` — Positive: correct reading of the drift-guard contract — a snapshot of an *inherited* value records "whatever the global was at creation time" and then flags an intentional global change as drift. Skipping both axes when both are None keeps inherit-mode jobs tracking the live default, while mixed-pinning jobs still snapshot only their explicitly pinned axis via the fall-through. The updated test also asserts the runtime resolver is never called for fully-inherit jobs, pinning the no-work expectation alongside the no-snapshot one. No change requested.

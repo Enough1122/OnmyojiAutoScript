@@ -1,0 +1,279 @@
+diff --git a/gateway/run.py b/gateway/run.py
+index 9e9adaf5a592..366d04c5655e 100644
+--- a/gateway/run.py
++++ b/gateway/run.py
+@@ -17935,8 +17935,15 @@ async def _do_undo():
+         # No bare text matching — "yes" in normal conversation must not trigger
+         # execution of a dangerous command.
+ 
+-        if not is_internal and await asyncio.to_thread(
+-            self._is_telegram_topic_root_lobby, source
++        # Topic-mode lobby reminders only apply to Telegram private DMs.
++        # Do not submit a guaranteed no-op group/channel check to the shared
++        # default executor: a busy pool delays plaintext dispatch and can
++        # starve e2e send capture (same constraint as adapter handle_message).
++        if (
++            not is_internal
++            and source.platform == Platform.TELEGRAM
++            and source.chat_type == "dm"
++            and await asyncio.to_thread(self._is_telegram_topic_root_lobby, source)
+         ):
+             # Debounce the lobby reminder so a user who forgets about
+             # topic mode and fires ten prompts doesn't get ten copies.
+diff --git a/hermes_cli/plugins.py b/hermes_cli/plugins.py
+index 2493d8f21edd..1b64ef0a7dae 100644
+--- a/hermes_cli/plugins.py
++++ b/hermes_cli/plugins.py
+@@ -104,6 +104,12 @@ class PluginToolOverrideError(PermissionError):
+ 
+ logger = logging.getLogger(__name__)
+ 
++# The gateway runner is process-scoped: one live runner serves every profile
++# manager in a multiplexed gateway. Message injectors remain manager-scoped so
++# each profile keeps its own capability and configuration boundary.
++_gateway_lifecycle_owner: object | None = None
++_gateway_lifecycle_lock = threading.RLock()
++
+ 
+ # ---------------------------------------------------------------------------
+ # Plugin developer debug logging
+@@ -1968,7 +1974,17 @@ def _tool_override_allowed(self, tool_name: str) -> bool:
+         # manager's home, never the active profile's (#65593 constraint).
+         return plugin_capability_granted(plugin_id, "tools.override", config=cfg)
+ 
+-    # -- message injection --------------------------------------------------
++    # -- gateway runtime and message injection ------------------------------
++
++    @property
++    def gateway(self) -> Any | None:
++        """Return the live gateway runner, or ``None`` outside its lifetime.
++
++        The reference is published only after gateway startup has installed
++        its running loop and is withdrawn during shutdown. Plugins should
++        resolve it when needed instead of caching it across restarts.
++        """
++        return self._manager.gateway
+ 
+     def inject_message(
+         self,
+@@ -3749,19 +3765,32 @@ def has_gateway_message_injector(self) -> bool:
+         """Return whether a live gateway can accept plugin-triggered turns."""
+         return self._gateway_message_injector is not None
+ 
++    @property
++    def gateway(self) -> object | None:
++        """Return the current gateway lifecycle owner, if one is running."""
++        with _gateway_lifecycle_lock:
++            return _gateway_lifecycle_owner
++
+     def set_gateway_message_injector(
+         self,
+         owner: object,
+         injector: Callable[..., bool],
+     ) -> None:
+         """Publish a live gateway injector and its lifecycle owner."""
++        global _gateway_lifecycle_owner
+         self._gateway_message_injector = (owner, injector)
++        with _gateway_lifecycle_lock:
++            _gateway_lifecycle_owner = owner
+ 
+     def clear_gateway_message_injector(self, owner: object) -> None:
+         """Clear the injector only when it still belongs to ``owner``."""
++        global _gateway_lifecycle_owner
+         registered = self._gateway_message_injector
+         if registered is not None and registered[0] is owner:
+             self._gateway_message_injector = None
++        with _gateway_lifecycle_lock:
++            if _gateway_lifecycle_owner is owner:
++                _gateway_lifecycle_owner = None
+ 
+     def inject_gateway_message(self, **kwargs: Any) -> bool:
+         """Submit a plugin-triggered turn to the live gateway."""
+@@ -5672,7 +5701,7 @@ def _reset_plugin_managers_for_tests() -> None:
+     slate (rather than adopting/injecting a specific manager) can call
+     this instead of reaching into the module's private dict directly.
+     """
+-    global _plugin_manager
++    global _gateway_lifecycle_owner, _plugin_manager
+     with _plugin_managers_lock:
+         managers = list(dict.fromkeys(_plugin_managers_by_home.values()))
+         if _plugin_manager is not None and _plugin_manager not in managers:
+@@ -5685,6 +5714,8 @@ def _reset_plugin_managers_for_tests() -> None:
+                 logger.debug("test plugin-manager unload failed", exc_info=True)
+         _plugin_managers_by_home.clear()
+         _plugin_manager = None
++        with _gateway_lifecycle_lock:
++            _gateway_lifecycle_owner = None
+ 
+ 
+ def has_enabled_agent_plugin_mcp(raw_config: Mapping[str, Any]) -> bool:
+diff --git a/tests/e2e/test_platform_commands.py b/tests/e2e/test_platform_commands.py
+index ffd9db601fcf..9419454f8dc8 100644
+--- a/tests/e2e/test_platform_commands.py
++++ b/tests/e2e/test_platform_commands.py
+@@ -113,7 +113,10 @@ async def test_plaintext_restart_gateway_in_group_stays_plain_text(self, adapter
+         if platform != Platform.TELEGRAM:
+             pytest.skip("Shortcut scope is only verified for Telegram here")
+ 
+-        monkeypatch.setenv("INVOCATION_ID", "e2e-systemd")
++        # Group chats must not take the systemd /restart shortcut. Clear the
++        # supervisor marker so Linux CI (which may inherit INVOCATION_ID)
++        # cannot engage service-restart side effects on this plaintext path.
++        monkeypatch.delenv("INVOCATION_ID", raising=False)
+         runner.request_restart = MagicMock(return_value=True)
+         runner._handle_message_with_agent = AsyncMock(return_value="agent-handled")
+ 
+diff --git a/tests/gateway/test_plugin_message_injection.py b/tests/gateway/test_plugin_message_injection.py
+index da054a4c487d..dcf61a10590a 100644
+--- a/tests/gateway/test_plugin_message_injection.py
++++ b/tests/gateway/test_plugin_message_injection.py
+@@ -541,14 +541,19 @@ def _reject(coro, _target_loop, **_kwargs):
+ 
+ def test_install_and_clear_gateway_injector_preserves_newer_owner():
+     runner = _runner(_entry())
++    runner._gateway_loop = object()
+     manager = PluginManager()
+ 
+     with patch("hermes_cli.plugins.get_plugin_manager", return_value=manager):
+         runner._install_plugin_message_injector()
+         assert manager.has_gateway_message_injector is True
++        assert manager.gateway is runner
++        assert manager.gateway._gateway_loop is runner._gateway_loop
++        assert manager.gateway._running is True
+ 
+         runner._clear_plugin_message_injector()
+         assert manager.has_gateway_message_injector is False
++        assert manager.gateway is None
+ 
+         runner._install_plugin_message_injector()
+ 
+@@ -558,5 +563,6 @@ def test_install_and_clear_gateway_injector_preserves_newer_owner():
+         runner._clear_plugin_message_injector()
+ 
+     assert manager.has_gateway_message_injector is True
++    assert manager.gateway is newer_owner
+     assert manager.inject_gateway_message(value="kept") is True
+     newer_injector.assert_called_once_with(value="kept")
+diff --git a/tests/hermes_cli/test_plugin_message_injection.py b/tests/hermes_cli/test_plugin_message_injection.py
+index 209f6f3e6e37..3e20ba610a0c 100644
+--- a/tests/hermes_cli/test_plugin_message_injection.py
++++ b/tests/hermes_cli/test_plugin_message_injection.py
+@@ -6,6 +6,8 @@
+ 
+ import yaml
+ 
++import hermes_cli.plugins as plugins_mod
++from hermes_constants import reset_hermes_home_override, set_hermes_home_override
+ from hermes_cli.plugins import PluginContext, PluginManager, PluginManifest
+ 
+ 
+@@ -24,6 +26,62 @@ def _write_plugin_config(tmp_path, monkeypatch, entry: dict) -> None:
+     monkeypatch.setenv("HERMES_HOME", str(hermes_home))
+ 
+ 
++def test_gateway_accessor_is_none_without_live_gateway():
++    context, manager = _context()
++
++    assert context.gateway is None
++    assert manager.gateway is None
++
++
++def test_gateway_accessor_returns_current_lifecycle_owner():
++    context, manager = _context()
++    gateway = object()
++    manager.set_gateway_message_injector(gateway, MagicMock(return_value=True))
++
++    assert context.gateway is gateway
++    assert manager.gateway is gateway
++
++    manager.clear_gateway_message_injector(gateway)
++    assert context.gateway is None
++
++
++def test_gateway_accessor_is_process_scoped_across_profile_managers(tmp_path):
++    default_home = tmp_path / "default"
++    secondary_home = tmp_path / "secondary"
++    default_home.mkdir()
++    secondary_home.mkdir()
++    plugins_mod._reset_plugin_managers_for_tests()
++
++    default_token = set_hermes_home_override(default_home)
++    try:
++        default_manager = plugins_mod.get_plugin_manager()
++        gateway = object()
++        default_manager.set_gateway_message_injector(
++            gateway,
++            MagicMock(return_value=True),
++        )
++    finally:
++        reset_hermes_home_override(default_token)
++
++    secondary_token = set_hermes_home_override(secondary_home)
++    try:
++        secondary_manager = plugins_mod.get_plugin_manager()
++        manifest = PluginManifest(
++            name="secondary-plugin",
++            key="secondary-plugin",
++            source="user",
++        )
++        context = PluginContext(manifest, secondary_manager)
++
++        assert secondary_manager is not default_manager
++        assert secondary_manager.has_gateway_message_injector is False
++        assert context.gateway is gateway
++    finally:
++        reset_hermes_home_override(secondary_token)
++        default_manager.clear_gateway_message_injector(gateway)
++        plugins_mod._reset_plugin_managers_for_tests()
++
++
+ def test_cli_idle_injection_keeps_existing_queue_behaviour():
+     context, manager = _context()
+     cli = SimpleNamespace(
+diff --git a/website/docs/developer-guide/plugins/index.md b/website/docs/developer-guide/plugins/index.md
+index 8688d181a3c2..18aad8efde9e 100644
+--- a/website/docs/developer-guide/plugins/index.md
++++ b/website/docs/developer-guide/plugins/index.md
+@@ -139,6 +139,14 @@ The compatibility rules are:
+   format must still replay. Do not add version literals to unrelated callback
+   or context values.
+ 
++### Gateway lifecycle access
++
++`PluginContext.gateway` is a read-only accessor for the live gateway runner.
++It returns `None` in CLI mode and outside the gateway's running lifetime. The
++runner is published only after its event loop is installed and is withdrawn
++during shutdown, so background plugins should resolve the property when needed
++instead of caching the object across restarts.
++
+ ### Deprecation policy
+ 
+ A documented native plugin behavior may be deprecated only with all of the
+diff --git a/website/docs/user-guide/features/plugins.md b/website/docs/user-guide/features/plugins.md
+index 14c162f12370..92cae6b39396 100644
+--- a/website/docs/user-guide/features/plugins.md
++++ b/website/docs/user-guide/features/plugins.md
+@@ -700,6 +700,23 @@ In a running session, `/plugins` shows which plugins are currently loaded.
+ 
+ ## Injecting Messages
+ 
++### Accessing the live gateway runtime
++
++Trusted native plugins that own background work can resolve the current
++gateway runner through `ctx.gateway`:
++
++```python
++gateway = ctx.gateway
++if gateway is None:
++    return  # CLI mode, gateway startup, or gateway shutdown
++```
++
++The property becomes non-`None` only after the gateway has installed its
++running event loop, and it returns to `None` during shutdown. Resolve it when
++needed rather than caching the runner across gateway restarts. The accessor is
++read-only, but the returned runner is a live in-process host object, so it is
++intended only for trusted native plugins that need gateway runtime services.
++
+ Plugins can inject messages into a CLI conversation or a known gateway session using `ctx.inject_message()`:
+ 
+ ```python

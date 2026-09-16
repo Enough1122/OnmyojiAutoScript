@@ -1,0 +1,3 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. plugins/platforms/telegram/adapter.py:`send_image` — Positive: the SSRF redirect-guard hook is untouched (headers only change what the origin server sees), and a browser-shaped User-Agent + `Accept: image/*` is the pragmatic fix for CDNs that 403 default python-httpx agents. Nit: this literal now exists in two places (this download fallback and #89264's upload path); worth hoisting to one shared constant so the two stay in sync when it eventually needs rotating.

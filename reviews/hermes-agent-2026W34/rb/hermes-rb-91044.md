@@ -1,0 +1,9 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Reviewed the diff. Correct gap-fill: \`host\`/\`port\`-style Qdrant configs previously hit the final \`return\` in \`_recreate_collection_if_dims_changed\`, so the dimension-mismatch guard silently never ran for them and users got raw vector-size errors at write time instead of a clean recreate. The stubbed-client test pins the exact call sequence including close. Two gaps remain:
+
+- **plugins/memory/mem0/_backend.py:~217-225 — a config with \`host\` but no \`port\` still falls through to \`return\`.** That's arguably the most common minimal remote form (QdrantClient itself defaults port 6333), so those users keep the broken no-guard behavior this PR fixes for others. Since \`QdrantClient(host=...)\` accepts a missing port, the branch can simply be \`elif host:\` passing \`port=vs_config.get("port")\` (None lets the client default).
+
+- **_backend.py:~221-226 — the guard's client may speak a different scheme than the one Mem0 actually uses.** This constructor hard-codes plain HTTP semantics for host/port, ignoring keys mem0's own Qdrant factory honors (\`https\`/url-prefix style options). If someone runs TLS Qdrant behind \`host\` config, the guard would connect to \`http://host:port\` — worst case \`collection_exists\` returns False for a healthy collection and the *destructive* \`delete_collection\` path diverges from the real backend. Suggestion: mirror whichever connection options the surrounding code passes into mem0's vector-store config (at minimum an \`https\` passthrough), or derive the guard client from the same helper that builds the runtime client.
+
+Nit: tests file picked up a stray double blank line before the moved test.

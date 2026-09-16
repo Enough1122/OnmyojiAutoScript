@@ -1,0 +1,13 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Reviewed the diff. The goal (fewer gateway-restart false positives for benign `grep … python3 -c 'print(...)'` shapes) is reasonable, but the implementation has a significant safety gap:
+
+- **cron/lifecycle_guard.py:150-165,327 — marker blocklist is bypassable, so dangerous payloads get masked.** For `python/-c`, `perl -e`, `ruby -e`, `node -e` the *entire* payload is arbitrary code by definition — it does not need `os.system`/`subprocess`/`eval(` to cause damage. Examples that hit **none** of `_INTERPRETER_PAYLOAD_EXEC_MARKERS` and would therefore be masked (i.e. auto-approved without human scrutiny): `python3 -c "import shutil; shutil.rmtree('/data')"`, `ruby -e 'File.delete("/etc/important")'`, `perl -e 'unlink glob "/tmp/*"'`, `node -e 'require("fs").rmSync("/", {recursive:true})'`. Why it matters: this guard exists to gate risky commands; masking turns a destructive command into an approved one. Suggestion: invert the logic — never mask interpreter inline-exec payloads unless the payload provably matches a narrow benign allowlist (or simply exclude `-c/-e` interpreters from masking entirely and accept those false positives).
+
+- **cron/lifecycle_guard.py:327 — substring scan on \"" ".join(payload)\" fails open.** Markers like `sh -c` split across argv (`sh`, `-c`) evade the joined-string check, and quoting variants (`os\u200b.system`-style homoglyphs aside, even simple `exec ((...))` spacing defeats `exec(``). Any miss means the payload is masked — the failure direction here is silent auto-approval. If the blocklist stays, scan each raw argv element individually and normalize whitespace first.
+
+- **No tests added.** This touches a security-sensitive masking path in `lifecycle_guard`, yet the PR has zero test changes. Suggested minimum cases: benign `print` payload → masked; `os.system` payload → left intact; the `shutil.rmtree`/`File.delete`/`unlink glob` examples above → must NOT be masked; flags between binary and `-c` (`python3 -u -c ...`) → current fall-through preserved.
+
+- **cron/lifecycle_guard.py:148-149,324 — interpreter name set is narrow.** `python3.11`, `pypy`, `ipython`, `deno`, `bun` aren't matched, so those calls keep triggering the original false positive (safe direction, incomplete fix). Conversely `Path(...).name` correctly handles absolute paths. Worth deciding whether versioned binaries should normalize onto their family (`python3.* → python`).
+
+Nit: cron/lifecycle_guard.py:323 — drop the `# NEW:` prefix; comments should carry rationale, not changelog duty.

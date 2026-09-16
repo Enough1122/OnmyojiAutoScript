@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. agent/prompt_builder.py + system_prompt.py — Positive: the mode is resolved *once* at agent init and threaded through every guidance builder (execution discipline, tool-use enforcement, task completion, skills policy) while `system_prompt.py` reads it from the frozen agent attribute with a comment explaining why config is never re-read — exactly right for prompt-cache byte-stability. The skills cache key including `execution_mode` means distinct modes get distinct cache entries rather than silently sharing a prompt built under another posture.
+
+2. Rigorous preservation — Positive: `RIGOROUS_MODEL_EXECUTION_GUIDANCE` is the old constant verbatim (`rigorous == OPENAI_MODEL_EXECUTION_GUIDANCE` asserted), the back-compat export keeps historical imports working, and missing config values deep-merge to rigorous without materializing the key into existing users' config.yaml (tested). Validation covers structure errors, set-time rejection/normalization ("FAST" → fast), and docs show all three modes with honest tradeoff framing. No change requested.

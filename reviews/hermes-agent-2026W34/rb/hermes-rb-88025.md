@@ -1,0 +1,9 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. agent/context_compressor.py:`should_warn`/`warn_threshold_tokens` — Positive: the warn band ([derived warn point, threshold)) cleanly complements `should_compress` without overlap, and deriving `warn_threshold_tokens` as a property means feasibility auto-lower and `update_model` move the band automatically instead of requiring resync. Clamping `warn_at` to (0, 1] prevents both disable-by-zero and fire-only-at-compaction configs. The one-shot `_precompaction_warned` latch lives on the agent so plugin context engines don't need to carry it — tested for that duck-type.
+
+2. conversation_compression.py — Positive: replacing the filtered-out "Session compressed N times" status with a *delivered* post-compaction caveat (worded to pass the Telegram noise regex, asserted against `_prepare_gateway_status_message`) plus folding repeat-escalation into it fixes the exact silent-drop chain from #36908's first attempt. The caveat copy is user-actionable ("paste it back — or run /handoff"), which is what makes a destructive operation forgivable.
+
+3. gateway/runtime_footer.py:`build_meter_footer` — Positive: the two-mode footer logic is complete — manual-on keeps configured fields and appends the marker only past the floor; manual-off surfaces the meter past the floor; the compaction field never double-appends (tested); overshoot >100% renders honestly as 🔴 since compaction checks after send. `resolve_meter_config` bounds the floor to (0,1].
+
+4. Tests — Positive across all four surfaces (compressor band edges incl. at-threshold exclusivity, breakdown compaction_percent with zero-threshold case, meter floor/custom-floor/dedupe, pre-compaction one-shot/re-arm/disabled/plugin-engine-safety). No change requested.

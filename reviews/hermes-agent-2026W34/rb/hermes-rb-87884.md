@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. hermes_cli/main.py:`_darwin_native_machine` — Positive: the `sysctl.proc_translated` probe is the correct Rosetta-proof signal — `platform.machine()` reports the *process* arch and lies on arm64 hosts running x86_64 Pythons, which is precisely how the update chain built the wrong-arch tree in #75612. Preferring native-only, then merely-runnable, then mtime gives a deterministic ladder that can't reselect a stale tree just because it's newer.
+
+2. main.py:`_macho_cpu_types` — Positive detail: reading 64-bit header fields as little-endian regardless of MH_CIGAM magic (with the comment explaining why CIGAM-as-big-endian yields garbage cputype) is the kind of endianness subtlety most implementations get wrong; fat/Universal records are parsed without loading file bodies. Tests cover translated/native hosts, thin+fat binaries, unreadable and non-Mach-O inputs, plus the core wrong-arch-with-newer-mtime selection scenario and the single-candidate no-regression case. No change requested.

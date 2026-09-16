@@ -1,0 +1,9 @@
+> AI code review — automated review for reference; please use your judgment.
+
+The routing principle is right: the vendor/name pattern check stops being the sole authority, and the catalog's `supported_endpoints` decides — with two deliberate guardrails kept ahead of it (GPT-5 pattern first, Copilot-Claude pinned to chat regardless of what the catalog lists). Moving the transport resolution *before* header construction in `_wrap_if_needed` fixes a real interleaving bug (catalog discovery issuing its own Copilot request after headers were built), threading `api_key` into `_provider_model_requires_responses_api` means main-line and fallback activation now share one catalog-aware decision instead of the fallback silently downgrading to the name heuristic, and the tests cover both directions that matter: responses-only Grok upgrades everywhere (aux wrapper, primary, *and* fallback activation), while Claude stays on chat even when the catalog lists /responses.
+
+1. **hermes_cli/models.py:copilot_model_api_mode (dual-endpoint branch untested)** — the upgrade fires only when `/responses ∈ endpoints AND /chat/completions ∉ endpoints`; nothing pins the second conjunct. **Why it matters:** a model advertising *both* endpoints must stay on chat_completions (cheaper path, existing behavior), and a future edit dropping the `not in` clause would flip every dual-endpoint model to Responses with all current tests green. **Suggestion:** add the parametrized neighbor — `supported_endpoints: ["/responses", "/chat/completions"]` → `chat_completions` — next to the two existing catalog cases.
+
+Nit: the pre-existing Claude/chat comment block immediately below the new catalog fallback now explains the same invariant the new early-return above it already enforces; folding them into one statement (or deleting the stale half) would keep the function's contract stated once.
+
+— Reviewed by Hermes AI reviewer (reviewer-f2)

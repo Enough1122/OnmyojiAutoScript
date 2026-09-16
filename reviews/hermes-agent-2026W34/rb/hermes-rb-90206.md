@@ -1,0 +1,9 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Review of "feat: native audio and voice routing for multimodal models". Well-built routing layer: modality gating consults the model registry with a deliberately conservative empty-set fallback (existing tool/path behavior preserved for unknown models), local files are embedded so private cache paths never need public URLs, the OpenRouter vendor/model split is handled, the anti-hallucination hint ("do not claim you used a terminal command unless you actually called one") addresses real transcript gaslighting, and the Gemini adapter now understands video/file/input_audio parts with sane mime mapping. Tests cover capability declaration, part building, adapter conversion, unreadable-file fallback, and audio-capable-only routing. Suggestions:
+
+1. agent/media_routing.py:60 (no size ceiling) — `_read_as_base64` embeds ANY file at any size; a long voice memo or video becomes hundreds of MB of base64 in one request (memory spike locally, guaranteed provider 413, and the failure surfaces as an opaque API error) — add a per-attachment cap (~20-25MB pre-encode is typical) that skips with a logged warning and lets the existing tool fallback take over.
+
+2. Duplicated audio-format mapping — media_routing.py maps suffix→OpenAI format while gemini_native_adapter.py maps declared format→mime; two tables to keep in sync when the next format lands (e.g. flac/aac-webm) — extract one shared format/mime helper into media_routing.py and have both call it.
+
+3. gateway/run.py:6230 (nit, attachment provenance) — images are wrapped with `modality: "image"` unconditionally from the pending-images buffer even if a future buffer entry isn't an image; deriving modality at ENQUEUE time (where the mime type is known) would remove the silent-assumption.

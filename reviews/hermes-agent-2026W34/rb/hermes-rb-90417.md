@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. agent/think_scrubber.py:`reasoning()` — Nit: parts are joined with `"\n"`, so a sentence streamed across deltas ("Let me check" + " their config") gains a newline where none existed ("Let me check\ntheir config"). Harmless for model consumption, mildly lossy if a UI renders this as the model's literal reasoning prose. Suggestion: join with "" and let the natural delta boundaries carry whitespace (the scrubber already suppresses nothing but tags), or document the reflow.
+
+2. Overall — Positive: the collection hooks cover all four suppression sites (in-flight block buffer, block-close content, single-delta closed pairs, unterminated flush), `reasoning()` strips tag markup including case variants, and the relay fallback engages *only* when no genuine reasoning deltas arrived — so providers with native reasoning streams are untouched. Reset-clears-collected is tested, which matters because a stale turn's reasoning leaking into the next turn's field would be its own bug. Clean fix for the MiniMax-M3 inline-think class of providers.

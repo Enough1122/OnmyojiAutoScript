@@ -1,0 +1,9 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Review of "fix(desktop): bind approvals to source authority" (sampled: electron main/notification seams, native-notification-action module, prompts/native-notifications stores; full diff is 114KB across 25 files). This closes a genuine authority-confusion hole: OS approval notifications previously routed clicks to mainWindow and resolved by SESSION ID against mutable renderer state, so a stale notification could approve a DIFFERENT request that had replaced its target in the same session. Now the approval's opaque `approvalRequestId` plus source authority (connectionId + profile) are captured at creation, click/action return to the ORIGINATING renderer via `event.sender` (with destroyed-sender guards), resolution goes through the captured request's OWN gateway connection/profile via an explicit requestId, dedupe/throttle keys include the authority tuple so distinct sources stop collapsing into one notification, and shouldFire additionally checks source match for approvals. Tests pin both behavior and the wiring seams. Suggestions:
+
+1. native-notifications.ts `respondToApprovalAction` — the early returns (`!source.profile`, `!requestId`) silently drop the click with no user feedback; for a SAFETY action ("Run") the user believes was executed, at least surface a local notice that the approval could not be delivered, rather than a silent no-op.
+
+2. nit — several tests assert exact SOURCE TEXT of main.ts/approval.tsx slices (indexOf + substring contains); deliberately regression-proof, but every refactor of those seams will need test edits — a shared seam-extraction helper would localize that churn.
+
+3. scope note — 25 files is large but single-concern (threading one authority tuple through creation → display → response); no blocking issues found in the sampled security seams.

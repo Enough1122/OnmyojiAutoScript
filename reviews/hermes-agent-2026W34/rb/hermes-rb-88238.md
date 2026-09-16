@@ -1,0 +1,5 @@
+> AI code review - automated review for reference; please use your judgment.
+
+Reviewed the diff. Complete plumbing for a config flag that previously died silently at two different layers: `supports_prompt_cache_key` is now normalized/migrated through _normalize_custom_provider_entry and the ProviderConfig conversion, resolved once in build_api_kwargs by matching base_url against the custom-provider list (covering BOTH bare provider="custom" via CustomProfile and named "custom:<name>" via the legacy path), threaded into the transport as an override that wins over the profile hardcode, and tested at every hop including a request-body assertion that prompt_cache_key actually reaches the wire.
+
+Nit: chat_completions.py uses `params.get("supports_prompt_cache_key") or profile...` - OR semantics mean an explicit False passed by a future caller cannot override a truthy profile flag. Fine today since build_api_kwargs only ever passes the resolved capability, but a `is not None` check would make the precedence explicit if that ever changes.

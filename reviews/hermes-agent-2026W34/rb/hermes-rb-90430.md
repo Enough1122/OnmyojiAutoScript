@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. apps/desktop/src/components/assistant-ui/clarify-tool.tsx — Positive: Space-as-stage is the right keyboard model (Enter keeps confirm semantics, matching every native radio/listbox pattern), the Other-row fallback to focusing free-text is the detail most implementations forget, `activeIndex` was correctly added to the effect deps, and all three behaviors — single-select staging without submit, multi-select toggle on/off, Other-focus — have regression tests asserting `aria-pressed` transitions rather than internals.
+
+2. apps/desktop/src/lib/keybinds/composer-focus-keys.ts — Nit worth one sentence of docs: `clarifyCardOwnsKey` now claims Space whenever a live card is present, so the guarantee that composer *typing* is unaffected rests entirely on the card's own stands-down-when-focused rule (the two layers must stay in sync). A comment cross-referencing that invariant would prevent a future edit to either file from silently breaking mid-message spaces.

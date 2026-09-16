@@ -1,0 +1,78 @@
+=== batch-0 run start ===
+43870 skipped-dup
+43869 skipped-closed
+43863 skipped-dup
+43849 posted
+43847 skipped-dup
+43839 skipped-dup
+43831 skipped-dup
+43826 skipped-dup
+43808 skipped-dup
+43794 posted
+43780 posted
+43778 posted
+43776 posted
+43775 posted
+43769 posted
+43763 posted
+43754 posted
+43749 posted
+43747 posted
+43734 posted
+43728 posted
+43727 posted
+43723 posted
+43708 posted
+43687 posted
+=== batch-2 run start ===
+43231 skipped-dup
+43228 skipped-dup
+43212 skipped-dup
+43211 skipped-dup
+43203 skipped-dup
+43197 posted
+43193 posted
+43183 posted
+43165 posted
+43154 posted
+43141 posted
+43140 posted
+43138 skipped-closed
+43135 posted
+43130 posted
+43128 posted
+43123 posted
+43115 posted
+43113 posted
+43100 posted
+43076 posted
+43073 posted
+43066 posted
+43065 posted
+43059 posted
+=== batch-4 run start ===
+42872 skipped-dup
+42867 skipped-dup
+42854 skipped-dup
+42851 skipped-dup
+42850 skipped-dup
+42842 skipped-dup
+42836 skipped-dup
+42833 skipped-dup
+42832 skipped-dup
+42830 skipped-dup
+42819 skipped-dup
+42812 skipped-dup
+42809 skipped-dup
+42808 posted
+42807 posted
+42801 skipped-dup
+42796 skipped-dup
+42789 skipped-dup
+42786 skipped-dup
+42777 skipped-dup (batch-4)
+42771 skipped-dup (batch-4)
+42769 skipped-dup (batch-4)
+42761 skipped-dup (batch-4)
+42756 skipped-dup (batch-4)
+42751 skipped-dup (batch-4)

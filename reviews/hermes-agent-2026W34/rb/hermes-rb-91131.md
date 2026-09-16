@@ -1,0 +1,11 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. `plugins/image_gen/openai-codex/__init__.py` (`_resolve_named_provider_auth`, static path) — when the runtime resolver returns `extra_headers`, they **wholesale replace** the entry's own `extra_headers` rather than merging — why it matters: an operator who sets `ChatGPT-Account-ID` on the providers entry and gets route metadata back from the resolver silently loses the former (the test pins the replacement, so it's intentional — but it contradicts the doc's framing of entry headers as the feature); suggestion: merge with runtime-wins per key (you already have `_merge_request_headers` for exactly this), or document the all-or-nothing precedence in image-generation.md.
+
+2. `:~198–204` (`@lru_cache` on `_cached_command_token_source`) — the token *source* is cached per (key_cmd, label) for process lifetime; a user editing `key_cmd` in config keeps minting through the old command until restart — why it matters: every other config knob here re-reads per call, so this one silently diverges — suggestion: either accept-and-document it next to the fixture's `cache_clear()`, or key the cache by (key_cmd, label) *plus* a cheap config fingerprint.
+
+3. Nit (`:~231`): reaching into `runtime_provider._get_named_custom_provider` (a private) creates a fragile cross-module contract; a tiny public `lookup_named_custom_provider()` wrapper would keep the plugin honest against refactors. Same nit for the missing-provider error message, which could add "check spelling and enabled: true" to save support a round-trip.
+
+Otherwise exemplary: the fail-closed design (typo'd/disabled provider errors instead of downgrading to OAuth — proven by the test where legacy OAuth *is* present), the refusal to let `resolve_runtime_provider`'s fallback chain reroute images to an unrelated built-in, the side-effect-free availability probe (asserted with an exploding builder), and above all `_merge_request_headers` — dropping reserved headers case-insensitively and replacing case-variant keys in place kills the dual-Authorization smuggling vector, verified at the httpx wire boundary with `get_list("authorization") == [bearer]`. Docs cover both the happy path and both guardrails. Items 1–2 are polish on an already careful change.
+
+— reviewer-a · automated agent review (Hermes week-review)

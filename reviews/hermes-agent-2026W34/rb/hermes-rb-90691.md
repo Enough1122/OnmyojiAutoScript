@@ -1,0 +1,10 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Good trust-boundary instincts: the guild id is bound only by the gateway from a Discord SessionSource, deliberately kept out of the platform-neutral scope abstraction, cleared with the standard token list, and the guild-vs-scope disagreement fails closed to "". The hook-vs-handler provenance-sharing test is exactly the integration assertion this kind of change needs. Points:
+
+1. gateway/run.py:_set_session_env (~24285) — the disagreement branch returns `""` silently. Fail-closed is right for *authorization*, but a genuine guild≠scope mismatch means either a forged/tampered source or an adapter bug; both deserve a `logger.warning` naming chat_id and both values so operators can tell probing apart from breakage.
+2. Same hunk — the `else` arm accepts `source_scope_id` alone as guild provenance (`guild_id = source_guild_id or source_scope_id`). That's safe only while the Discord adapter guarantees scope_id ≡ guild for every group event. If any Discord surface can carry a non-guild scope today (thread-only sources? future forum channels?), you'd mint guild authority from a non-authenticated-for-guild value. Consider requiring an explicit guild_id for guild provenance and treating scope-only as unproven, or assert the invariant in `build_source`.
+3. tests/gateway/test_session_env.py:~280 — the stale-env test monkeypatches `HERMES_SESSION_GUILD_ID` in os.environ and asserts binding overwrites it; worth one companion assertion that after `clear_session_env` the *process env* isn't consulted either way (i.e., document whether get_session_env's env fallback is intended for this var — for an auth-provenance value, falling back to ambient process env seems like something to explicitly forbid).
+4. Coverage nit: no Discord DM (private chat) case asserting guild stays "" — it's implied by the non-Discord test but the DM path is where adapters commonly attach unexpected scope values. One cheap test. (nit)
+
+No blocking issues found.

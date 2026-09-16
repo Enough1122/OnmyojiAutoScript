@@ -1,0 +1,11 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Strong feature design: sticky-above-threshold keeps working sessions stable, highest-remaining wins on rotation with deterministic tie-breaks, all-below-threshold fails open to least-bad instead of pretending unusable, non-Codex pools degrade to least-used, and the test matrix is exceptional — including a test asserting the raw bearer token never appears in the cache representation (fingerprint keys) and one proving ineligible entries never trigger telemetry fetches at all. Points:
+
+1. agent/credential_pool.py:_codex_usage_snapshot_for_entry (~2090) — the telemetry fetch is **synchronous inside `select()`**: on cold/expired cache, selection blocks up to `CODEX_QUOTA_USAGE_TIMEOUT_SECONDS` (4s) *per entry*, sequentially. A five-entry pool with expired cache adds up to ~20s of latency directly onto whatever thread requested a credential (likely mid-turn). Consider refreshing in a background thread on a TTL half-life cadence, or fetching entries concurrently — at minimum document the worst-case first-selection stall.
+2. Same function — a transient network failure caches `None` for the full 300s TTL, silently degrading those entries to least-used ranking for five minutes even after connectivity returns. A short negative-cache TTL (e.g. 30–60s) would recover quickly while still damping storms.
+3. `_remaining_fraction_from_usage` comparing the *minimum* window against `avoid_below` is the conservative reading (a nearly-exhausted weekly window forces rotation even with a fresh session window) — correct choice for quota exhaustion; worth one comment stating min-window semantics explicitly since it drives routing.
+4. Sticky-stay increments the current entry's request_count without considering other above-threshold candidates — intentional stickiness, but it means request_count skews low for rotated-away entries over time, subtly biasing the eventual tie-breaks. Harmless; noting the interaction. (nit)
+5. Config knob `credential_pool_quota_aware.avoid_below_fraction` validates [0,1] and falls back cleanly — good; consider also clamping in `get_quota...` rather than only at parse (defense against direct callers). (nit)
+
+No blocking issues found beyond acknowledging item 1's latency profile.

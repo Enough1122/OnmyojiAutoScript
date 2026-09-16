@@ -1,0 +1,209 @@
+diff --git a/packages/app/src/components/prompt-input/attachments.ts b/packages/app/src/components/prompt-input/attachments.ts
+index 6f3ef57c66e2..ea32099e4115 100644
+--- a/packages/app/src/components/prompt-input/attachments.ts
++++ b/packages/app/src/components/prompt-input/attachments.ts
+@@ -1,7 +1,7 @@
+ import { onMount } from "solid-js"
+ import { makeEventListener } from "@solid-primitives/event-listener"
+ import { showToast } from "@/utils/toast"
+-import { type ContentPart, type ImageAttachmentPart, type usePrompt } from "@/context/prompt"
++import { type ContentPart, type FileAttachmentPart, type ImageAttachmentPart, type usePrompt } from "@/context/prompt"
+ import { useLanguage } from "@/context/language"
+ import { usePlatform } from "@/context/platform"
+ import { uuid } from "@/utils/uuid"
+@@ -9,6 +9,7 @@ import { getCursorPosition } from "./editor-dom"
+ import { createBlobReference, type DraftStore } from "@/utils/draft-store"
+ import { attachmentMime } from "./files"
+ import { normalizePaste, pasteMode } from "./paste"
++import { parseFileURL } from "@/context/file/path"
+ 
+ type PromptTarget = Pick<ReturnType<ReturnType<typeof usePrompt>["capture"]>, "current" | "cursor" | "set">
+ type AttachmentTarget = { prompt: PromptTarget; cursor: number | undefined }
+@@ -35,6 +36,17 @@ export type PromptAttachmentsInput = {
+   getPathForFile?: (file: File) => string
+ }
+ 
++export function filePartFromFileURL(input: string): FileAttachmentPart | undefined {
++  if (!input.startsWith("file:")) return undefined
++  if (input.startsWith("file://")) {
++    const file = parseFileURL(input)
++    if (!file) return undefined
++    return { type: "file", path: file.path, url: file.url, content: "@" + file.path, start: 0, end: 0 }
++  }
++  const filePath = input.slice("file:".length)
++  return { type: "file", path: filePath, content: "@" + filePath, start: 0, end: 0 }
++}
++
+ export function createPromptAttachmentsCore(input: PromptAttachmentsCoreInput) {
+   const capture = (): AttachmentTarget | undefined => {
+     const prompt = input.capture()
+@@ -189,11 +201,10 @@ export function createPromptAttachments(input: PromptAttachmentsInput) {
+     input.setDraggingType(null)
+ 
+     const plainText = event.dataTransfer?.getData("text/plain")
+-    const filePrefix = "file:"
+-    if (plainText?.startsWith(filePrefix)) {
+-      const filePath = plainText.slice(filePrefix.length)
++    const file = plainText ? filePartFromFileURL(plainText) : undefined
++    if (file) {
+       input.focusEditor()
+-      input.addPart({ type: "file", path: filePath, content: "@" + filePath, start: 0, end: 0 })
++      input.addPart(file)
+       return
+     }
+ 
+diff --git a/packages/app/src/components/prompt-input/build-request-parts.test.ts b/packages/app/src/components/prompt-input/build-request-parts.test.ts
+index ab84cb6eae81..2aa22d91708d 100644
+--- a/packages/app/src/components/prompt-input/build-request-parts.test.ts
++++ b/packages/app/src/components/prompt-input/build-request-parts.test.ts
+@@ -1,5 +1,6 @@
+ import { describe, expect, test } from "bun:test"
+ import type { Prompt } from "@/context/prompt"
++import { filePartFromFileURL } from "./attachments"
+ import { buildRequestParts } from "./build-request-parts"
+ 
+ describe("buildRequestParts", () => {
+@@ -258,6 +259,64 @@ describe("buildRequestParts", () => {
+     }
+   })
+ 
++  test("preserves decoded paths and canonical URLs from desktop file drops", () => {
++    const attachment = filePartFromFileURL("file:///home/carole/Bureau/%3F%3F%3F.png")
++    if (!attachment) throw new Error("Expected a file attachment")
++
++    const result = buildRequestParts({
++      prompt: [attachment],
++      context: [],
++      images: [],
++      text: attachment.content,
++      messageID: "msg_drop_1",
++      sessionID: "ses_drop_1",
++      sessionDirectory: "/repo",
++    })
++
++    expect(result.requestParts.find((part) => part.type === "file")).toMatchObject({
++      url: "file:///home/carole/Bureau/%3F%3F%3F.png",
++      source: {
++        type: "file",
++        path: "/home/carole/Bureau/???.png",
++        text: { value: "@/home/carole/Bureau/???.png" },
++      },
++    })
++  })
++
++  test("resolves relative paths from sidebar file-tree drags against sessionDirectory", () => {
++    const attachment = filePartFromFileURL("file:packages/app/src/foo.ts")
++    if (!attachment) throw new Error("Expected a file attachment")
++
++    const result = buildRequestParts({
++      prompt: [attachment],
++      context: [],
++      images: [],
++      text: attachment.content,
++      messageID: "msg_drop_2",
++      sessionID: "ses_drop_2",
++      sessionDirectory: "/repo",
++    })
++
++    expect(result.requestParts.find((part) => part.type === "file")).toMatchObject({
++      url: "file:///repo/packages/app/src/foo.ts",
++      source: {
++        type: "file",
++        path: "/repo/packages/app/src/foo.ts",
++        text: { value: "@packages/app/src/foo.ts" },
++      },
++    })
++  })
++
++  test("keeps reserved characters in relative file-tree drag paths", () => {
++    expect(filePartFromFileURL("file:packages/app/??.ts")).toEqual({
++      type: "file",
++      path: "packages/app/??.ts",
++      content: "@packages/app/??.ts",
++      start: 0,
++      end: 0,
++    })
++  })
++
+   test("handles macOS paths correctly", () => {
+     const prompt: Prompt = [{ type: "file", path: "README.md", content: "@README.md", start: 0, end: 9 }]
+ 
+diff --git a/packages/app/src/context/file/path.test.ts b/packages/app/src/context/file/path.test.ts
+index 99dd88ae0e9c..74bcbed0c689 100644
+--- a/packages/app/src/context/file/path.test.ts
++++ b/packages/app/src/context/file/path.test.ts
+@@ -1,5 +1,5 @@
+ import { describe, expect, test } from "bun:test"
+-import { createPathHelpers, stripQueryAndHash, unquoteGitPath, encodeFilePath } from "./path"
++import { createPathHelpers, stripQueryAndHash, unquoteGitPath, encodeFilePath, parseFileURL } from "./path"
+ 
+ describe("file path helpers", () => {
+   test("normalizes file inputs against workspace root", () => {
+@@ -57,6 +57,42 @@ describe("file path helpers", () => {
+   })
+ })
+ 
++describe("parseFileURL", () => {
++  test("decodes reserved characters in POSIX file URLs", () => {
++    expect(parseFileURL("file:///home/carole/Bureau/%3F%3F%3F.png")).toEqual({
++      path: "/home/carole/Bureau/???.png",
++      url: "file:///home/carole/Bureau/%3F%3F%3F.png",
++    })
++    expect(parseFileURL("file:///tmp/file%2520name%23.txt")?.path).toBe("/tmp/file%20name#.txt")
++  })
++
++  test("preserves Windows drives and UNC hosts", () => {
++    expect(parseFileURL("file:///C:/Users/test/file%3F.txt")?.path).toBe("/C:/Users/test/file?.txt")
++    expect(parseFileURL("file://server/share/file%23.txt")?.path).toBe("//server/share/file#.txt")
++  })
++
++  test("accepts localhost and rejects non-file URLs", () => {
++    expect(parseFileURL("file://localhost/tmp/file.txt")?.path).toBe("/tmp/file.txt")
++    expect(parseFileURL("https://example.com/file.txt")).toBeUndefined()
++    expect(parseFileURL("not a URL")).toBeUndefined()
++  })
++
++  test("falls back when URL.canParse is unavailable", () => {
++    const original = Object.getOwnPropertyDescriptor(URL, "canParse")
++    Object.defineProperty(URL, "canParse", { configurable: true, value: undefined })
++    try {
++      expect(parseFileURL("file:///home/carole/Bureau/%3F%3F%3F.png")).toEqual({
++        path: "/home/carole/Bureau/???.png",
++        url: "file:///home/carole/Bureau/%3F%3F%3F.png",
++      })
++      expect(parseFileURL("not a URL")).toBeUndefined()
++    } finally {
++      if (original) Object.defineProperty(URL, "canParse", original)
++      if (!original) Reflect.deleteProperty(URL, "canParse")
++    }
++  })
++})
++
+ describe("encodeFilePath", () => {
+   describe("Linux/Unix paths", () => {
+     test("should handle Linux absolute path", () => {
+diff --git a/packages/app/src/context/file/path.ts b/packages/app/src/context/file/path.ts
+index 2bc4bde5e9b4..1aee8db48c5b 100644
+--- a/packages/app/src/context/file/path.ts
++++ b/packages/app/src/context/file/path.ts
+@@ -80,6 +80,20 @@ export function decodeFilePath(input: string) {
+   }
+ }
+ 
++export function parseFileURL(input: string) {
++  if (typeof URL.canParse === "function" && !URL.canParse(input)) return undefined
++  let url: URL
++  try {
++    url = new URL(input)
++  } catch {
++    return undefined
++  }
++  if (url.protocol !== "file:") return undefined
++  const pathname = decodeFilePath(url.pathname)
++  const path = !url.hostname || url.hostname === "localhost" ? pathname : `//${url.hostname}${pathname}`
++  return { path, url: url.href }
++}
++
+ export function encodeFilePath(filepath: string): string {
+   // Normalize Windows paths: convert backslashes to forward slashes
+   let normalized = filepath.replace(/\\/g, "/")

@@ -1,0 +1,7 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. hermes_cli/foreign_sessions.py:`import_hermes_export` — Positive: closing the documented one-way door by reusing `SessionDB.import_sessions` (the payload exporter already writes) is the minimal-surface fix, and the semantics are exactly right for backups: skip-never-overwrite means re-importing an old backup can't clobber history recorded after it (tested with a post-backup turn), multi-session files restore completely, and the report distinguishes imported/skipped/detached.
+
+2. foreign_sessions.py:`looks_like_hermes_export` + CLI — Positive: content-sniffing beats path guessing ("claude-notes.jsonl" holding a Hermes export imports correctly — tested), Claude/Codex transcript shapes are rejected so the wrong-`--from` error names the right flag instead of half-importing, and `--from hermes` without a path explains there's no store to scan rather than offering a picker over nothing.
+
+3. Tests — Positive: real SessionDB stores on both ends (never mocked), disaster-recovery as the headline case (delete → restore → resume id/title/cwd/branch/messages intact), file-shape matrix incl. malformed-line self-naming, rejection paths asserting nothing was written. No change requested.

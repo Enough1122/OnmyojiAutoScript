@@ -1,0 +1,3 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. agent/gemini_native_adapter.py — Positive: dropping `sort_keys=True` preserves the model's own argument ordering, which keeps the serialized arguments byte-stable against what the provider emitted (relevant for cache keys and any order-sensitive replay) instead of alphabetically reshuffling them per call. The test asserts two structurally identical calls with different key orders serialize differently — pinning exactly the behavior change. JSON semantics are unaffected for every parser on the consuming side. No change requested.

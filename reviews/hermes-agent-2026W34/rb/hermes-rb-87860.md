@@ -1,0 +1,3 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. scripts/whatsapp-bridge/group_routes.js — Positive: extracting `registerGroupRoutes` keeps the bridge file tidy and makes the route independently testable with a real Express listener (connected summary mapping, 503 while disconnected, 500 on Baileys query failure — all covered). Returning only id/name/participant-count avoids leaking full participant rosters into whatever allowlist-setup UI consumes it. Nit: the two new files lack trailing newlines. No change requested beyond that.

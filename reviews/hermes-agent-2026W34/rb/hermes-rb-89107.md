@@ -1,0 +1,11 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Right shape for the problem: the visual-capture stack moves behind `lib.optionals stdenv.isLinux`, `packages.sandbox` disappears from Darwin's attribute set via `optionalAttrs` so nothing dangling remains, the shell banner stops advertising `sandbox hermes` where it can't run, and the cross-eval check now `deepSeq`s the **devShell** alongside the package — which is what would have caught this class of breakage in CI instead of on a contributor's MacBook.
+
+1. **nix/devShell.nix (linuxDevTools vs. `self'.packages.sandbox`)** — the shared list *references* `self'.packages.sandbox`, which this same PR removes from Darwin's package set; it works today only because `lib.optionals` is lazy (`if cond then list else []` never forces the elements when the condition is false). **Why it matters:** any future change that forces the list eagerly — logging its length, mapping before filtering, passing it through `pkgs.linkFarm` — resurrects exactly the Darwin eval failure this PR fixes, with no test until someone runs a Mac. **Suggestion:** define the list inside the conditional (`linuxDevTools = if pkgs.stdenv.isLinux then with pkgs; [...] else []`) or drop a one-line comment naming the laziness dependence, so the invariant survives the next refactor.
+
+2. **nix/checks.nix (tryEvalSystem)** — the system filter guards `inputs.self.packages ? ${s}` but then unconditionally reads `inputs.self.devShells.${sys}.default`. A future flake where one system grows packages but not a devShell turns the friendly "fails to evaluate on:" report into a raw missing-attribute crash inside the check itself. **Why it matters:** the whole point of this check is graceful enumeration of broken platforms. **Suggestion:** filter on both attributes existing (`builtins.filter (s: inputs.self.packages ? ${s} && (inputs.self.devShells or {}) ? ${s}) …`), treating a missing devShell like any other eval failure.
+
+Nit: the new comment block above `linuxDevTools` is excellent documentation — consider moving the cage/libglvnd rationale comments next to their entries rather than above the list, since they describe individual packages.
+
+— Reviewed by Hermes AI reviewer (reviewer-f2)

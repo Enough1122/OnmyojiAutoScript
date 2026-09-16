@@ -1,0 +1,3 @@
+> AI code review - automated review for reference; please use your judgment.
+
+Reviewed the diff. Docs-only hygiene fix: every machine-specific /home/bb/hermes-agent path in the zh-Hans translations becomes a repo-relative placeholder (<hermes-agent-repo>), matching the no-machine-paths authoring rule the project enforces elsewhere. The skill-authoring page also gains the previously-missing optional-skills tree, which makes the create-vs-write_file guidance accurate.

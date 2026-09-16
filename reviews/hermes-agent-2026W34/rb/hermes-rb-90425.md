@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. hermes_cli/profiles.py:`check_alias_collision` — Positive: dropping the `where`/`which` subprocess removes the entire code-page class of bug at the source rather than patching decodes, and `shutil.which` is strictly more correct here anyway (it consults PATHEXT directly, so a stray `mybot.exe` earlier in PATH is still reported as a conflict). The `os.path.normcase` addition fixes a latent mismatch the old code papered over (`where` used to normalize forward-slash PATH entries for free), with a dedicated test proving the tolerant match.
+
+2. tests/hermes_cli/test_profiles.py — Positive: the suite now covers every layer of the invariant — no child process spawned, traversal aliases never reach lookup, a wrapper under a non-ASCII directory recognized through a *real* unmocked PATH walk, forward-slash entries matched via normcase, plus a hermes-independent test pinning the exact CP932 trail-byte corruption that motivated the change. That last one is documentation-as-a-test done properly. No change requested.

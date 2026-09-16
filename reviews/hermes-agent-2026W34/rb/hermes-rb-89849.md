@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. apps/desktop/src/app/session/hooks/use-session-actions/utils.ts:`resolveStoredSession` — Positive: treating a profile-scoped open's owner as *authoritative* fixes two failure modes at once — the spawn storm (one backend per installed profile probed per stale id) and the misattribution risk (an id that happens to exist under an unrelated profile being adopted silently). Publishing the owner into `$sessionResumeRequest` *before* navigation closes the race where route-resume fired with no hint, and the `hydrationResumeRequested` flag stops the hydration-retry path from downgrading an already-hinted request back to a blind one.
+
+2. utils.ts hinted catch — Nit: the catch collapses every failure mode (404 missing vs network blip vs gateway restarting) into "not found for this profile". With an authoritative hint that's the right *scope* decision, but surfacing a transient transport error as terminal resume-failure may push users toward re-adding sessions. Suggestion: let non-404 errors propagate or retry once before giving up.

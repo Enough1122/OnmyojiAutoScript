@@ -1,0 +1,9 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Review of "fix(delegate): inherit coherent parent runtime after provider fallback". This fixes a real coherence bug: post-fallback children previously inherited independent surface fields (provider/base_url/api_key read separately), producing mixed tuples like an anthropic provider with the codex key. `_snapshot_parent_delegation_runtime` reads PAIRED stores atomically per api-mode (anthropic pairs, Bedrock native identity with sentinel auth, MoA sentinel tuple, OpenAI `(kwargs|client)` pairing), fails loud on incomplete pairs, and the Nous dual-wire rederivation is pinned by tests from both directions. Suggestions:
+
+1. tools/delegate_tool.py:1812 (all-or-nothing override gate) — the snapshot is used only when ALL THREE of override_provider/base_url/api_key are absent; a caller passing just one (say base_url) drops into the LEGACY path and re-reads the other fields independently — which after a fallback reproduces the exact mixed-tuple bug this PR fixes (override base_url + stale codex api_key) — consider layering per-field overrides ON TOP of the coherent snapshot instead of bypassing it.
+
+2. tools/delegate_tool.py:1640 (narrowed inheritance) — parents that keep OpenAI-compatible credentials somewhere OTHER than `_client_kwargs`/`client` (custom integration subclasses) now hard-fail delegation with "Refusing to inherit" where they previously worked by accident — right call security-wise, but worth a line in the delegation docs/changelog so integrators know to populate the paired stores.
+
+3. tools/delegate_tool.py:1596 (nit, silent region guess) — `_bedrock_region_from_parent` defaults to us-east-1 when neither `_bedrock_region` nor the URL reveals it; a mismatched guess silently routes the child's Bedrock traffic cross-region (latency/cost/data-residency) — emit a warning when the fallback fires.

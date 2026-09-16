@@ -1,0 +1,13 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. **optional-mcps/*/manifest.yaml (auth.env, all eight files)** — `auth.env` declares `ACADEMICA_API_KEY`, but for `http` + `api_key` manifests the loader requires `auth.env` to declare exactly `MCP_<NAME>_API_KEY` derived from the server name (`_env_key_for_server`, hermes_cli/mcp_config.py:153-157, enforced at hermes_cli/mcp_catalog.py:256-270). **Why it matters:** every one of the eight entries raises a parse-time CatalogError ("http + api_key auth requires auth.env to declare 'MCP_ACADEMICA_..._API_KEY'"), so none can install, and the shipped-catalog sanity test (tests/hermes_cli/test_mcp_catalog.py:603, "Every manifest in optional-mcps/ must parse cleanly") will fail CI. **Suggestion:** rename per entry (e.g. `MCP_ACADEMICA_PUBMED_API_KEY`, `MCP_ACADEMICA_SEC_FILINGS_API_KEY`, …), or extend the loader to support a shared vendor key before merging.
+
+2. **optional-mcps/*/manifest.yaml (transport.headers, e.g. academica-clinical-trials lines 17-19)** — `TransportSpec` has no `headers` field (hermes_cli/mcp_catalog.py:226-233 parses only type/command/args/url/version/env), so the `transport.headers:` block is silently ignored; the Authorization header is generated at install time by `_bearer_auth_headers`. **Why it matters:** dead config that misleads maintainers into thinking custom header templates are honored, and it hides finding 1 (the real key contract lives elsewhere). **Suggestion:** drop the block, or implement manifest-declared header templates explicitly.
+
+3. **post_install text vs loader design (all eight files)** — the note "The eight Academica catalog entries share ACADEMICA_API_KEY" conflicts with the strictly one-env-var-per-server contract; even with per-entry renames, users of one vendor plan would need to paste eight separate keys. **Why it matters:** documented UX the implementation cannot deliver. **Suggestion:** add shared/vendor-key support (e.g. honor an `auth.env_var` override or alias list in the http+api_key path) so docs and behavior agree.
+
+4. **Test coverage** — no tests accompany the new entries while finding 1 actively breaks the existing catalog-parsing test. **Why it matters:** the guardrail that would have caught this is being updated only by its failure. **Suggestion:** add cases asserting each new manifest parses and that its declared `auth.env` names match `_env_key_for_server(name)`.
+
+Nit: `suggest.hosts` repeats `academica.sh` in every entry; host-suffix matching means one visit/mention of the domain can fan out suggestions across the whole installed family — worth confirming family-level suggestion dedup exists.
+
+— Reviewed by Hermes AI reviewer (reviewer-f2)

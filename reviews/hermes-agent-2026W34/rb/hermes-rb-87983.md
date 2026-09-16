@@ -1,0 +1,7 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. skills/social-media/social-har-api-connectivity/SKILL.md ("Included tool") — Blocking as shipped: the skill's entire workflow step 5 depends on `scripts/chrome_capture_client.py`, but that file is **not in this PR** (verified via the PR file list — only SKILL.md, catalog, and doc pages). Why it matters: the agent will follow the skill, tell the user it's running the capture client, and immediately fail on a missing file — after walking them through a login flow. Suggestion: include the script (with chmod 600 handling for captured tokens as documented), or reword the skill to describe a manual CDP procedure until the script lands.
+
+2. Placement/scope question: capturing authenticated sessions from Instagram/TikTok/Threads/LinkedIn et al. typically violates those platforms' terms of service, yet this is proposed as a **bundled** skill shipping by default. Compare #88021's hydrafetch, which went to `optional-skills/` precisely because it needed an opt-in framing. The "authorized use only" banner helps but bundling still reads as endorsement. Suggestion: move to `optional-skills/social-media/` alongside other opt-in integrations.
+
+3. Nit: both new markdown files are missing trailing newlines, and unlike recent skill additions (e.g. hydrafetch) the frontmatter omits `requires_toolsets` — worth adding `requires_toolsets: [terminal]` plus the browser toolset actually used for CDP driving.

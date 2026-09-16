@@ -1,0 +1,3 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Review of "fix(agent): anchor ZAI vision-error base_url check to real hosts". Clean completion of the #74312 host-anchoring sweep: the duplicated inline ZAI-1210 checks in BOTH call sites collapse into one helper that hostname-matches open.bigmodel.cn / api.z.ai instead of substring-matching "bigmodel" anywhere in the URL — killing the proxied-path false-positive class and lookalike subdomains (evil.net test included). The dedup itself also fixes drift risk between the sync/async copies. Tests cover real hosts, proxy-path non-match, subdomain lookalike, non-1210, and missing base_url. No blocking issues found.

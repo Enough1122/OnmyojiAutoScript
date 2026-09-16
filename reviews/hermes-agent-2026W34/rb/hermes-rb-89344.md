@@ -1,0 +1,9 @@
+> AI code review - automated review for reference; please use your judgment.
+
+Reviewed the diff. This is how an opt-in escalation should be built: empty default keeps today's compress-until-exhausted for everyone (with a test asserting no default provider/model ever ships), the classifier is untouched so overflow never leaks into fallback_providers, the switch is session-sticky via switch_model rewriting _primary_runtime (restore verified to keep the large model), credential resolution falls back to the resolved client's key/URL when yaml omits them, and the guard ladder (already-on, already-activated, window-too-small, resolve-failure, switch-failure) each has both a unit test and mostly an integration test through run_conversation. The output-cap negative test is particularly good - that 400 shares phrasing with real overflows and would have been an easy misfire.
+
+- **Cost visibility after the sticky switch.** Once activated, every subsequent small turn bills at the large model's rates until /model or /new. The one-shot status emit covers the moment, but `/context` and the model pill will happily keep showing... actually they show the switched model, which is right - the gap is that nothing indicates *why* ("overflow-escalated"). A tiny `agent._overflow_model_activated` read in the /model handler's confirmation (or a "(escalated)" suffix in /context) would let users connect the rate change to the event.
+
+- Nit: try_activate_overflow_model logs and emits on success but the failure paths log at warning with full provider detail - fine - just make sure none of those warnings can carry the resolved api_key (they log exc strings from resolve_provider_client, which should be safe, worth a glance).
+
+No blocking issues found.

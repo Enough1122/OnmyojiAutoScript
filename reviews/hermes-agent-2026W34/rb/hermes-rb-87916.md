@@ -1,0 +1,7 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Review of "fix(providers): omit Cloudflare generic reasoning and honor output caps". Three coordinated fixes landing together sensibly: custom providers gain `max_output_tokens`/`max_tokens` caps (validated positive-int, bool-excluded) that reach ProviderConfig AND the CLI agent with correct precedence (explicit global wins; a runtime-derived cap is flagged and cleared before each re-resolve so provider switches can't leave stale limits); Cloudflare's two OpenAI-compatible surfaces omit the generic `reasoning_effort`/`think` controls their envelopes reject (hostname+path anchored, both account-scoped and gateway forms tested); and the normalization allowlist is extended so these keys survive validation. Tests cover cap propagation through the real CLI route, normalizer preservation, and the omission matrix across enabled/disabled reasoning configs. Suggestions:
+
+1. hermes_cli/config.py:1484 (dual-key ambiguity) — both `max_output_tokens` and `max_tokens` are accepted; when a config defines BOTH, dict iteration order decides silently which survives — either reject the combination with a clear error or document `max_output_tokens` as authoritative.
+
+2. nit — consider also clamping absurdly large caps (> model context) at use time rather than trusting config, since the value flows straight into provider requests.

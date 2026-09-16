@@ -1,0 +1,3 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. hermes_cli/doctor.py:`_monthly_provider_usage` — Positive: read-only URI connection with a timeout, empty-list-on-any-failure (never wedges the doctor run), and honest labeling ("local count", "unbilled" for empty provider) so nobody mistakes a chars-based call counter for an authoritative quota API. The test covers aggregation, per-provider grouping, and month-window exclusion. No change requested.

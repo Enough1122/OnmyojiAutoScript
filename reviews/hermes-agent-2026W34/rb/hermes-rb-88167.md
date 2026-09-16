@@ -1,0 +1,3 @@
+> AI code review - automated review for reference; please use your judgment.
+
+Reviewed the diff (#82620 salvage). Precise root-cause fix: dropping the reclaimed runtime's session state emptied a bound tile's view, but the resume effect is gated on !runtimeId - so the still-set binding meant it never refired, leaving an empty transcript under live chrome with no recovery short of closing the pane. The targeted `unbindTileRuntime` (sibling of the bulk reset, which cannot cover a backend reclaim arriving after reconnect-time unbinds) re-arms exactly that effect, and purging the wiring cache's warm entry stops resumeTile from handing the dead id straight back. Both behaviors are pinned by tests including a bystander-tile assertion.

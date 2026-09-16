@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. apps/desktop/src/app/chat/sidebar/nav-state.ts — Positive: extracting `sidebarVisibleView`/`sidebarNavItemIsActive` turns the inline highlight chain-of-ors into testable pure functions, and the tile-focus → `chat` mapping is the correct semantic (the focused surface IS a chat even when the router pathname still points at a contributed page), which kills the stale contributed-route highlight without breaking built-in section selection (covered by a parameterized preserve/clear matrix).
+
+2. store/session-states.ts — Positive: splitting `$focusedStoredSessionId` into `$focusedTreePaneId` + `$focusedSessionIsTile` gives the sidebar the piece it was actually missing (is the focused zone a session tile?) instead of inferring it from string prefix checks at every consumer; the markSelectionRestore interaction case is tested, which is exactly where a naive derivation would regress. The integration test asserts both `aria-current` and row-active styling stay mutually exclusive across route/tile/null transitions. No change requested.

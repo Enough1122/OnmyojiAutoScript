@@ -1,0 +1,9 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Right call: persisted REST history is complete and authoritative the moment it resolves, so gating its paint behind a cold runtime build (skills/MCP/memory init) stranded users behind hydration timeouts for no informational gain. The implementation keeps the invariants that made the old deferral safe — `isCurrentResume()` is re-checked *at paint time*, the runtime path grafts only live projection onto the same snapshot instead of rebuilding, and `chatMessageArraysEquivalent` preserves reference identity so an unchanged acknowledgement skips the second large DOM build. The tests pin all three properties including mid-flight visibility and single-row dedup of the inflight prompt. Points:
+
+1. apps/desktop/src/app/session/hooks/use-session-actions/index.ts:~1169 — new interleaving to verify: runtime resume now can **fail** after the prefetch has already painted. Walk the failure branch and confirm nothing clears `$messages` back to empty on that path — "full history + error notice" would be the right outcome, an accidental wipe-to-empty would regress harder than the original bug. A companion test resolving `session.resume` with a rejection would pin it.
+2. Same region — between the eager paint and `await resumePromise`, user input that appends optimistic rows lands on top of the painted snapshot; the later reconcile uses `viewMessagesForReconcile()` so presumably preserved via `preserveLocalPendingTurnMessages` semantics only when `resumedSameSelectedSession`. Confirm the fresh-resume case (different session) also can't have user-typed rows yet by construction, or guard it. (nit)
+3. The duplicated 60-line test bodies across these two describes are getting heavy; a `makeDeferredResume()` helper would shrink future variants. (nit)
+
+No blocking issues found.

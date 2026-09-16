@@ -1,0 +1,11 @@
+> AI code review - automated review for reference; please use your judgment.
+
+Reviewed the diff. The mechanics are excellent: the CAS guard pins run id + pid + claim lock plus a NOT EXISTS on terminal events, so the transition is idempotent under concurrent reapers and cannot clobber an observed terminal transition (both raced); the pre-pass runs inside detect_crashed_workers' main txn so an expired claim can no longer erase the clean-exit evidence before anyone sees it; block_recurrences uses a CASE over the pre-update block_kind so mixed kinds reset correctly; hooks fire strictly after commit (proven with fresh-connection assertions); foreign-host claims skip PID inspection entirely; and a live/recycled PID outranks stale exit evidence without signaling. The stale-running preview/reap backfill honestly reports "unknown" exit kinds instead of inventing one.
+
+- **This reverses a measured policy, not just an ordering bug.** The deleted code documented ~96% of clean-exit-no-terminal tasks completing on a later run, with a violation-only 3-strike budget and max_retries override - all now removed in favor of first-observation blocking. The new rationale (never advertise work the worker abandoned) is coherent, but operators who relied on the automatic retry will start seeing blocked cards needing manual promote/unblock for what used to self-heal. Please link the issue/incident that motivated the reversal in the PR body and call out the behavior change in release notes.
+
+- **Coverage asymmetry between the forward path and the backfill.** The dispatcher pre-pass handles only known-clean exits; unknown exits (dispatcher restarted, exit record lost) are covered solely by the explicit reap_stale_running_workers backfill. Where/how is that invoked operationally - a doctor step, a documented command? If it is one-time-by-design, say so next to its definition so it is not assumed to be a recurring sweep.
+
+Nit: _fire_missing_terminal_hooks rebuilds _missing_terminal_payload just to read back the reason string; threading the reason through would drop the double construction.
+
+No blocking issues found.

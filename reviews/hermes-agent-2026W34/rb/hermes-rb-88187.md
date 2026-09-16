@@ -1,0 +1,5 @@
+> AI code review - automated review for reference; please use your judgment.
+
+Reviewed the diff. Clean fix plus refactor: the inline image_url data-URL decoding moved into a shared `_decode_data_url` helper, which made adding the missing `video_url` branch (what `video_analyze_tool` actually emits - a custom part type only Gemini's native inlineData path understands) a three-line change instead of a copy-paste. Tests cover the new video translation, the image regression after the refactor, and rejection of non-data URLs.
+
+Nit: `_decode_data_url` rejects anything whose payload is not valid base64 by returning None - meaning a malformed part is silently dropped and the model answers text-only. That matches the previous behavior, but since this branch exists because parts were being *silently* dropped, consider a debug log line naming the dropped part type.

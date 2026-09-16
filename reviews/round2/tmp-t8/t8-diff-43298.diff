@@ -1,0 +1,98 @@
+diff --git a/packages/app/e2e/regression/prompt-thinking-level.spec.ts b/packages/app/e2e/regression/prompt-thinking-level.spec.ts
+index 9315c347c036..06ae1ee02fcd 100644
+--- a/packages/app/e2e/regression/prompt-thinking-level.spec.ts
++++ b/packages/app/e2e/regression/prompt-thinking-level.spec.ts
+@@ -7,7 +7,8 @@ const directory = "C:/OpenCode/PromptThinkingLevelRegression"
+ const projectID = "proj_prompt_thinking_level_regression"
+ const sessionID = "ses_prompt_thinking_level_regression"
+ 
+-test("shows the V2 thinking level control while relevant", async ({ page }) => {
++test("keeps V2 prompt controls and submit accessible on narrow displays", async ({ page }) => {
++  await page.setViewportSize({ width: 320, height: 800 })
+   await mockOpenCodeServer(page, {
+     directory,
+     project: {
+@@ -26,7 +27,7 @@ test("shows the V2 thinking level control while relevant", async ({ page }) => {
+           models: {
+             "thinking-model": {
+               id: "thinking-model",
+-              name: "Thinking Model",
++              name: "A long thinking model name for narrow layouts",
+               limit: { context: 200_000 },
+               variants: { high: {} },
+             },
+@@ -57,9 +58,17 @@ test("shows the V2 thinking level control while relevant", async ({ page }) => {
+   const composer = page.locator('[data-component="prompt-input-v2"]')
+   const input = composer.locator('[data-component="prompt-input"]')
+   const control = composer.getByRole("button", { name: "Choose model variant" })
++  const controls = composer.locator('[data-slot="prompt-controls"]')
++  const submit = composer.locator('[data-action="prompt-submit"]')
+   await expectAppVisible(composer)
+ 
+   await idleComposer(page)
++  await expect(submit).toBeVisible()
++  expect(await controls.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true)
++  const [controlsBox, submitBox] = await Promise.all([controls.boundingBox(), submit.boundingBox()])
++  expect(controlsBox).not.toBeNull()
++  expect(submitBox).not.toBeNull()
++  expect(submitBox!.x).toBeGreaterThanOrEqual(controlsBox!.x + controlsBox!.width)
+   await expect(control).toBeVisible()
+ 
+   await control.click()
+diff --git a/packages/app/src/components/prompt-input-v2.tsx b/packages/app/src/components/prompt-input-v2.tsx
+index 481b7922cf36..8dde324135c6 100644
+--- a/packages/app/src/components/prompt-input-v2.tsx
++++ b/packages/app/src/components/prompt-input-v2.tsx
+@@ -517,7 +517,7 @@ function PromptInputV2ModelControl(props: {
+               data-control-type="dialog"
+               variant="ghost-muted"
+               size="normal"
+-              class="min-w-0 max-w-[220px] justify-start ![font-weight:440] group"
++              class="min-w-0 max-w-[220px] shrink-0 justify-start ![font-weight:440] group"
+               classList={{ "animate-in fade-in": shouldAnimate() }}
+               style={{ height: "28px" }}
+               onClick={props.onUnpaidClick}
+@@ -534,7 +534,7 @@ function PromptInputV2ModelControl(props: {
+                 variant="ghost-muted"
+                 size="normal"
+                 style={{ height: "28px" }}
+-                class="min-w-0 max-w-[220px] justify-start ![font-weight:440] group"
++                class="min-w-0 max-w-[220px] shrink-0 justify-start ![font-weight:440] group"
+                 classList={{ "animate-in fade-in": shouldAnimate() }}
+                 data-action="prompt-model"
+                 data-control-type="popover"
+diff --git a/packages/session-ui/src/v2/components/prompt-input/index.tsx b/packages/session-ui/src/v2/components/prompt-input/index.tsx
+index ff4ff0f1d408..15b44fceed03 100644
+--- a/packages/session-ui/src/v2/components/prompt-input/index.tsx
++++ b/packages/session-ui/src/v2/components/prompt-input/index.tsx
+@@ -195,9 +195,10 @@ export function PromptInputV2(props: PromptInputV2Props) {
+           </Show>
+         </div>
+ 
+-        <div class="flex h-11 items-center px-2">
++        <div class="flex h-11 min-w-0 items-center px-2">
+           <div
+-            class="flex min-w-0 flex-1 items-center gap-1"
++            data-slot="prompt-controls"
++            class="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto no-scrollbar"
+             aria-hidden={state.mode === "shell"}
+             inert={state.mode === "shell" ? true : undefined}
+             style={buttons()}
+@@ -573,7 +574,7 @@ export function PromptInputV2Select(props: {
+           as={ButtonV2}
+           variant="ghost-muted"
+           size="normal"
+-          class={`max-w-[220px] justify-start ![font-weight:440] ${props.class ?? ""}`}
++          class={`max-w-[220px] shrink-0 justify-start ![font-weight:440] ${props.class ?? ""}`}
+           aria-label={props.title}
+         >
+           {props.currentIcon}
+@@ -691,7 +692,7 @@ export function PromptInputV2SubmitButton(props: {
+         tabIndex={props.mode === "normal" ? undefined : -1}
+         icon={props.stopping ? "stop" : props.mode === "shell" ? "arrow-undo-down" : "arrow-up"}
+         variant="primary"
+-        class="size-7 rounded-md p-[6px] text-v2-icon-icon-muted shadow-[var(--v2-elevation-button-contrast)] disabled:opacity-50"
++        class="relative z-10 size-7 shrink-0 rounded-md p-[6px] text-v2-icon-icon-muted shadow-[var(--v2-elevation-button-contrast)] disabled:opacity-50 max-sm:size-10 max-sm:p-[12px]"
+         style={{
+           "background-image":
+             "linear-gradient(180deg,var(--v2-alpha-light-20) 0%,var(--v2-alpha-light-0) 100%),linear-gradient(90deg,var(--v2-background-bg-contrast) 0%,var(--v2-background-bg-contrast) 100%)",

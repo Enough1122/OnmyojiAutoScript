@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. model_tools.py:`_resolved_tool_names` ContextVar — Positive: moving the execute_code sandbox fallback from a process-global list to a per-turn ContextVar closes a real cross-turn race (concurrent gateway turns resolving different toolsets could swap each other's sandbox allowlist), while keeping the deprecated mirror write-compatible with unknown importers and explicitly marking it never-for-authorization. The delegation cleanup is the elegant consequence: seeding the child's fresh thread from captured parent names makes the old save/restore-global dance unnecessary, and it's deleted rather than left as dead code.
+
+2. Tests — Positive: the interleaved alpha/beta ThreadPool scenarios prove both the execute_code fallback isolation and per-thread child-construction snapshots; the restored-after-delegation test was rewritten against the new API rather than left asserting the global. No change requested.

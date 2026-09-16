@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. tools/threat_patterns.py (`ssh_access_write`) — Bypass shapes worth closing before merge: the verb set covers echo/cat/cp/tee/append/add/write and bare `>>?`, but misses `mv`, `install`, `printf`, `dd`, `scp`, `rsync`, `ln -s` — and critically, a *bare leading redirect* (`> ~/.ssh/authorized_keys_backup`) carries no verb word at all, so it sails past the gate while being a pure write primitive. Since the sibling `authorized_keys` rule still fires on that filename regardless of verbs, the practical exposure is narrower (id_rsa/config/known_hosts writes), but an injection only needs one unlisted shape. Suggestion: extend the alternation with the missing commands and add an alternative branch for `(?<![a-z])>?\s*(?:\$HOME|~)/\.ssh` following a newline or statement boundary.
+
+2. Tests — Positive: both directions are pinned — four genuine write shapes still flag, four documentation phrasings stay clean, and the third test explicitly proves the sibling `ssh_backdoor` rule's filename-keyed behavior is untouched by the verb gating. No change requested beyond item 1.

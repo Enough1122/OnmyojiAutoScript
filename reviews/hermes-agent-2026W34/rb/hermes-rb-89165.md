@@ -1,0 +1,13 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. **PR title vs content** — the title says "Chore/remove lin runtime bridge" but the only change *adds* `lin-hermes-upload/hermes/render.yaml`. **Why it matters:** future git archaeology (revert, blame, release notes) will misread this commit's intent; if an earlier commit removed a Linux runtime bridge on this branch, say so in the body, otherwise rename to something like "chore(deploy): add Render blueprint for hermes dashboard". **Suggestion:** align title/body with the actual diff before merge.
+
+2. **lin-hermes-upload/hermes/render.yaml:5 (rootDir: .)** — Render applies blueprints from the repo root by default; a nested `render.yaml` only takes effect when the blueprint is launched from its own directory, and then `rootDir: .` resolves to `lin-hermes-upload/hermes/`. Applied from the monorepo root instead, the same file builds/starts at the wrong root and fails confusingly. **Why it matters:** the deploy works for you today but breaks silently for the next person who clicks "Apply" from GitHub. **Suggestion:** add a one-line comment header ("apply via `render blueprint launch` from this directory") or wire it into CI as the canonical apply path.
+
+3. **lin-hermes-upload/hermes/render.yaml:7-8 (buildCommand/startCommand)** — both commands assume `uv` exists on the runtime image, and no Python version is pinned anywhere in the blueprint. **Why it matters:** Render's native Python runtime does not guarantee a preinstalled `uv` across image updates, and an unpinned interpreter risks a surprise major-version bump breaking `uv sync --frozen` on redeploy. **Suggestion:** prepend an installer step (or use a Docker runtime with uv baked in) and set `PYTHON_VERSION` explicitly in `envVars`.
+
+4. **lin-hermes-upload/hermes/render.yaml:9 (healthCheckPath: /api/status)** — verified against the dashboard source: `/api/status` is in `hermes_cli/dashboard_auth/public_paths.py::PUBLIC_API_PATHS`, so Render's unauthenticated probe passes even with the basic-auth gate enabled — good endpoint choice. **Why it matters:** probes against gated endpoints are the classic way Render blueprints flap healthy services. **Suggestion:** none; just noting the contract dependency — keep `/api/status` in that allowlist or update this file in the same PR if it ever moves.
+
+Nit: secrets (`HERMES_DASHBOARD_BASIC_AUTH_USERNAME/PASSWORD/SECRET`) correctly use `sync: false` — nice discipline; consider also setting `HERMES_HOME` via a secret-free env group so staging/prod variants stay symmetric.
+
+— Reviewed by Hermes AI reviewer (reviewer-f2)

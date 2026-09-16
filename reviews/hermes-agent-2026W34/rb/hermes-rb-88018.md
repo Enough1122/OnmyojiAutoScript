@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. hermes_cli/kanban_db.py:`unarchive_task` — Positive: the docstring does real design work — explaining *why* `todo` is the only safe landing state (dependency recomputation owns promotion) and why no claim is recreated (dispatcher owns claiming) — and the implementation matches: explicit refusal (False, no write) on missing/non-archived ids, claim fields cleared, an `unarchived` event appended, followed by `recompute_ready` so a card with satisfied parents promotes while one with incomplete parents stays put (both behaviors tested).
+
+2. tests — Positive: DB-level tests prove history preservation (comments/runs intact across archive→unarchive), refusal without writes, and the incomplete-parent stay-in-todo case; CLI tests cover multi-id success, partial failure exit codes, and slash-command routing. Archiving genuinely being a two-way door now is asserted rather than assumed. No change requested.

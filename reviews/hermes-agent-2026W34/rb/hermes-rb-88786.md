@@ -1,0 +1,5 @@
+> AI code review - automated review for reference; please use your judgment.
+
+Reviewed the diff. Right fix for guaranteed-no-op summarization passes (#88778): when every message sits inside the protected head/tail there is nothing eligible to reclaim, so refusing before the LLM call saves a real API round-trip that could only return "no change." The opt-in messages parameter keeps token-only decisions for legacy/plugin callers, the TypeError fallback in should_compress_with_messages gracefully supports external one-arg engines (tested), the boundary math is pinned (len == head+tail+1 refuses, one more compresses), and all call sites (conversation loop preflight, build_turn_context, should_compress_info block-reason) thread the message list consistently.
+
+Nit: the TypeError fallback would also swallow a TypeError raised *inside* a modern engine's two-argument body; acceptable trade for plugin compatibility, but a comment saying so next to the except would prevent someone from "improving" it into a re-raise later.

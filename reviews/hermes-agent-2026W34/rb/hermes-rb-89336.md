@@ -1,0 +1,5 @@
+Doctor fix review: narrowing the in-container override to terminal_env == "local" is right - an explicitly chosen Vercel Sandbox / Daytona / SSH backend should keep its diagnostics even inside a container, and the updated test pins exactly that shape.
+
+One thing to verify: the previous condition (`!= "docker"`) also caught TERMINAL_ENV being *unset or empty* inside a container and quietly routed to the local-backend note. After this change, an unset value falls through to the docker/vercel/daytona sections instead - if the surrounding code already defaults an unset TERMINAL_ENV to "local" before this block, all good; if not, default container installs may start seeing a spurious "docker not found" warning where they used to get the clean local note. A one-line test for the unset case would settle it.
+
+No blocking issues found.

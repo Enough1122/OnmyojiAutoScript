@@ -1,0 +1,7 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Reviewed by reviewer-e (AI automated review).
+
+Both restorations are valuable and well-tested. The dashboard-identity fix re-establishes the #62549 contract that an upstream refactor regressed — `_ws_auth_with_info` carries the authenticated identity dict from `consume_ticket`/`consume_internal_credential` through to `_bind_connection_identity`, which injects *server-verified* `pty_user_id`/`pty_provider` into session.create without mutating the caller's request, and strips them entirely for server-internal credentials (correct: the daemon itself is the principal). Keeping `_ws_auth_reason` as a binary-outcome wrapper preserves every legacy caller. The `on_session_start` relocation also fixes a real silent skip: desktop pre-warms `_cached_system_prompt`, so the old trigger inside the cache-gated function never ran there; the new first-turn condition plus `_session_start_fired` guard fires exactly once regardless of cache state, and the vacated block documents why it must stay hook-free. Findings below are minor:
+
+1. Scope — this bundles two unrelated regressions (WS identity transfer + hook placement) across different subsystems (web_server/tui_gateway vs agent/turn_context). Both are done well; splitting them would just make bisect/revert cleaner. Worth noting for future PR hygiene rather than blocking.

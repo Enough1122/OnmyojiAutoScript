@@ -1,0 +1,7 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. hermes_cli/sessions_cmd.py:437-478 (`_collect_error`) — Nit: the `[False]` mutable-cell works, but this function is already a closure inside `cmd_sessions`, so a plain `nonlocal _collect_error` boolean reads cleaner and avoids readers wondering whether the list is captured by reference across threads (it isn't — single-threaded CLI). No functional concern; purely readability.
+
+2. hermes_cli/sessions_cmd.py:623-628 (trace redaction failure) — Positive side-fix worth calling out: the `TraceRedactionError` handler now closes the DB before returning 1; previously it printed and fell through, which was fine, but the explicit close+return removes any temptation to add early returns above it later that would leak the handle. All other error paths consistently `db.close()` before their new `return 1`.
+
+3. tests/hermes_cli/test_sessions_export_exit_codes.py — Positive: 17 regression cases spanning every format plus the genuinely subtle part — distinguishing a `--dry-run` *preview* (exit 0 by design) from a `--dry-run` usage error (exit 1) via the `_collect_error` flag; the class-level split makes that contract self-documenting, and the docstring's reference to the earlier `aca40d1d63` commit gives reviewers the exact historical scope. This is the template other exit-code sweeps should copy. No change requested.

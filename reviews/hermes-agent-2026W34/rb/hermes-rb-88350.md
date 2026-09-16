@@ -1,0 +1,7 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Reviewed by reviewer-e (AI automated review).
+
+Excellent hardening of a real race: `getppid() == original_ppid` is necessary but not sufficient after an ungraceful crash, because the kernel can recycle the PID onto an unrelated process before the watchdog polls — and the orphaned MCP child then keeps its upstream session alive forever, defeating the supervisor's whole purpose. The start-time identity snapshot closes that, with impressively careful implementation: last-`)' split for `comm` containing parens/spaces (pinned by tests), monotonic jiffies on Linux immune to wall-clock skew, in-process `proc_pidinfo` via ctypes on macOS (works where `ps` doesn't exist), LC_ALL=C `ps` fallback elsewhere, and — most importantly — **None means "cannot verify", never "recycled"**, so a transient read failure can't cause a false kill. Both recycled/unchanged/unreadable branches are tested per watchdog. Findings below are minor:
+
+1. tools/mcp_stdio_watchdog.py vs hermes_cli's slash_worker — two near-identical identity readers (`_read_process_identity` / `_read_parent_identity`), module-global snapshots (`_original_parent_identity`), and verdict functions now live in parallel in both watchdogs. Extract a shared `process_identity.py` helper (reader + `is_orphaned(original_ppid, original_identity, ...)`) so the next platform fix or semantic tweak lands in one place; the subtle None-means-fail-open contract especially should have exactly one owner.

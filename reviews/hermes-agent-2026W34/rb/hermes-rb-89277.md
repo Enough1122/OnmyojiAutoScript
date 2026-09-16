@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. preview-reader.ts:`resolveActivePreviewTab` — Positive: the five-rung ladder mirrors the keyboard tab-verb eligibility exactly (hover → focused zone → store → singleton Browser → first), which means the tool and the user's eyes now share one definition of "the active preview"; the `tabs[]` summary plus multi-tab note makes residual ambiguity visible to the model instead of silently answering from an unexpected tab. The stale-global case (file selected globally while Browser shows in another zone) is closed by rungs 1–2, with the singleton fallback covering headless/no-layout contexts.
+
+2. preview-tile.tsx:`reveal` — Positive: noting the tree group after `revealTreePane` closes the actual clobber mechanism (`follow` re-asserting the sibling file group on the layout commit), and the test reproduces both halves — reveal mirroring and follow — so the desync can't return via either side. The `active_tab_id` addition to every read result also gives post-hoc debugging a ground truth. No change requested.

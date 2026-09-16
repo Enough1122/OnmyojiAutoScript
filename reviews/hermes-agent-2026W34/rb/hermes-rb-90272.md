@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. apps/desktop/src/i18n — updateThisApp/updateBackend are added to en.ts and zh.ts and to the Translations interface, but ar.ts / ja.ts / zh-hant.ts are absent from the diff. If every locale implements the full interface (as the Turkish-locale PR relied on), this fails typecheck; if partial locales fall back at runtime instead, those three languages now render raw keys on the About panel. Either way it needs resolving before merge — add the two strings everywhere or document the fallback contract.
+
+2. The routing fix itself is exactly right: startUpdateFor(target) makes both targets reachable in remote mode (the mode-driven startActiveUpdate could only ever reach the backend there), the regression test asserts 'client' NEVER falls through to the backend RPC — naming the stuck-GUI failure it prevents — and startActiveUpdate is retained as a documented thin wrapper for callers that genuinely want the mode default. The backend-side availability check also correctly ORs updateAvailable with behind > 0 for backends that cannot count commits.

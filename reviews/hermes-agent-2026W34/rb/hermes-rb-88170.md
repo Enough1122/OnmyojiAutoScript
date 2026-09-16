@@ -1,0 +1,3 @@
+> AI code review - automated review for reference; please use your judgment.
+
+Reviewed the diff. This is byte-for-byte the same `npm run fix` auto-formatting as **PR #88173** (identical connection-config.ts, use-session-tile-delegate.ts, and session-states.test.ts changes). One of the two should be closed in favor of the other so the merged history does not contain two identical format commits attributed separately.

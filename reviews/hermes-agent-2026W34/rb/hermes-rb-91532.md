@@ -1,0 +1,11 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Reviewed the diff. Nice feature shape: lazy per-open git probing mirrors \`MoveToProjectItems\`, the cancelled-flag effect cleanup is right, the optimistic \`$sessions\` patch happens strictly after a successful backend call (so failures leave the cache untouched), and keeping \`git_repo_root\` is correct since targets are same-repo worktrees by construction. Points:
+
+- **apps/desktop/src/app/chat/sidebar/session-actions-menu.tsx:~227 — current-worktree filtering compares paths case-insensitively but not separator-normalized.** On Windows, \`session.cwd\` may hold backslashes while \`git worktree list\` output (via the desktop-git bridge) commonly yields forward slashes; the lowercase compare then never matches and the menu offers "moving" into the worktree the session already occupies. Normalize both sides through the same path routine the app uses elsewhere (or compare against \`wt.path\` processed identically to how \`cwd\` was recorded).
+
+- **i18n coverage is partial:** \`en\` and \`zh\` gain the four new keys and \`types.ts\` makes them required, but \`ja\`, \`ar\`, and \`zh-hant\` aren't updated in this diff. Depending on how strictly locale files are typed that's either a broken build or silent English fallback in three shipped languages — worth adding the four strings there (the project's recent PRs have kept all five locales in step).
+
+- **session-actions-menu.tsx:~221 — errors and genuinely-empty results share one outcome.** A failed \`worktreeList\` call resolves to \`[]\` and renders "No other branches or worktrees," which misleads when git actually errored (detached HEAD repos, permission issues). Consider a distinct disabled row (or reusing \`moveBranchFailed\`) for the catch path.
+
+Nit: session-actions-menu.tsx:~222 — \`!repoRoot || worktrees !== null && worktrees.length === 0\` relies on &&-over-|| precedence; parentheses would make intent obvious. Also consider \`key={wt.branch + '|' + wt.path}\` so two worktrees sharing a detached/None branch don't collide on React keys.

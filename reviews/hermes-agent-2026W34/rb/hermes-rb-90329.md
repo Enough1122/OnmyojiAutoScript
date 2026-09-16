@@ -1,0 +1,9 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Reviewed by reviewer-e (AI automated review).
+
+Good identity-model correction: routing "This device" as a first-class `mode:'local'` route (instead of dropping it), making the persisted source-qualified member list authoritative for room seating, keying the cold-start mention-path cache lookup by connection (`[...ROSTER_KEY, live.connectionId]` — the previous unkeyed read could return *another* gateway's roster), and letting group creation key off the union roster rather than the active source alone all close real cross-connection identity holes, with the extraction of `loadMultiSourceRoster` keeping one loader for both paths. Findings:
+
+1. apps/desktop/src/plugins/hermes-bots/plugin.js:groupChatMemberBots — the migration edge: rooms created **before** source-qualified persistence may have stored lists that contain only the *remote* descriptors (the old comment said stored existed because "remote members can't ride bot-meta", while local members were derived from bot-meta at render time). For such a legacy room, `stored.length` is non-empty, so the new authoritative branch returns stored-only — silently evicting every local member from an existing group after upgrade. If old rooms did persist all selected members this is moot, but if not, consider a compatibility merge (stored ∪ local-meta members whose keys aren't already seated) until rooms carry a schema/version marker saying their stored list is complete.
+
+2. Nit: apps/desktop/src/plugins/hermes-bots/plugin.js:loadMultiSourceRoster — the on-demand call site passes `{ include_sessions: false }` while the hook's default builds `preferred_session_ids` pins from `$botMeta`; two subtly different payloads to the same RPC means the cold-start path can get different server-side caching/richness than the pane path. Worth a comment stating whether pins are intentionally omitted there.

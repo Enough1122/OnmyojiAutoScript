@@ -1,0 +1,9 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Correct direction: Electron Framework under hardened runtime loses JIT without `com.apple.security.cs.allow-jit`, and applying the inherit-entitlements plist to every nested bundle matches what electron-builder's afterSign plumbing does (helpers *and* frameworks). Keeping deepest-first sort order and pinning the exact codesign argv in a regression test are both right. Two points:
+
+1. hermes_cli/main.py:`_desktop_macos_local_codesign` — the old code only needed `ent_inherit` when a `Helper*.app` happened to exist; the new code requires it for **every** nested `.framework`. On a build where the `electron/entitlements.mac.inherit.plist` template isn't generated/copied (or a non-Electron desktop variant with third-party frameworks and no helper), previously-working framework signing now hard-fails. Please confirm the plist is guaranteed present wherever this function runs, or fall back gracefully (skip entitlements + warn) when it's missing.
+2. Scope note: the inherit plist typically also carries `allow-unsigned-execution-memory` / `allow-dyld-environment-variables`. Fine for direct-distribution + notarization, but those entitlements are App-Store-disallowed — if any flow ever submits these bundles to MAS, this loop will need a non-inherit branch again. Worth one sentence in the comment so future-you remembers why the unconditional inherit exists.
+3. main.py:7522 — the change deletes the comment that explained why symbol mapping was deliberately narrow, replacing it with no rationale at all for why frameworks now get entitlements. The "why" (JIT under hardened runtime) currently lives only in the test docstring; a one-liner above the `sign_path` call would keep the code self-explaining. (nit)
+
+No blocking issues found.

@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. gateway/platforms/api_server.py:`_handle_health` — Positive: correct and minimal — delegating to `_check_auth` means /health inherits exactly the same key semantics as every other route (including the deliberately permissive no-key branch), closing the "unauthenticated 200 says open while chat is gated" lie without inventing a second auth path. The three-test spread (401 without key, 200 with valid bearer, still-public without key configured) pins the whole matrix.
+
+2. Ops note (not a code change): this is intentionally breaking for deployments that run unauthenticated uptime probes against /health while having API_SERVER_KEY set — those monitors will start seeing 401 and may page. Worth one line in the release notes / messaging docs telling operators to add the Bearer header to their health checks, since the diff itself doesn't touch any deployment-facing documentation.

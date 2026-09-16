@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. plugins/platforms/telegram/adapter.py:`_handle_callback_query` — Positive: correct resilience split — the ACK is presentation-only at this point (approval already resolved in the store), so degrading it to a warning while still editing the message preserves the security-relevant half (button removal) even when Telegram's ACK times out. `except Exception` deliberately excludes `asyncio.CancelledError` (BaseException since 3.8), so shutdown semantics are untouched, and the log goes through `_redact_telegram_error_text`.
+
+2. tests/gateway/test_telegram_approval_buttons.py — Positive: the regression test drives the real handler with an ACK that raises TimeoutError and asserts the three outcomes that matter — decision text rendered, `reply_markup=None`, typing pause released. No change requested.

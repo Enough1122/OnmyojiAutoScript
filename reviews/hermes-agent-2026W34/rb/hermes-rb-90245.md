@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. agent/chat_completion_helpers.py:3968 — the reactive net gains the very broad strings "is deprecated" / "deprecated for this model", matched against ANY unsupported-parameter rejection. Why it matters: another provider that deprecates an unrelated parameter in different wording now also lands in this branch and silently retries without its parameter; that is probably desirable, but it converts a precise Bedrock workaround into a general deprecation heuristic. Consider anchoring at least one alternative to the parameter name (e.g. r"`temperature`.*deprecated") so unrelated deprecation phrasing keeps surfacing instead of being absorbed.
+
+2. The proactive half is well-built: profile detection covers ARN shapes and bare inference-profile ids, control-plane resolution caches hits AND misses (one probe per distinct id), failures return the original id unchanged, and region extraction from the ARN avoids the global resolver when possible.

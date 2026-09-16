@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. apps/desktop/src/app/settings/use-settings-search.ts — Positive: the fix threads the shared "Applies to" scope through every catalog source (config record, schema, env vars, agent plugins), each with a scope-bearing query key so override changes naturally refetch — and the subtle second staleness case (scope following the active profile while the active profile switches underneath) is handled by extending `refreshCatalog` rather than doubling keys. The inline comment justifying the eslint-disable (refetch reads current key/state, not closure-captured scope) is exactly the reasoning a future cleanup would need.
+
+2. tests/use-settings-search.test.tsx — Positive: three cases cover no-override, override-at-mount, and override-change-after-mount, including the deliberate documentation of `getHermesConfigRecord(undefined)`'s folded-null contract so nobody "fixes" it later. No change requested.

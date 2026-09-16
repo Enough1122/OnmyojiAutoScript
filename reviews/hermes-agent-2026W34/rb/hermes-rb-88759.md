@@ -1,0 +1,5 @@
+> AI code review - automated review for reference; please use your judgment.
+
+Reviewed the diff. Right observability fix for #88657 ("which side did my credentials come from?"): load_config failures now log at WARNING (they silently degraded to env-only before), the all-empty schema-template shape is correctly equated to "no section" via _section_has_credentials rather than reading as present, LAST_CONFIG_STATUS records the consulted config path, and the register success line discloses username source, password source, and config disposition - paths logged, never credential values, exactly as the comment promises. Test coverage hits every branch including the empty-template trap.
+
+Nit: username_src re-reads the env var at log time instead of capturing what _resolve actually consumed; if a future change makes resolution order smarter (e.g. config wins over an empty-but-present env var), the disclosure could drift from reality - capturing the source at resolve time would keep them tied together.

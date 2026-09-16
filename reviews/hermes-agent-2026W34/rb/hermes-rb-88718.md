@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. agent/conversation_loop.py — Positive: the *delivery gate* is what makes this recovery sound — only commentary the user already saw (`_interim_text_was_delivered`) can be promoted to a durable final response, while undelivered commentary retains normal retry/fallback (its test proves three empty responses still end failed). The transcript repair is thorough too: finish_reason rewritten to stop, all reasoning/codex bookkeeping keys stripped so hidden reasoning can't leak into history, and `_db_persisted`/`_db_flush_scan_prefix` reset so an already-flushed incomplete row gets rewritten rather than leaving divergent durable state.
+
+2. Nit: the recovery exits via an inner `break` plus a sentinel `_turn_exit_reason` checked again at the outer loop — functional, but a small labeled-break-style helper or early-return wrapper would keep the two-step exit from growing more special cases. No change requested beyond that.

@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. hermes_state.py:8765-8775 — Correct and minimal: skipping only the `hidden = 0` clause under `archived_only` keeps every other list's semantics untouched, and the comment names the unreachable-state failure mode (#90946) that justifies the carve-out. One product-level follow-up worth tracking (not this PR): surfacing these rows is only half the recovery path — whatever UI renders the archived-only view needs a visible "unhide" affordance, else users recover visibility into a row they still can't act on.
+
+2. tests/hermes_state/test_session_archiving.py:53-66 — Positive: the test asserts both sides of the contract in sequence — default listing still excludes the hidden row *and* the archived-only view includes it — so a future regression in either direction trips, not just the new behavior. No change requested.

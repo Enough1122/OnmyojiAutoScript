@@ -1,0 +1,15 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Reviewed the full diff. This is a disciplined rollout of a very privileged hook: fail-open semantics everywhere, first-valid-rewrite-only, explicit exclusion sets (slash, attachments, voice, synthetic, internal, bots, active goals — with unknown goal state treated as do-not-route), synthetic-marker plumbing across seven adapters so generated events keep authorization but skip routing, and tests that pin each negative path including an off-loop thread assertion. The docs table entry is honest about the privilege level. Points:
+
+- **hermes_cli/lifecycle.py:~40 — no fast path when nothing subscribes.** Every eligible CLI keystroke now constructs the goal manager and calls \`is_active()\`, and every authorized gateway text message pays a session-store lookup plus \`GoalManager(session_id=...)\` construction off-loop — *before* discovering there are zero \`pre_user_input_route\` hooks. On busy gateways that's recurring IO per message for a feature most installs won't enable. Suggestion: open \`route_pre_user_input\` with \`if not has_hook("pre_user_input_route"): return text, None\`, which collapses both surfaces' cost to a set lookup when the hook isn't registered (the CLI/gateway goal checks then only run for actual subscribers).
+
+- **cli.py:~4970 (_is_real_user_input) — name vs behavior mismatch for voice.** The helper returns True for \`_VoiceInputMessage\` (correctly — voice IS user input), yet the routing gate separately excludes voice. Fine today, but the next caller reading the name will assume "True ⇒ routable." A one-line docstring ("real-user test only; voice is additionally excluded from routing") prevents that misuse.
+
+- **gateway/platforms/webhook.py — the entire webhook platform is blanket-marked synthetic**, so webhook-originated *human* text can never reach routing plugins even after passing authorization. Probably intended (payloads are programmatic), but it's an undocumented platform-level carve-out; worth half a sentence in the hooks.md row or the adapter comment.
+
+- **Rewrite-to-slash is deliberate command execution by plugin proxy.** The comments say a rewrite may intentionally enter slash dispatch — that makes this hook strictly more powerful than \`pre_gateway_dispatch\` for command invocation. It's correctly classified Directive/control, but I'd spell out "a rewrite whose text begins with '/' executes that command as the user" in the catalog row so auditors don't have to trace process_loop to learn it.
+
+- **Eligibility predicate duplication:** the CLI gate (cli.py:~20295) re-encodes most of lifecycle's internal guards (slash prefix, blank, type). Today they agree; consider exporting a shared \`is_routable_user_text(text, *, has_attachments)\` so the two surfaces can't drift.
+
+Nit: tests/cli/test_pre_user_input_route.py:~46 — the queue-entry test omits the \`_VoiceInputMessage\` branch of \`_is_real_user_input\`; one more assert would lock the True case.

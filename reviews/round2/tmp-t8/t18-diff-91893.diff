@@ -1,0 +1,321 @@
+diff --git a/hermes_cli/subcommands/update.py b/hermes_cli/subcommands/update.py
+index 24bfffeb222a..10852b63764b 100644
+--- a/hermes_cli/subcommands/update.py
++++ b/hermes_cli/subcommands/update.py
+@@ -99,6 +99,15 @@ def build_update_parser(subparsers, *, cmd_update: Callable) -> None:
+             "Still refuses to touch a dirty tree."
+         ),
+     )
++    update_parser.add_argument(
++        "--no-doctor",
++        action="store_true",
++        default=False,
++        help=(
++            "Skip the automatic read-only `hermes doctor` run after update "
++            "and fleet verification."
++        ),
++    )
+     update_parser.add_argument(
+         "--force",
+         action="store_true",
+diff --git a/hermes_cli/update_cmd.py b/hermes_cli/update_cmd.py
+index 021b7656feb9..af266a81f348 100644
+--- a/hermes_cli/update_cmd.py
++++ b/hermes_cli/update_cmd.py
+@@ -42,6 +42,65 @@
+ logger = logging.getLogger(__name__)
+ 
+ 
++def _run_post_update_doctor(args) -> bool:
++    """Run read-only doctor in the updated runtime after fleet verification."""
++    # Internal callers and older integrations construct ad-hoc Namespaces.
++    # Only the real update parser opts in, which avoids changing those APIs.
++    if not hasattr(args, "no_doctor"):
++        return True
++    if bool(getattr(args, "no_doctor", False)):
++        try:
++            from hermes_cli.update_receipt import record_step
++
++            record_step("post_update_doctor", True, "skipped by --no-doctor")
++        except Exception:
++            pass
++        return True
++
++    print()
++    print("→ Running post-update doctor...")
++    interpreter = venv_python_path(
++        _m().PROJECT_ROOT / "venv", windows=_m()._is_windows()
++    )
++    if not interpreter.exists():
++        interpreter = Path(sys.executable)
++
++    try:
++        result = subprocess.run(
++            [str(interpreter), "-m", "hermes_cli.main", "doctor"],
++            cwd=_m().PROJECT_ROOT,
++            capture_output=True,
++            text=True,
++            encoding="utf-8",
++            errors="replace",
++            timeout=300,
++        )
++    except Exception as exc:
++        print(f"  ✗ Post-update doctor could not run: {exc}")
++        try:
++            from hermes_cli.update_receipt import record_step
++
++            record_step("post_update_doctor", False, str(exc))
++        except Exception:
++            pass
++        return False
++
++    if result.stdout:
++        print(result.stdout.rstrip())
++    if result.stderr:
++        print(result.stderr.rstrip())
++    ok = result.returncode == 0
++    try:
++        from hermes_cli.update_receipt import record_step
++
++        record_step("post_update_doctor", ok, f"exit_code={result.returncode}")
++    except Exception:
++        pass
++    if not ok:
++        print(f"  ✗ Post-update doctor exited with code {result.returncode}")
++    return ok
++
++
+ def _m():
+     """Lazy ``hermes_cli.main`` reference.
+ 
+@@ -1611,15 +1670,18 @@ def _update_via_zip(args, *, had_desktop_app_before_update: bool = False) -> boo
+     # Don't stop a working dashboard when the Node refresh failed — see the
+     # git-update path for rationale (#30271).
+     _finish_dashboard_update_cleanup(node_failures)
++    doctor_ok = _run_post_update_doctor(args)
+     try:
+         from hermes_cli.update_receipt import finalize_update_receipt
+ 
+         finalize_update_receipt(
+-            "success" if (desktop_build_ok and not node_failures) else "partial"
++            "success"
++            if (desktop_build_ok and not node_failures and doctor_ok)
++            else "partial"
+         )
+     except Exception as _receipt_exc:
+         logger.debug("Update receipt finalize (zip path) failed: %s", _receipt_exc)
+-    return desktop_build_ok
++    return desktop_build_ok and doctor_ok
+ 
+ def _stash_local_changes_if_needed(git_cmd: list[str], cwd: Path) -> Optional[str]:
+     status = subprocess.run(
+@@ -7636,11 +7698,15 @@ def _on_unit_timeout(svc_name: str, exc: subprocess.TimeoutExpired) -> None:
+         except Exception as _fleet_exc:
+             logger.debug("Fleet version verification failed: %s", _fleet_exc)
+ 
++        doctor_ok = _run_post_update_doctor(args)
++
+         try:
+             from hermes_cli.update_receipt import finalize_update_receipt
+ 
+             _receipt_path = finalize_update_receipt(
+-                "partial" if gateway_fleet_restart_incomplete else "success",
++                "partial"
++                if (gateway_fleet_restart_incomplete or not doctor_ok)
++                else "success",
+                 fleet=_fleet_snapshot,
+             )
+             if _receipt_path is not None:
+@@ -7648,10 +7714,10 @@ def _on_unit_timeout(svc_name: str, exc: subprocess.TimeoutExpired) -> None:
+         except Exception as _receipt_exc:
+             logger.debug("Update receipt finalize failed: %s", _receipt_exc)
+ 
+-        if gateway_fleet_restart_incomplete:
+-            # Code update itself succeeded, but at least one gateway still
+-            # runs pre-update modules — surface that as a failed update so
+-            # automation / operators do not treat the fleet as healthy.
++        if gateway_fleet_restart_incomplete or not doctor_ok:
++            # Code update itself succeeded, but either a gateway still runs
++            # pre-update modules or the fresh-process doctor failed. Surface
++            # that as a failed update so operators do not treat it as healthy.
+             sys.exit(1)
+ 
+     except subprocess.CalledProcessError as e:
+diff --git a/tests/hermes_cli/test_update_post_doctor.py b/tests/hermes_cli/test_update_post_doctor.py
+new file mode 100644
+index 000000000000..d4795d9f76eb
+--- /dev/null
++++ b/tests/hermes_cli/test_update_post_doctor.py
+@@ -0,0 +1,117 @@
++"""Behavior contracts for post-update doctor verification."""
++
++from __future__ import annotations
++
++import argparse
++import subprocess
++from pathlib import Path
++from types import SimpleNamespace
++
++from hermes_cli import main as hermes_main
++from hermes_cli import update_cmd
++from hermes_cli import update_receipt
++from hermes_cli.subcommands.update import build_update_parser
++
++
++def _parser() -> argparse.ArgumentParser:
++    parser = argparse.ArgumentParser()
++    subparsers = parser.add_subparsers()
++    build_update_parser(subparsers, cmd_update=lambda args: None)
++    return parser
++
++
++def test_update_parser_enables_doctor_by_default_and_supports_opt_out():
++    assert _parser().parse_args(["update"]).no_doctor is False
++    assert _parser().parse_args(["update", "--no-doctor"]).no_doctor is True
++
++
++def test_post_update_doctor_runs_fresh_read_only_process(
++    monkeypatch, tmp_path: Path, capsys
++):
++    interpreter = tmp_path / "venv" / "bin" / "python"
++    interpreter.parent.mkdir(parents=True)
++    interpreter.touch()
++    calls = []
++    receipt_steps = []
++
++    def fake_run(command, **kwargs):
++        calls.append((command, kwargs))
++        return subprocess.CompletedProcess(command, 0, "doctor healthy\n", "")
++
++    monkeypatch.setattr(hermes_main, "PROJECT_ROOT", tmp_path)
++    monkeypatch.setattr(hermes_main, "_is_windows", lambda: False)
++    monkeypatch.setattr(update_cmd.subprocess, "run", fake_run)
++    monkeypatch.setattr(
++        update_receipt,
++        "record_step",
++        lambda name, ok, detail: receipt_steps.append((name, ok, detail)),
++    )
++
++    assert update_cmd._run_post_update_doctor(SimpleNamespace(no_doctor=False)) is True
++    assert calls == [
++        (
++            [str(interpreter), "-m", "hermes_cli.main", "doctor"],
++            {
++                "cwd": tmp_path,
++                "capture_output": True,
++                "text": True,
++                "encoding": "utf-8",
++                "errors": "replace",
++                "timeout": 300,
++            },
++        )
++    ]
++    assert receipt_steps == [("post_update_doctor", True, "exit_code=0")]
++    assert "doctor healthy" in capsys.readouterr().out
++
++
++def test_post_update_doctor_failure_is_reported_and_recorded(
++    monkeypatch, tmp_path: Path, capsys
++):
++    receipt_steps = []
++
++    monkeypatch.setattr(hermes_main, "PROJECT_ROOT", tmp_path)
++    monkeypatch.setattr(hermes_main, "_is_windows", lambda: False)
++    monkeypatch.setattr(
++        update_cmd.subprocess,
++        "run",
++        lambda command, **kwargs: subprocess.CompletedProcess(
++            command, 2, "", "doctor found a problem\n"
++        ),
++    )
++    monkeypatch.setattr(
++        update_receipt,
++        "record_step",
++        lambda name, ok, detail: receipt_steps.append((name, ok, detail)),
++    )
++
++    assert update_cmd._run_post_update_doctor(SimpleNamespace(no_doctor=False)) is False
++    assert receipt_steps == [("post_update_doctor", False, "exit_code=2")]
++    output = capsys.readouterr().out
++    assert "doctor found a problem" in output
++    assert "exited with code 2" in output
++
++
++def test_post_update_doctor_opt_out_and_legacy_callers_do_not_spawn(
++    monkeypatch
++):
++    calls = []
++    receipt_steps = []
++
++    monkeypatch.setattr(
++        update_cmd.subprocess,
++        "run",
++        lambda *args, **kwargs: calls.append((args, kwargs)),
++    )
++    monkeypatch.setattr(
++        update_receipt,
++        "record_step",
++        lambda name, ok, detail: receipt_steps.append((name, ok, detail)),
++    )
++
++    assert update_cmd._run_post_update_doctor(SimpleNamespace(no_doctor=True)) is True
++    assert update_cmd._run_post_update_doctor(SimpleNamespace()) is True
++    assert calls == []
++    assert receipt_steps == [
++        ("post_update_doctor", True, "skipped by --no-doctor")
++    ]
+diff --git a/website/docs/getting-started/updating.md b/website/docs/getting-started/updating.md
+index 5859174c7f7e..ab7999a54965 100644
+--- a/website/docs/getting-started/updating.md
++++ b/website/docs/getting-started/updating.md
+@@ -29,7 +29,8 @@ When you run `hermes update`, the following steps occur:
+ 3. **Post-pull syntax validation + auto-rollback** — after the pull, Hermes compiles the nine critical files every `hermes` invocation imports at startup. If any fails to parse (e.g. an orphan merge-conflict marker, an accidentally truncated file), Hermes runs `git reset --hard <pre-pull-sha>` to roll the install back so your shell stays bootable. Re-run `hermes update` once the upstream fix lands.
+ 4. **Dependency install** — runs `uv pip install -e ".[all]"` to pick up new or changed dependencies
+ 5. **Config migration** — detects new config options added since your version and prompts you to set them
+-6. **Gateway auto-restart** — running gateways are refreshed after the update completes so the new code takes effect immediately. Service-managed gateways (systemd on Linux, launchd on macOS) are restarted through the service manager. Manual gateways are relaunched automatically when Hermes can map the running PID back to a profile.
++6. **Gateway auto-restart** — running gateways are refreshed once after the update completes so the new code takes effect immediately. Service-managed gateways (systemd on Linux, launchd on macOS) are restarted through the service manager. Manual gateways are relaunched automatically when Hermes can map the running PID back to a profile.
++7. **Fleet verification and doctor** — Hermes verifies that restarted gateways serve the updated code, then runs read-only `hermes doctor` in a fresh process. Use `--no-doctor` only when deliberately troubleshooting the updater itself.
+ 
+ ### Updating against a non-default branch: `--branch`
+ 
+@@ -163,12 +164,12 @@ Already up to date.  (or: Updating abc1234..def5678)
+ ✅ Hermes Agent updated successfully!
+ ```
+ 
+-### Recommended Post-Update Validation
++### Post-update validation
+ 
+-`hermes update` handles the main update path, but a quick validation confirms everything landed cleanly:
++`hermes update` runs `hermes doctor` automatically after its gateway restart wave and fleet verification. For a normal successful update, do not restart the gateway again. If deeper manual validation is warranted, check:
+ 
+ 1. `git status --short` — if the tree is unexpectedly dirty, inspect before continuing
+-2. `hermes doctor` — checks config, dependencies, and service health
++2. the doctor output embedded in `~/.hermes/logs/update.log` and the update receipt
+ 3. `hermes --version` — confirm the version bumped as expected
+ 4. If you use the gateway: `hermes gateway status`
+ 5. If `doctor` reports npm audit issues: run `npm audit fix` in the flagged directory
+diff --git a/website/docs/reference/cli-commands.md b/website/docs/reference/cli-commands.md
+index a75f2a6e9170..e665b5614dec 100644
+--- a/website/docs/reference/cli-commands.md
++++ b/website/docs/reference/cli-commands.md
+@@ -1730,10 +1730,10 @@ hermes completion fish > ~/.config/fish/completions/hermes.fish
+ ## `hermes update`
+ 
+ ```bash
+-hermes update [--gateway] [--check] [--plan] [--no-backup] [--backup] [--yes]
++hermes update [--gateway] [--check] [--plan] [--no-backup] [--backup] [--yes] [--no-doctor]
+ ```
+ 
+-Pulls the latest `hermes-agent` code and reinstalls dependencies in the managed venv, then re-runs the post-install hooks (MCP servers, skills sync, completion install). Safe to run on a live install. Use `--check` to see whether your checkout is behind `origin/main` without installing.
++Pulls the latest `hermes-agent` code, reinstalls dependencies in the managed venv, re-runs the post-install hooks, restarts running gateways once, verifies the fleet, and runs read-only `hermes doctor` in a fresh process. Safe to run on a live install. Use `--check` to see whether your checkout is behind `origin/main` without installing.
+ 
+ `hermes update` pulls the configured update branch (default: `main`). If your checkout is on another branch, Hermes may check out the update branch before pulling. Commit branch work before updating when you want to keep it outside the update autostash flow.
+ 
+@@ -1745,6 +1745,7 @@ Pulls the latest `hermes-agent` code and reinstalls dependencies in the managed
+ | `--no-backup` | Skip all pre-update backups for this run (both the quick state snapshot and the full zip), regardless of `updates.pre_update_backup`. |
+ | `--backup` | Force a **full** pre-update backup for this run: the quick state snapshot plus a complete zip of `HERMES_HOME` (config, auth, sessions, skills, pairing data). The default mode is `quick` — a lightweight state snapshot only. Set the permanent mode via `updates.pre_update_backup: quick | full | off` in `config.yaml`. |
+ | `--yes`, `-y` | Assume yes for interactive prompts such as config migration and stash restore. API-key entry is skipped; run `hermes config migrate` separately for those. |
++| `--no-doctor` | Skip the final read-only doctor process. Intended for updater troubleshooting. |
+ 
+ Additional behavior:
+ 

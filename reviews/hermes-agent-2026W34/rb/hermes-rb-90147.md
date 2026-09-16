@@ -1,0 +1,10 @@
+> AI code review — automated review for reference; please use your judgment.
+
+The four production bugs are correctly identified and mostly correctly fixed: anchored doctype detection resists prose false-positives, preamble stripping preserves trailing remarks, `splits_long_messages = True` is properly justified against RFC limits, and the helper-level test suite is thorough. One real defect in the new code:
+
+1. adapter.py:~1263 (all three `_send_email*` sites + standalone) — the extracted `<title>` subject is unconditionally run through the Re:` prefixer: a fresh cron report titled "Weekly Deploy Report" ships as **"Re: Weekly Deploy Report"** with no thread context and no In-Reply-To — every branded report looks like a reply to something. The Re: logic predates this change and made sense when the subject could only come from thread context. Gate it: apply "Re:" only when `_thread_context` actually has a subject/message being replied to (or when In-Reply-To is set); title-derived subjects should ship verbatim.
+2. adapter.py:~247 (`_html_subtype`) — requiring `<!DOCTYPE html…><html` means common LLM output of a *fragment* (`<html>` without doctype, or a styled `<div>` document) still ships as text/plain — the exact visible symptom being fixed, one tier milder. Consider accepting bare `<html` as a second-tier anchor, or documenting fragments as out of scope.
+3. `_strip_leading_prose` keeps everything after `</html>`; the docstring says "the email adapter trims them downstream" — I don't see that trim in this diff; if nothing trims, stray post-document remarks ride along inside the HTML part where mail clients may render them oddly. Verify or drop the claim. (nit)
+4. The preamble-strip heuristic (cut everything before the first real doctype) will silently delete genuine user content if an agent ever legitimately discusses HTML *and then produces* a document — acceptable tradeoff given the 20–30% leak rate cited, worth one sentence in the docstring acknowledging content loss is possible. (nit)
+
+No blocking issues found beyond item 1 — as written, every successful fix also mislabels its own subject.

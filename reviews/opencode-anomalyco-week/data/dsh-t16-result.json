@@ -1,0 +1,20 @@
+{
+  "totals": {
+    "progressEntries": 117,
+    "postedRecords": 114,
+    "uniquePRs": 113
+  },
+  "missingFromProgress": [],
+  "duplicatesAcrossLogs": [
+    {
+      "pr": "42808",
+      "logs": [
+        "A",
+        "C"
+      ],
+      "count": 2
+    }
+  ],
+  "duplicatesWithinLog": [],
+  "unparsedCount": 1
+}

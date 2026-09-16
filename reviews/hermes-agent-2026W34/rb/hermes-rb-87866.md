@@ -1,0 +1,3 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. agent/model_metadata.py — Positive: adding `glm-5.3` at 1M in the longest-key-first table plus registering it in `_PRE_CATALOG_STALE_KEYS` handles both halves of the problem — fresh resolution gets the right window, and stale pre-catalog caches persisting the 202K `glm` catch-all are invalidated rather than silently masking it (both tested, including provider-scoped resolution). No change requested.

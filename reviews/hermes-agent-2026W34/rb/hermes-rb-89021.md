@@ -1,0 +1,7 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Review of "fix(delegate): preserve named custom provider pools". Correct fix for a real identity-collapse: multiple NAMED custom providers sharing one endpoint (claude-ai + open-ai → same base_url) collapsed to whichever pool URL-keying found first, so delegated children rotated against the WRONG vendor's keys. Threading `effective_requested_provider` through (inherit parent's requested provider unless explicitly overridden; raw-endpoint override correctly does NOT inherit identity) and keying pool resolution by provider NAME restores the intended semantics, with tests covering mocked-key resolution, REAL config.yaml discovery, parent-pool sharing, and all three override combinations on the child identity. Suggestions:
+
+1. COORDINATION with #90209 — this edits `_build_child_agent`'s inheritance block immediately adjacent to that PR's `_snapshot_parent_delegation_runtime` refactor; whichever merges second needs an integration test asserting the snapshot path ALSO carries `requested_provider` coherently (the snapshot returns runtime identity, this PR adds naming identity — their combination isn't covered by either PR alone).
+
+2. nit — the `effective_requested_provider` precedence expression is a three-way nested conditional; two named intermediate variables (inherited vs overridden) would make the ordering auditable at a glance.

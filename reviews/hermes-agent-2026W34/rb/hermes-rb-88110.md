@@ -1,0 +1,3 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. gateway/config.py — Positive: covers both silent-drop shapes at config-parse time (key set but under 16 chars; ENABLED=true with no key), each with an actionable remediation line including the `openssl rand -hex 32` generator command. This pairs naturally with #90421's auth hardening — the platform now both enforces and explains. No change requested.

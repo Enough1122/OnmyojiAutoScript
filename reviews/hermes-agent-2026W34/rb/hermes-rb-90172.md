@@ -1,0 +1,10 @@
+> AI code review — automated review for reference; please use your judgment.
+
+This is a well-designed promotion of three hardcoded busy-composer keys to rebindable actions: the `ownedBy: 'composer'` meta cleanly solves the idle-Enter collision by keeping these out of the global combo index while staying rebindable and Settings-visible, the store test pins exactly that exclusion invariant (even after rebinding), and KEYBIND_READONLY losing the three entries keeps a single source of truth. Points:
+
+1. apps/desktop/src/app/chat/composer/index.tsx:~895 — cancel is now handled in two places: ChatBar's keydown (queueEdit exit / busy stop) and `useComposerEscCancel` on window. The interlock relies on the ChatBar branch calling `event.preventDefault()` so the window listener's `defaultPrevented` check skips — but that preventDefault is only visible in the *queueEdit* branch of this diff. Please confirm the busy-stop branch also prevents default (and ideally stops propagation), otherwise a focused-composer cancel fires both handlers back-to-back (double haptic/double stop request).
+2. Same file — when two composer-owned actions are bound to the same combo (e.g. user sets steer = mod+enter = queue), the global duplicate-combo validation presumably doesn't cover them since they're excluded from the index, and the handler's check order makes queue silently win over steer. Either extend the Settings duplicate check to ownedBy:'composer' pairs or document the precedence (queue > steer > cancel) next to matchesBusy*.
+3. help-hint.tsx — `composer.sendQueued` ('mod+shift+k') is still a hardcoded combo row while its siblings went dynamic; if sendQueued ever becomes rebindable the hint drifts. Fine as-is, just noting the migration is partial. (nit)
+4. UX guard worth considering: clearing `composer.cancel` entirely leaves busy turns uncancelable by keyboard. If Settings permits empty bindings, show a warning for this specific action (it's the only escape hatch mid-turn). (nit)
+
+No blocking issues found.

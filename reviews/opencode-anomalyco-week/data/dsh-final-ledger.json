@@ -1,0 +1,1809 @@
+{
+  "generatedAt": "2026-08-21T18:16:47.656Z",
+  "generator": "reviewer-h (t20)",
+  "total": 205,
+  "shardUniverseTotal": 205,
+  "byDisposition": {
+    "posted": 145,
+    "skipped-dup": 56,
+    "skipped-closed": 4
+  },
+  "prs": [
+    {
+      "number": 41658,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-0",
+        "old-progress:oc-progress"
+      ],
+      "note": "inferred from prior-round progress records (no current-round log line)"
+    },
+    {
+      "number": 41723,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-2",
+        "log:H:7"
+      ]
+    },
+    {
+      "number": 41737,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-1",
+        "log:H:6"
+      ]
+    },
+    {
+      "number": 41752,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-0",
+        "old-progress:oc-progress"
+      ],
+      "note": "inferred from prior-round progress records (no current-round log line)"
+    },
+    {
+      "number": 41760,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-0",
+        "old-progress:dsh-progress-4way-3"
+      ],
+      "note": "inferred from prior-round progress records (no current-round log line)"
+    },
+    {
+      "number": 41803,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-2",
+        "log:H:5"
+      ]
+    },
+    {
+      "number": 41824,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-1",
+        "log:H:4"
+      ]
+    },
+    {
+      "number": 41830,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-0",
+        "old-progress:oc-progress"
+      ],
+      "note": "inferred from prior-round progress records (no current-round log line)"
+    },
+    {
+      "number": 41921,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-2",
+        "log:H:3"
+      ]
+    },
+    {
+      "number": 41933,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-1",
+        "log:H:2"
+      ]
+    },
+    {
+      "number": 41936,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-2",
+        "log:G:6"
+      ]
+    },
+    {
+      "number": 41963,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-1",
+        "log:G:5"
+      ]
+    },
+    {
+      "number": 41968,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-0",
+        "log:G:4"
+      ]
+    },
+    {
+      "number": 42087,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-2",
+        "log:G:3"
+      ]
+    },
+    {
+      "number": 42112,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-1",
+        "log:G:2"
+      ]
+    },
+    {
+      "number": 42139,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-0",
+        "log:G:1"
+      ]
+    },
+    {
+      "number": 42174,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-2",
+        "log:F:6"
+      ]
+    },
+    {
+      "number": 42187,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-1",
+        "log:F:5"
+      ]
+    },
+    {
+      "number": 42241,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-0",
+        "dsh-progress.txt(legacy)"
+      ],
+      "note": "inferred from legacy progress entry (pre-round, unexplained by current logs)"
+    },
+    {
+      "number": 42311,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-2",
+        "log:F:4"
+      ]
+    },
+    {
+      "number": 42312,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-1",
+        "log:F:3"
+      ]
+    },
+    {
+      "number": 42364,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-0",
+        "old-progress:dsh-progress-4way-0+dsh-progress-hidden-0"
+      ],
+      "note": "inferred from prior-round progress records (no current-round log line)"
+    },
+    {
+      "number": 42365,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-2",
+        "log:F:2"
+      ]
+    },
+    {
+      "number": 42381,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-1",
+        "log:F:1"
+      ]
+    },
+    {
+      "number": 42410,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-0",
+        "dsh-progress.txt(legacy)"
+      ],
+      "note": "inferred from legacy progress entry (pre-round, unexplained by current logs)"
+    },
+    {
+      "number": 42412,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-2",
+        "log:E:8"
+      ]
+    },
+    {
+      "number": 42415,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-1",
+        "log:E:7"
+      ]
+    },
+    {
+      "number": 42438,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-0",
+        "dsh-progress.txt(legacy)"
+      ],
+      "note": "inferred from legacy progress entry (pre-round, unexplained by current logs)"
+    },
+    {
+      "number": 42443,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-2",
+        "log:E:6"
+      ]
+    },
+    {
+      "number": 42461,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-1",
+        "log:E:5"
+      ]
+    },
+    {
+      "number": 42483,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-0",
+        "old-progress:oc-progress"
+      ],
+      "note": "inferred from prior-round progress records (no current-round log line)"
+    },
+    {
+      "number": 42485,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-2",
+        "log:E:4"
+      ]
+    },
+    {
+      "number": 42503,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-1",
+        "log:E:3"
+      ]
+    },
+    {
+      "number": 42519,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-5",
+        "log:E:2"
+      ]
+    },
+    {
+      "number": 42526,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-5",
+        "log:D:25"
+      ]
+    },
+    {
+      "number": 42527,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-5",
+        "log:D:24"
+      ]
+    },
+    {
+      "number": 42547,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-5",
+        "log:D:23"
+      ]
+    },
+    {
+      "number": 42552,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-0",
+        "opencode-week-shard-5",
+        "old-progress:dsh-progress-4way-3+dsh-progress-hidden-1"
+      ],
+      "note": "inferred from prior-round progress records (no current-round log line)"
+    },
+    {
+      "number": 42558,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-5",
+        "log:D:22"
+      ]
+    },
+    {
+      "number": 42566,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-5",
+        "log:D:21"
+      ]
+    },
+    {
+      "number": 42569,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-2",
+        "opencode-week-shard-5",
+        "log:D:20"
+      ]
+    },
+    {
+      "number": 42582,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-1",
+        "opencode-week-shard-5",
+        "log:D:19"
+      ]
+    },
+    {
+      "number": 42590,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-5",
+        "log:D:18"
+      ]
+    },
+    {
+      "number": 42622,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-5",
+        "log:D:17"
+      ]
+    },
+    {
+      "number": 42625,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-0",
+        "opencode-week-shard-5",
+        "old-progress:dsh-progress-4way-2+dsh-progress-hidden-0"
+      ],
+      "note": "inferred from prior-round progress records (no current-round log line)"
+    },
+    {
+      "number": 42631,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-5",
+        "log:D:16"
+      ]
+    },
+    {
+      "number": 42632,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-5",
+        "log:D:15"
+      ]
+    },
+    {
+      "number": 42633,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-5",
+        "log:D:14"
+      ]
+    },
+    {
+      "number": 42641,
+      "disposition": "skipped-closed",
+      "source": [
+        "opencode-week-shard-2",
+        "opencode-week-shard-5",
+        "log:D:13"
+      ]
+    },
+    {
+      "number": 42644,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-1",
+        "opencode-week-shard-5",
+        "log:D:12"
+      ]
+    },
+    {
+      "number": 42648,
+      "disposition": "skipped-closed",
+      "source": [
+        "opencode-week-shard-5",
+        "log:D:11"
+      ]
+    },
+    {
+      "number": 42654,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-0",
+        "opencode-week-shard-5",
+        "old-progress:dsh-progress-4way-1+dsh-progress-hidden-1"
+      ],
+      "note": "inferred from prior-round progress records (no current-round log line)"
+    },
+    {
+      "number": 42658,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-5",
+        "log:D:10"
+      ]
+    },
+    {
+      "number": 42660,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-5",
+        "log:D:9"
+      ]
+    },
+    {
+      "number": 42662,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-5",
+        "log:D:8"
+      ]
+    },
+    {
+      "number": 42683,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-5",
+        "log:D:7"
+      ]
+    },
+    {
+      "number": 42684,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-5",
+        "log:D:6"
+      ]
+    },
+    {
+      "number": 42685,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-5",
+        "log:D:5"
+      ]
+    },
+    {
+      "number": 42712,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-5",
+        "log:D:4"
+      ]
+    },
+    {
+      "number": 42720,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-5",
+        "log:D:3"
+      ]
+    },
+    {
+      "number": 42735,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-2",
+        "opencode-week-shard-5",
+        "log:D:2"
+      ]
+    },
+    {
+      "number": 42746,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-5",
+        "log:D:1"
+      ]
+    },
+    {
+      "number": 42751,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-5",
+        "log:A:78",
+        "log:C:25",
+        "log:F:15"
+      ]
+    },
+    {
+      "number": 42756,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-5",
+        "log:A:77",
+        "log:C:24",
+        "log:F:14"
+      ]
+    },
+    {
+      "number": 42761,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-1",
+        "opencode-week-shard-5",
+        "log:A:76",
+        "log:C:23",
+        "log:F:13"
+      ]
+    },
+    {
+      "number": 42762,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-0",
+        "opencode-week-shard-5",
+        "old-progress:dsh-progress-4way-0+dsh-progress-hidden-0"
+      ],
+      "note": "inferred from prior-round progress records (no current-round log line)"
+    },
+    {
+      "number": 42769,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-5",
+        "log:A:75",
+        "log:C:22",
+        "log:F:12"
+      ]
+    },
+    {
+      "number": 42771,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-5",
+        "log:A:74",
+        "log:C:21",
+        "log:F:11"
+      ]
+    },
+    {
+      "number": 42777,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-5",
+        "log:A:73",
+        "log:C:20",
+        "log:F:10"
+      ]
+    },
+    {
+      "number": 42786,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-5",
+        "log:A:72",
+        "log:C:19",
+        "log:F:9"
+      ]
+    },
+    {
+      "number": 42789,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-2",
+        "opencode-week-shard-5",
+        "log:A:71",
+        "log:C:18",
+        "log:F:8"
+      ]
+    },
+    {
+      "number": 42796,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-5",
+        "log:A:70",
+        "log:C:17"
+      ]
+    },
+    {
+      "number": 42801,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-5",
+        "log:A:69",
+        "log:C:16"
+      ]
+    },
+    {
+      "number": 42807,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-1",
+        "opencode-week-shard-4",
+        "log:A:68",
+        "log:C:15"
+      ]
+    },
+    {
+      "number": 42808,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-4",
+        "log:A:67",
+        "log:C:14"
+      ],
+      "note": "DOUBLE-POST confirmed: 2 Enough1122 comments (logged posted in A:67 and C:14)"
+    },
+    {
+      "number": 42809,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-4",
+        "github",
+        "log:A:66",
+        "log:C:13"
+      ],
+      "note": "race resolved by GitHub: Enough1122 comments=1"
+    },
+    {
+      "number": 42811,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-0",
+        "opencode-week-shard-4",
+        "old-progress:oc-progress"
+      ],
+      "note": "inferred from prior-round progress records (no current-round log line)"
+    },
+    {
+      "number": 42812,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-4",
+        "github",
+        "log:A:65",
+        "log:C:12"
+      ],
+      "note": "race resolved by GitHub: Enough1122 comments=1"
+    },
+    {
+      "number": 42819,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-4",
+        "github",
+        "log:A:64",
+        "log:C:11"
+      ],
+      "note": "race resolved by GitHub: Enough1122 comments=1; others commented too (total 3)"
+    },
+    {
+      "number": 42830,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-2",
+        "opencode-week-shard-4",
+        "github",
+        "log:A:63",
+        "log:C:10"
+      ],
+      "note": "race resolved by GitHub: Enough1122 comments=1"
+    },
+    {
+      "number": 42832,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-1",
+        "opencode-week-shard-4",
+        "github",
+        "log:A:62",
+        "log:C:9"
+      ],
+      "note": "race resolved by GitHub: Enough1122 comments=1"
+    },
+    {
+      "number": 42833,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-4",
+        "github",
+        "log:A:61",
+        "log:C:8"
+      ],
+      "note": "race resolved by GitHub: Enough1122 comments=1; others commented too (total 3)"
+    },
+    {
+      "number": 42836,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-4",
+        "github",
+        "log:A:60",
+        "log:C:7"
+      ],
+      "note": "race resolved by GitHub: Enough1122 comments=1; formal reviews: 1"
+    },
+    {
+      "number": 42840,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-0",
+        "opencode-week-shard-4",
+        "old-progress:oc-progress"
+      ],
+      "note": "inferred from prior-round progress records (no current-round log line)"
+    },
+    {
+      "number": 42842,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-4",
+        "github",
+        "log:A:59",
+        "log:C:6"
+      ],
+      "note": "race resolved by GitHub: Enough1122 comments=1; others commented too (total 3)"
+    },
+    {
+      "number": 42850,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-4",
+        "github",
+        "log:A:58",
+        "log:C:5"
+      ],
+      "note": "race resolved by GitHub: Enough1122 comments=1"
+    },
+    {
+      "number": 42851,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-2",
+        "opencode-week-shard-4",
+        "github",
+        "log:A:57",
+        "log:C:4"
+      ],
+      "note": "race resolved by GitHub: Enough1122 comments=1"
+    },
+    {
+      "number": 42854,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-4",
+        "github",
+        "log:A:56",
+        "log:C:3"
+      ],
+      "note": "race resolved by GitHub: Enough1122 comments=1; others commented too (total 2)"
+    },
+    {
+      "number": 42867,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-4",
+        "github",
+        "log:A:55",
+        "log:C:2"
+      ],
+      "note": "race resolved by GitHub: Enough1122 comments=1"
+    },
+    {
+      "number": 42872,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-4",
+        "github",
+        "log:A:54",
+        "log:C:1"
+      ],
+      "note": "race resolved by GitHub: Enough1122 comments=1"
+    },
+    {
+      "number": 42873,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-4",
+        "github",
+        "log:B:50",
+        "log:E:11"
+      ],
+      "note": "race resolved by GitHub: Enough1122 comments=1; others commented too (total 2)"
+    },
+    {
+      "number": 42885,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-4",
+        "github",
+        "log:B:49",
+        "log:E:10"
+      ],
+      "note": "race resolved by GitHub: Enough1122 comments=1"
+    },
+    {
+      "number": 42888,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-4",
+        "github",
+        "log:B:48",
+        "log:E:9"
+      ],
+      "note": "race resolved by GitHub: Enough1122 comments=1; others commented too (total 2)"
+    },
+    {
+      "number": 42894,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-0",
+        "opencode-week-shard-4",
+        "old-progress:oc-progress"
+      ],
+      "note": "inferred from prior-round progress records (no current-round log line)"
+    },
+    {
+      "number": 42901,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-4",
+        "log:B:47"
+      ]
+    },
+    {
+      "number": 42902,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-4",
+        "log:B:46"
+      ]
+    },
+    {
+      "number": 42904,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-1",
+        "opencode-week-shard-4",
+        "log:B:45"
+      ]
+    },
+    {
+      "number": 42907,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-4",
+        "log:B:44"
+      ]
+    },
+    {
+      "number": 42919,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-4",
+        "log:B:43"
+      ]
+    },
+    {
+      "number": 42922,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-0",
+        "opencode-week-shard-4",
+        "old-progress:oc-progress"
+      ],
+      "note": "inferred from prior-round progress records (no current-round log line)"
+    },
+    {
+      "number": 42927,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-4",
+        "log:B:42"
+      ]
+    },
+    {
+      "number": 42936,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-4",
+        "log:B:41"
+      ]
+    },
+    {
+      "number": 42937,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-4",
+        "log:B:39"
+      ]
+    },
+    {
+      "number": 42939,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-2",
+        "opencode-week-shard-4",
+        "log:B:38"
+      ]
+    },
+    {
+      "number": 42966,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-1",
+        "opencode-week-shard-4",
+        "log:B:37"
+      ]
+    },
+    {
+      "number": 42975,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-4",
+        "log:B:40"
+      ]
+    },
+    {
+      "number": 42978,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-4",
+        "log:B:36"
+      ]
+    },
+    {
+      "number": 42986,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-4",
+        "log:B:35"
+      ]
+    },
+    {
+      "number": 42990,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-4",
+        "log:B:34"
+      ]
+    },
+    {
+      "number": 43011,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-4",
+        "log:B:33"
+      ]
+    },
+    {
+      "number": 43018,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-4",
+        "log:B:32"
+      ]
+    },
+    {
+      "number": 43030,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-4",
+        "log:B:31"
+      ]
+    },
+    {
+      "number": 43035,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-4",
+        "log:B:30"
+      ]
+    },
+    {
+      "number": 43037,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-3",
+        "log:B:29"
+      ]
+    },
+    {
+      "number": 43038,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-3",
+        "log:B:28"
+      ]
+    },
+    {
+      "number": 43052,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-3",
+        "log:B:27"
+      ]
+    },
+    {
+      "number": 43058,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-3",
+        "log:B:26"
+      ]
+    },
+    {
+      "number": 43059,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-3",
+        "log:A:52"
+      ]
+    },
+    {
+      "number": 43065,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-3",
+        "log:A:51"
+      ]
+    },
+    {
+      "number": 43066,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-3",
+        "log:A:50"
+      ]
+    },
+    {
+      "number": 43069,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-0",
+        "opencode-week-shard-3",
+        "old-progress:oc-progress"
+      ],
+      "note": "inferred from prior-round progress records (no current-round log line)"
+    },
+    {
+      "number": 43073,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-2",
+        "opencode-week-shard-3",
+        "log:A:49"
+      ]
+    },
+    {
+      "number": 43076,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-1",
+        "opencode-week-shard-3",
+        "log:A:48"
+      ]
+    },
+    {
+      "number": 43091,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-0",
+        "opencode-week-shard-3",
+        "old-progress:oc-progress"
+      ],
+      "note": "inferred from prior-round progress records (no current-round log line)"
+    },
+    {
+      "number": 43100,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-2",
+        "opencode-week-shard-3",
+        "log:A:47"
+      ]
+    },
+    {
+      "number": 43113,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-3",
+        "log:A:46"
+      ]
+    },
+    {
+      "number": 43115,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-1",
+        "opencode-week-shard-3",
+        "log:A:45"
+      ]
+    },
+    {
+      "number": 43116,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-0",
+        "opencode-week-shard-3",
+        "old-progress:oc-progress"
+      ],
+      "note": "inferred from prior-round progress records (no current-round log line)"
+    },
+    {
+      "number": 43123,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-3",
+        "log:A:44"
+      ]
+    },
+    {
+      "number": 43128,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-2",
+        "opencode-week-shard-3",
+        "log:A:43"
+      ]
+    },
+    {
+      "number": 43130,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-3",
+        "log:A:42"
+      ]
+    },
+    {
+      "number": 43135,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-3",
+        "log:A:41"
+      ]
+    },
+    {
+      "number": 43138,
+      "disposition": "skipped-closed",
+      "source": [
+        "opencode-week-shard-2",
+        "opencode-week-shard-3",
+        "log:A:40"
+      ]
+    },
+    {
+      "number": 43140,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-3",
+        "log:A:39"
+      ]
+    },
+    {
+      "number": 43141,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-1",
+        "opencode-week-shard-3",
+        "log:A:38"
+      ]
+    },
+    {
+      "number": 43154,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-2",
+        "opencode-week-shard-3",
+        "log:A:37"
+      ]
+    },
+    {
+      "number": 43165,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-3",
+        "log:A:36"
+      ]
+    },
+    {
+      "number": 43183,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-3",
+        "log:A:35"
+      ]
+    },
+    {
+      "number": 43193,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-3",
+        "log:A:34"
+      ]
+    },
+    {
+      "number": 43195,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-3",
+        "dsh-progress.txt(legacy)"
+      ],
+      "note": "inferred from legacy progress entry (pre-round, unexplained by current logs)"
+    },
+    {
+      "number": 43197,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-3",
+        "log:A:33"
+      ]
+    },
+    {
+      "number": 43203,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-3",
+        "log:A:32"
+      ]
+    },
+    {
+      "number": 43210,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-0",
+        "opencode-week-shard-3",
+        "old-progress:oc-progress+oc-progress-2"
+      ],
+      "note": "inferred from prior-round progress records (no current-round log line)"
+    },
+    {
+      "number": 43211,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-3",
+        "log:A:31"
+      ]
+    },
+    {
+      "number": 43212,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-3",
+        "log:A:30"
+      ]
+    },
+    {
+      "number": 43228,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-3",
+        "log:A:29"
+      ]
+    },
+    {
+      "number": 43231,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-3",
+        "log:A:28"
+      ]
+    },
+    {
+      "number": 43236,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-3",
+        "log:B:25"
+      ]
+    },
+    {
+      "number": 43237,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-3",
+        "log:B:23"
+      ]
+    },
+    {
+      "number": 43238,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-3",
+        "log:B:22"
+      ]
+    },
+    {
+      "number": 43245,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-2",
+        "opencode-week-shard-3",
+        "log:B:21"
+      ]
+    },
+    {
+      "number": 43246,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-3",
+        "log:B:20"
+      ]
+    },
+    {
+      "number": 43253,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-3",
+        "log:B:19"
+      ]
+    },
+    {
+      "number": 43288,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-1",
+        "log:B:18"
+      ]
+    },
+    {
+      "number": 43300,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-2",
+        "log:B:17"
+      ]
+    },
+    {
+      "number": 43314,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-2",
+        "log:B:16"
+      ]
+    },
+    {
+      "number": 43461,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-2",
+        "log:B:15"
+      ]
+    },
+    {
+      "number": 43475,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-1",
+        "log:B:14"
+      ]
+    },
+    {
+      "number": 43476,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-0",
+        "log:B:13"
+      ]
+    },
+    {
+      "number": 43498,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-0",
+        "old-progress:oc-progress"
+      ],
+      "note": "inferred from prior-round progress records (no current-round log line)"
+    },
+    {
+      "number": 43515,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-2",
+        "log:B:24"
+      ]
+    },
+    {
+      "number": 43535,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-1",
+        "log:B:12"
+      ]
+    },
+    {
+      "number": 43536,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-0",
+        "log:B:11"
+      ]
+    },
+    {
+      "number": 43556,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-2",
+        "log:B:10"
+      ]
+    },
+    {
+      "number": 43560,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-1",
+        "log:B:9"
+      ]
+    },
+    {
+      "number": 43564,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-0",
+        "log:B:8"
+      ]
+    },
+    {
+      "number": 43574,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-2",
+        "log:B:7"
+      ]
+    },
+    {
+      "number": 43616,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-1",
+        "log:B:6"
+      ]
+    },
+    {
+      "number": 43626,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-0",
+        "log:B:5"
+      ]
+    },
+    {
+      "number": 43632,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-0",
+        "old-progress:oc-progress"
+      ],
+      "note": "inferred from prior-round progress records (no current-round log line)"
+    },
+    {
+      "number": 43641,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-2",
+        "log:B:4"
+      ]
+    },
+    {
+      "number": 43653,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-1",
+        "log:B:3"
+      ]
+    },
+    {
+      "number": 43678,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-0",
+        "log:B:2"
+      ]
+    },
+    {
+      "number": 43681,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-2",
+        "log:B:1"
+      ]
+    },
+    {
+      "number": 43687,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-1",
+        "log:A:26"
+      ]
+    },
+    {
+      "number": 43708,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-0",
+        "log:A:25"
+      ]
+    },
+    {
+      "number": 43723,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-2",
+        "log:A:24"
+      ]
+    },
+    {
+      "number": 43727,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-1",
+        "log:A:23"
+      ]
+    },
+    {
+      "number": 43728,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-2",
+        "log:A:22"
+      ]
+    },
+    {
+      "number": 43734,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-0",
+        "log:A:21"
+      ]
+    },
+    {
+      "number": 43747,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-2",
+        "log:A:20"
+      ]
+    },
+    {
+      "number": 43749,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-1",
+        "log:A:19"
+      ]
+    },
+    {
+      "number": 43754,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-0",
+        "log:A:18"
+      ]
+    },
+    {
+      "number": 43763,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-1",
+        "log:A:17"
+      ]
+    },
+    {
+      "number": 43769,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-2",
+        "log:A:16"
+      ]
+    },
+    {
+      "number": 43775,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-1",
+        "log:A:15"
+      ]
+    },
+    {
+      "number": 43776,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-0",
+        "log:A:14"
+      ]
+    },
+    {
+      "number": 43778,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-2",
+        "log:A:13"
+      ]
+    },
+    {
+      "number": 43780,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-1",
+        "log:A:12"
+      ]
+    },
+    {
+      "number": 43788,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-0",
+        "old-progress:oc-progress"
+      ],
+      "note": "inferred from prior-round progress records (no current-round log line)"
+    },
+    {
+      "number": 43794,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-2",
+        "log:A:11"
+      ]
+    },
+    {
+      "number": 43808,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-1",
+        "log:A:10"
+      ]
+    },
+    {
+      "number": 43811,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-0",
+        "old-progress:oc-progress"
+      ],
+      "note": "inferred from prior-round progress records (no current-round log line)"
+    },
+    {
+      "number": 43826,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-1",
+        "log:A:9"
+      ]
+    },
+    {
+      "number": 43828,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-0",
+        "old-progress:oc-progress"
+      ],
+      "note": "inferred from prior-round progress records (no current-round log line)"
+    },
+    {
+      "number": 43831,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-1",
+        "log:A:8"
+      ]
+    },
+    {
+      "number": 43832,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-0",
+        "old-progress:oc-progress"
+      ],
+      "note": "inferred from prior-round progress records (no current-round log line)"
+    },
+    {
+      "number": 43839,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-1",
+        "log:A:7"
+      ]
+    },
+    {
+      "number": 43844,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-0",
+        "old-progress:oc-progress"
+      ],
+      "note": "inferred from prior-round progress records (no current-round log line)"
+    },
+    {
+      "number": 43847,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-1",
+        "log:A:6"
+      ]
+    },
+    {
+      "number": 43849,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-2",
+        "log:A:5"
+      ]
+    },
+    {
+      "number": 43863,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-1",
+        "log:A:4"
+      ]
+    },
+    {
+      "number": 43866,
+      "disposition": "posted",
+      "source": [
+        "opencode-week-shard-0",
+        "old-progress:oc-progress"
+      ],
+      "note": "inferred from prior-round progress records (no current-round log line)"
+    },
+    {
+      "number": 43869,
+      "disposition": "skipped-closed",
+      "source": [
+        "opencode-week-shard-2",
+        "log:A:3"
+      ]
+    },
+    {
+      "number": 43870,
+      "disposition": "skipped-dup",
+      "source": [
+        "opencode-week-shard-1",
+        "log:A:2"
+      ]
+    }
+  ],
+  "notes": {
+    "conflictResolution": "16 log races (posted vs skipped-dup) resolved via GitHub ground truth: all had exactly 1 Enough1122 comment -> posted",
+    "doublePosts": [
+      "42808"
+    ],
+    "uncertainNumbers": [],
+    "numbersOutsideShardUniverse": [],
+    "failedCount": 0,
+    "repairedCount": 0,
+    "dedupRuleNote": "PRs whose only coverage is other users' comments/reviews would now be skipped-reviewed under the upgraded rule; all such cases here were already covered by Enough1122 posts",
+    "sourcesUsed": [
+      "opencode-week-shard-{0..5}.json",
+      "oc-progress.txt",
+      "oc-progress-2.txt",
+      "dsh-progress-4way-{0..3}.txt",
+      "dsh-progress-hidden-{0,1}.txt",
+      "dsh-progress.txt(legacy rows)",
+      "dsh-run-log-A..H.txt",
+      "GitHub API"
+    ],
+    "spotCheck": "5 inferred-posted entries sampled on GitHub (41830 41658 43195 43498 42894): all show >=1 Enough1122 comment -> inference tier validated"
+  }
+}

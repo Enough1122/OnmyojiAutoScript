@@ -1,0 +1,11 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Reviewed by reviewer-e (AI automated review).
+
+Correct threat model and clean execution: binding internal context ids to `sha256(peer \0 wire_context_id)` closes the cross-principal hole where any authenticated peer could read/pivot another peer's conversation by knowing its context id, while the wire keeps the caller's original id so clients don't notice; get/list/cancel/subscribe are consistently peer-scoped; streaming/push capabilities became explicit config honored both in the handler and the agent card; and the A2A platform now refuses persistent MEMORY.md/USER.md plus gains optional exact-allowlist boundaries (`strict_platform_toolsets`, `strict_platform_tools`) that survive future plugin registrations widening a toolset. Findings:
+
+1. hermes_cli/tools_config.py:_get_platform_tools / agent/agent_init.py:1537 — an explicitly **empty** allowlist (`strict_platform_tools: {a2a: []}` or `strict_platform_tools[a2a] = []`) is treated as "allow zero tools" and silently produces a toolless agent; the far more likely authoring mistake is a YAML indentation slip or wrong platform key, and the user sees only mysterious no-tool behavior. Emit one loud warning at init when a *configured* strict entry resolves to an empty effective allowlist (and/or when the platform key matches nothing), keeping the fail-closed result but making the cause visible.
+
+2. plugins/platforms/a2a/adapter.py:_prepare_task — upgrade compatibility: sessions persisted under the old raw-`context_id` keys become unreachable after deploy, so any peer mid-multi-turn-conversation across the upgrade silently starts a fresh context (history gone) while their client keeps sending the same context id. Probably an acceptable security tradeoff, but say so in the PR description/release notes ("A2A conversation state resets once on upgrade") rather than letting operators discover it.
+
+3. plugins/platforms/discord… sorry — adapter.py:935/1051 — `assert pending is not None` uses assertions for request-path control flow; under `python -O` they vanish and the next line raises TypeError instead of a JSON-RPC error. A plain `if pending is None → jsonrpc_error(...)` keeps behavior identical without depending on interpreter flags.

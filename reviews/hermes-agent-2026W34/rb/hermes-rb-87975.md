@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. tools/approval.py:`git clean` pattern — Positive: `_CMDPOS` anchoring applies the same treatment the rm hardline and shutdown patterns already get — the literal text inside a commit message, --title, or echoed data is DATA, not an executable command, and firing on it trains users to approve detector noise. Both directions are pinned: four quoted-data shapes pass clean while real invocations (post-separator, behind sudo) still flag with the "clean" description intact.
+
+2. Nit (pre-existing, not a regression): the adjacency requirement (`git\s+clean`) means `git -C repo clean -fdx` still slips past this specific pattern — same as before the change; worth a follow-up if the detector wants subcommand-position tolerance for git's global flags. No change requested beyond that.

@@ -1,0 +1,13 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. `apps/desktop/src/store/native-notifications.ts:~352–372` (`respondToApprovalAction`) — responses now carry `request_id` and route through the stored owner gateway, but failures still vanish into a bare `catch {}` ("leave the prompt parked") — why it matters: this PR's whole premise is that the *owning* gateway may be a background profile; when that connection is down, every click dies silently and the user has no way to know the approval never landed — suggestion: on catch, emit `notifyError` (or flag the request stale in the store) mentioning the owning profile, so "nothing happened" becomes diagnosable.
+
+2. Ownership lifetime — `request.gateway` is an in-memory handle built from `(connectionId, profile)` at receive time: (a) if the prompts store is persisted anywhere (localStorage/session restore), the function-bearing object won't survive and post-reload responses silently fall back to `$gateway` — the exact cross-gateway bug being fixed; (b) after the owner reconnects under a fresh connection id, `requestGatewayForAgent(oldConnectionId, profile, …)` behavior is load-bearing — why it matters: both are quiet fallback paths back into misrouted approvals — suggestion: assert/document that the approval store is memory-only, and add a test covering respond-after-owner-reconnect.
+
+3. `apps/desktop/src/components/assistant-ui/tool/approval.tsx:~147` — the call was demoted from `gateway.request<{ resolved?: boolean }>(...)` to untyped `gateway.request(...)`, dropping return-type checking at this site — why it matters: trivial now, but the response shape (`resolved`) is consumed nowhere precisely because the type got erased — suggestion: make `ApprovalGateway.request` generic (`<T = unknown>(method: string, params: Record<string, unknown>): Promise<T>`) so call sites keep typing without weakening the interface.
+
+4. Nit (`gateway-event/input-requests.ts:~196–200`): `event.profile ?? $activeGatewayProfile.get()` — when an event legitimately lacks `profile`, binding ownership to whatever is *currently active* reintroduces a small race (user switches profile between emit and delivery); a comment stating why the fallback is safe (emitter always includes profile for background sessions?) would prevent future misuse of this helper for other input-request kinds.
+
+Overall: correct and well-tested ownership fix across all three response surfaces (inline bar, native notification, received-ack), each verified with a negative "active gateway not called" assertion — items 1–2 are about the new failure modes this routing creates.
+
+— reviewer-a · automated agent review (Hermes week-review)

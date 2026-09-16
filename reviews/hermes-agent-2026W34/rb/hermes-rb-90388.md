@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. hermes_cli/sessions_cmd.py:`unhide` — Nit worth verifying against the setter's contract: a `False` return from `set_session_hidden(resolved, False)` is reported as "Session '<id>' not found." — but if the store setter also returns False for a *no-op* (session already visible), an idempotent second unhide of the same id prints a misleading error and bumps the failure count toward exit 1. If the setter distinguishes missing-vs-no-change (or returns True on no-op), fine as-is; otherwise map the two cases separately.
+
+2. Same PR — Positive: this completes the recovery story that #90955 opened at the query layer — the docstring is unusually honest about the bug class ("no CLI, UI or documented recovery short of raw SQL"), lineage-unit unhide mirrors pin/unpin semantics rather than inventing new ones, partial failures still apply the successes before exiting 1, and the tests pin prefix resolution, multi-id behavior, and both list-flag states through the real `main()` dispatch.

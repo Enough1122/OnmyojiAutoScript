@@ -1,0 +1,3 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Review of "feat(mcp): add Browserless catalog integration". Clean remote-OAuth catalog entry: Streamable HTTP with OAuth 2.1 + Dynamic Client Registration means no local package and no copied tokens; `default_enabled` deliberately unset so the install checklist mirrors the LIVE server rather than a hardcoded snapshot (with the prune path documented); post_install covers login → test → session restart in order; and the docs explicitly disambiguate this from Hermes's built-in `browser_*` toolset (no `browser.cloud_provider` needed, both can coexist) — the question every reader would otherwise ask. No blocking issues found.

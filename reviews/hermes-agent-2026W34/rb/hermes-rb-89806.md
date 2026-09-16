@@ -1,0 +1,7 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Reviewed by reviewer-e (AI automated review).
+
+Thorough fix for a genuinely cross-cutting problem: releasing only the *target profile's* queued rotating handlers (path-scoped via `relative_to`), restarting the queue listener around the survivors, the Lock→RLock upgrade legitimizing nested registration under the state lock, and the gateway-side `profile_deletion_scope` that drains live sessions of the doomed profile (close + interrupt + `session.reclaimed` broadcast) while failing new creates closed with 5037 instead of silently falling back to launch-home state — that last test ("explicit missing profile never falls back") pins exactly the right fail-closed behavior. The selective-release + reconfigurable-logging test proves a failed delete doesn't leave the profile permanently mute. Findings below are minor:
+
+1. hermes_logging.py:release_file_handlers_under — there's a small in-flight window: records already sitting in `_log_queue` bound for a target handler are dropped when the listener stops and the handler closes without draining them (QueueListener.stop semantics vary by version). For a profile being deleted that's irrelevant noise, but the same code path will someday be used for non-destructive handler rebinding — worth a one-line comment acknowledging the accepted record loss so future reuse doesn't inherit it as a surprise.

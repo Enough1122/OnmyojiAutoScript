@@ -1,0 +1,3 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. cron/scheduler.py:`_resolve_single_delivery_target` — Positive: gating `deliver=origin` on `_is_known_delivery_platform` fixes the WebUI-origin case at the right layer (resolution, not delivery), with an info-level log naming the platform so the fallback is discoverable; both the empty-targets and local-delivery-success outcomes are tested. The updated user-facing notice now explains *why* a job is local-only instead of implying CLI/TUI are the only such surfaces. No change requested.

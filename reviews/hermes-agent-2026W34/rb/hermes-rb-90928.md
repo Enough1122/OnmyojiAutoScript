@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. gateway/platforms/api_server.py:3632 — Question worth resolving before merge: this makes the gateway *capable* of serving compacted history, but the reported breakage is a UI symptom ("Show earlier messages" reporting no more history). Does the Desktop client actually send `include_compacted=true` on its older-messages fetches against **this** route (as opposed to the desktop-local dashboard route that already had it)? If not, remote sessions stay broken and this lands as an unused parameter — the commit should say which client change consumes it (or link the companion PR).
+
+2. tests/gateway/test_session_api.py:119-169 — Positive: the regression case exercises the real HTTP surface end-to-end and asserts both sides of the contract — default view stays summary+live (archived rows hidden), flagged view returns old rows *in order* ahead of the live tail — so paging offsets computed over the flagged listing are provably stable too. No change requested beyond item 1.

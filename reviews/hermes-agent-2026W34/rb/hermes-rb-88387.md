@@ -1,0 +1,10 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Correct and well-tested fix for a serious multiplex-contamination bug: Telegram DMs make the peer tuple byte-identical across every bot on one gateway, so the conservative fallback happily adopted a *sibling profile's* session — executing another persona's credentials and filesystem scope. Fencing by the `agent:<ns>:` namespace with fail-closed-to-fresh-mint, extending the same fence to `profile_name` inheritance in `create_session`, and preserving the legitimate keyless-lineage recovery are all right. Points:
+
+1. hermes_state.py:~5260 — the fence is skipped entirely when the requested `session_key` doesn't start with `agent:` (`_req_prefix = None` → \`CASE ... WHEN ? IS NULL THEN 1\` admits everything). Verify every caller of `find_latest_gateway_session_for_peer` passes agent-namespaced keys; if cron or other surfaces can reach it with foreign key shapes, they bypass the fence exactly like pre-fix behavior. One assertion/comment pinning "agent-keys only" would close the question.
+2. The LIKE pattern `_ns_prefix` embeds a slice of `session_key` verbatim into a LIKE clause. Safe today because profile namespaces are validated `[a-z0-9_-]` at creation — but that invariant lives in a different module; one comment noting "no wildcards reachable here because of profile-name validation" prevents a future loosening from becoming a query-shape change. (nit)
+3. The inheritance guard's `substr(...,7)/instr(...)+6` arithmetic computes the ``agent:<ns>:`` prefix positionally — correct for agent-shaped keys and structurally requiring equality otherwise, but it's the least readable SQL in the file; a small Python-side helper computing the namespace once (as the lookup path already does) would read far better than inline string surgery. (nit)
+4. Test coverage hits all three critical shapes: sibling keyed row rejected, sibling *keyless* row rejected by profile, own keyless row still recovered — plus lineage mislabeling. Exactly the incident surface. (positive)
+
+No blocking issues found beyond item 1's caller-scope verification.

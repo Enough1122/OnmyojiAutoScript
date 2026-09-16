@@ -1,0 +1,7 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. agent/image_routing.py:`_resolve_inference_api_key` — Nit: this duplicates `_resolve_inference_base_url`'s traversal shape (runtime → model.api_key → providers blocks → custom_providers list, with custom: prefix juggling). The comment says it *mirrors* the URL resolver — good — but nothing enforces the mirror: when someone later adds a new credential location for base URLs, keys will silently stop matching the probed endpoint and #89863's 401 waterfall returns. Suggestion: factor one `_resolve_inference_provider_settings(cfg, provider) -> tuple[base_url, api_key]` used by both callers.
+
+2. agent/model_metadata.py (negative caching) — Positive: the TTL split is exactly right — positive verdicts pin for an hour because they're stable facts, while `None` verdicts get 5 minutes *in memory only* (never disk), so "server restarting / key just fixed" recovers quickly without re-running the 5-request waterfall every turn. The failure-cache tests verify request counts (5 not 10), absence of disk writes, and expiry re-probe — the trio that actually pins the contract.
+
+3. Overall — both halves attack #89863 from the right ends: stop spraying unauthorized probes, and stop repeating them when you do. No change requested beyond item 1.

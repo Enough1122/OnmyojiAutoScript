@@ -1,0 +1,3 @@
+> AI code review - automated review for reference; please use your judgment.
+
+Reviewed the diff. Right tightening: a worktree child executes inside the worker task's repo, so stamping it with some other project id was always a silent mislabel - inheriting the canonical project by default and *erroring* on an explicit mismatch is better than the old skip-and-honor behavior. The explicit-workspace-path escape hatch is preserved (inheritance only applies when no path override), and both the inherit and reject paths are pinned by tests.

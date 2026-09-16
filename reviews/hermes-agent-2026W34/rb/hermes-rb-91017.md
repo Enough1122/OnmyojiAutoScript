@@ -1,0 +1,11 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Reviewed the diff. Right unification: hook payloads previously reported the *process* cwd while file tools resolved against the session/workspace ladder, so any relative-path decision anchored to \`payload.cwd\` (the P0b write-guard being the pointed example) could disagree with where file operations actually land. Delegating to \`_resolve_base_dir\` makes "same directory" true by construction, and the four ladder tests — including the sentinel \`TERMINAL_CWD="."\` rejection and record-beats-process precedence — pin the contract well. Points:
+
+- **agent/shell_hooks.py:~761-764 — failure degrades silently at debug level on a correctness-critical path.** If \`_resolve_base_dir\` raises (broken import, internal state error), the payload quietly carries the process cwd again — precisely the pre-fix behavior the write-guard can't safely reason about — with only a debug line. Suggestion: log at warning, and consider adding a \`cwd_source\` field ("ladder" | "fallback") so downstream guards can distinguish authoritative from degraded provenance instead of trusting them equally.
+
+- **Private-symbol coupling across modules.** Importing underscore-private \`tools.file_tools._resolve_base_dir\` makes the "identical ladder" guarantee fragile to renames/refactors that would still type-check for the tools module itself. Either promote it to a public name (e.g. \`resolve_base_dir\`) with a stability comment, or add a two-sided contract test asserting both entry points return identical paths for the same fixture states.
+
+- **External-consumer behavior change worth a release note:** every hook payload's \`cwd\` value changes for existing deployments (process dir → chat dir). Third-party hook scripts doing their own joins/allowlisting against it will see different strings after upgrade; the changelog should call this out explicitly.
+
+Nit: \`_serialize_payload\` reads \`extras.get("task_id")\` implicitly; documenting in the payload docstring that \`task_id\` is the ladder key (and what empty string means) would help hook authors testing locally.

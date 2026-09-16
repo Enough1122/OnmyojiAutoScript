@@ -1,0 +1,11 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Both self-heals are narrowly scoped and the "deliberate close wins" reasoning is documented well. Concerns:
+
+1. apps/desktop/src/app/right-sidebar/files/use-project-tree.ts:449 — the wipe-reload guard ignores the failure terminal state. If `loadRoot` fails, the rejected commit leaves `state.cwd === ''` and `rootLoading === false`, so this effect re-arms and retries roughly every 50ms — a boot-time hot loop on persistent errors, and it bypasses the existing multi-second errored-root re-probe directly below. Please include `state.rootError` (or adopt `state.cwd = cwd` on failure) in the guard so a broken backend degrades into the slow re-probe instead of a spin.
+2. apps/desktop/src/app/contrib/controller.tsx:605 — the heal assumes every legitimate collapse of the right side also flips `$fileBrowserOpen` to false ("an explicit ⌘J collapse writes the toggle false"). If any other path can collapse the side — drag-collapse on the splitter, a workspace layout that docks files away — this subscription will silently re-reveal the rail against the user's intent on the next toggle/workspace change. Worth verifying those paths all write the toggle, or gating the heal to a short window after boot/workspace adoption only.
+3. controller.tsx:600 — `setTimeout(0)` as the "let adoption settle" barrier is fragile: dock enforcement/adoption isn't guaranteed to have run within one task (it may itself be async). A stable-check-with-one-retry (re-run the predicate on the next tick and only then reveal) would be sturdier than a single tick. (nit)
+4. controller.tsx:597 — the module-level `.subscribe` is never disposed. Fine for production app lifetime, but under HMR/dev remounts you accumulate subscribers that each schedule reveals; harmless duplicates today, surprising tomorrow. (nit)
+5. Tests: neither self-heal ships a test, yet both encode specific regression shapes (drifted tree states; wiped in-flight read). The drift predicate is pure enough to table-test (`!tree / missing pane / collapsed side / hidden pane`), and the wipe effect is testable with fake timers — cheap insurance for logic this easy to regress.
+
+No blocking issues found.

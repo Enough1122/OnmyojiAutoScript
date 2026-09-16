@@ -1,0 +1,7 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. apps/desktop/src/i18n — Likely CI-breaker: the five new `sessions.pinned*` keys were added to `types.ts` (so they're **required** members of `Translations`) and populated in en.ts and zh.ts only — ar.ts, ja.ts, and zh-hant.ts have zero occurrences of `pinnedCardRowsTitle` at the PR head (verified). Why it matters: unless `defineLocale` permits partials, tsc fails on all three locales; even if it doesn't, Arabic/Japanese/traditional-Chinese users get raw-key or undefined strings in Settings. The sibling desktop PR (#89865) added its preview keys to *all six* locale files — that's the established bar. Suggestion: add translations (or at minimum English fallbacks) to ar/ja/zh-hant before merge.
+
+2. apps/desktop/src/app/chat/sidebar/index.tsx — Positive: the pinned-exclusivity override is implemented at exactly one choke point (`isHiddenFromProjects`) so flat list, project lanes, and filters all stay consistent, with a comment stating the default rule and what the opt-in changes; the Pinned section keeps rendering either way, so the setting can never make a pinned chat vanish.
+
+3. tests — Positive: atom persistence round-trips through real localStorage keys, the settings toggles are driven through role-based queries against rendered switches, and defaults-off is asserted explicitly, pinning "opt-in overrides deliberate compact behavior" as a contract rather than an accident.

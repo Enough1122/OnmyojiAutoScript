@@ -1,0 +1,13 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. `plugins/platforms/slack/native_stop.py:~44–58` (`_register_agent_session_stopped_listener`) — the exactly-once guard compares `self._agent_session_stopped_listener_app`, an **instance** attribute, against the shared `AsyncApp` — why it matters: the comment says reconnects reuse the same `AsyncApp`; if the gateway ever rebuilds the *adapter* while keeping that app (profile reload, error-path re-init), the fresh instance has no memory of the prior registration and bolts a second handler onto the same event — every native Stop click then fans out into N `/stop` dispatches — suggestion: make the dedupe app-scoped (class-level `WeakSet`/`id` registry, or inspect `app._listeners` before decorating), and add a regression test for the new-adapter-same-app sequence that today's two-call test doesn't cover (it reuses one adapter).
+
+2. `plugins/platforms/slack/native_stop.py:~196–206` (`_PlatformRegistrationProxy`) — the proxy unconditionally overwrites `adapter_factory`, even when the base `register()` already supplied (or later gains) its own factory — why it matters: this is a silent coupling to the base registration signature; if `adapter.py` starts passing a factory for its own reasons, native-stop wins invisibly — suggestion: log at INFO/WARNING when replacing a non-`None` incoming factory so drift is observable.
+
+3. `tests/gateway/test_slack_native_stop.py:17–19` — `_bare_adapter` stubs **both** `_channel_team` and `_channel_teams` (and Mocks `_remember_channel_team`) — why it matters: the doubled attribute hints at uncertainty about the base-class contract; if the real storage name is wrong, team bookkeeping silently no-ops in production while tests stay green — suggestion: assert the concrete attribute name against `SlackAdapter` (or drop whichever stub is spurious) so the test documents the real interface.
+
+4. Nit (`~120–130`): `_settle_agent_session_stopped_ui` clears typing status before attempting `chat_stopStream`; if `stop_typing` itself throws, the stream stop is skipped entirely due to early `return` placement being inside separate try blocks — it isn't (separate try), but consider asserting that independence explicitly with one test where `stop_typing` raises, since the current suite never exercises that combination.
+
+Overall: clean design choice — translating the platform lifecycle event into the canonical `/stop` lane preserves all existing authorization/cleanup semantics, and the fail-closed identity check plus ts-matched stream cleanup show good defensive instincts. Item 1 is the only one I'd insist on before merge.
+
+— reviewer-a · automated agent review (Hermes week-review)

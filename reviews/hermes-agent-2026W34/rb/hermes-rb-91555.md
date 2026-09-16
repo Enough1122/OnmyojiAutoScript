@@ -1,0 +1,13 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Reviewed the full diff. This is about as careful as a destructive-ish external action can be made: default-off toolset restricted to an exact DM principal (user==chat==configured admin), dual explicit confirmation fields, participant allowlists enforced independently in Python *and* the bridge, loopback-only bearer auth with timing-safe comparison and header-only transport, subject-exists preflight against live groups, idempotency with payload hashing where ID reuse with a different payload is a hard conflict, uncertain outcomes never auto-retried, serialized execution, fsync'd 0600 state, and tests on both sides including a concurrency race. Remaining points:
+
+- **plugins/platforms/whatsapp/adapter.py:~529 (`toolsets_for_source`) — the exception fallback strips everyone's capabilities.** If \`load_config()\` or \`_get_platform_tools\` throws, \`configured\` becomes empty and every source — admin or not — gets \`["no_mcp"]\`, i.e. a zero-capability override, for that turn. A transient config read failure shouldn't downgrade the whole platform's toolset; returning \`None\` (no override, platform defaults apply) on the exception path is the safer failure mode, since admin detection itself runs off \`self.config.extra\` and stays available either way.
+
+- **scripts/whatsapp-bridge/bridge.js:~803 — \`express.json({ limit: '16kb' })\` applies to every route, not just group control.** Existing endpoints (/send etc.) previously had no explicit cap; WhatsApp's maximum message length is configurable, and a user who raised it past ~16KB will start getting silent 413s on ordinary sends after this upgrade. Scope the small limit to \`/groups/create\` (or set it per-route via an options object) and leave legacy routes at their previous behavior.
+
+- **scripts/whatsapp-bridge/group_control.js:~200 — the store fills up forever.** \`recordPending\` throws at MAX_OPERATIONS(256) and nothing ever prunes terminal \'created\' entries, so after a few hundred lifetime creations the endpoint bricks with 500s until someone hand-edits the state file. Add retention pruning (e.g. drop \'created\' rows older than the rate/idempotency horizon, keeping uncertain/pending forever), and a test for the wraparound.
+
+- **Test gaps:** the disabled-endpoint 404 path, the \`toolsets_for_source\` exception behavior once point 1 lands, and any check that ordinary send payloads still parse under the new body limit.
+
+Nit: JID normalization now exists twice (tools.py \`_normalize_jid\`, group_control.js \`normalizeParticipantJid\`) with subtly critical parity (device-suffix stripping, c.us mapping); a cross-reference comment on each ("keep in sync with <other>") would help future editors.

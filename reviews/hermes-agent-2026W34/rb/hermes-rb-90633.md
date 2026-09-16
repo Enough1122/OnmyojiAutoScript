@@ -1,0 +1,13 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. `cron/scheduler.py:~5682–5689` (`run_job`) — when an image is pinned, `task_id=` is passed **directly** as a kwarg to `agent.run_conversation`; PR #91747 added `_run_cron_conversation` with signature introspection precisely because some agent implementations don't accept `task_id` — why it matters: pinning `docker_image` on a job backed by such an agent would raise `TypeError` on *every fire*, i.e. the isolation feature bricks those jobs — suggestion: route through the same `_run_cron_conversation(agent, prompt, _cron_task_id)` helper (or verify all worker flavors now accept the kwarg and say so in a comment).
+
+2. Persistence of the *edit* path — the diff adds `docker_image` to `create_job` and to the `cronjob` tool's update lane, but I see no corresponding normalization/validation branch in `jobs.update_job`, and `hermes cron edit --docker-image …` flows through that lane — why it matters: depending on `update_job`'s allowlist behavior the CLI edit either silently drops the key or stores it un-normalized (e.g. `""` instead of `None` on clear), contradicting the new docs' "pass empty string to clear" promise — suggestion: add the `if "docker_image" in updates:` normalization branch mirroring `terminal_timeout`, plus a CLI-level edit test like the ones `test_cron.py` already has for other pins.
+
+3. `cron/scheduler.py:~4604–4611` — registered `cronimg-<job_id>` overrides are never cleared (unlike #91747's session-scoped terminal-timeout overrides); entries are overwritten per fire and bounded by the job count, so it's benign, but a deleted job leaves its entry registered until process restart — suggestion: clear in the run's `finally` (or on job deletion) for symmetry with the terminal-timeout lifecycle.
+
+Nit: `_resolve_cron_image_task_id`'s broad `except Exception` around registration logs a warning and degrades to the shared sandbox — good failure direction, though a misconfigured image name won't surface until the container spawn fails downstream; consider validating image presence cheaply when `terminal.backend == docker` at edit time.
+
+Overall: well-chosen primitive (reuse of the task-override registry rather than new plumbing), correct ownership policy (excluded from the agent-facing schema, with the exclusion itself under test), honest docs that explicitly distinguish image isolation from mount isolation and even document the per-job home trick for credential scoping. Items 1–2 are the merge blockers in my read.
+
+— reviewer-a · automated agent review (Hermes week-review)

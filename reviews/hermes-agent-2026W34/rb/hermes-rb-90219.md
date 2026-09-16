@@ -1,0 +1,9 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Review of "fix(tui): persist named-profile sessions to the profile state.db". Correct fix for a real cross-store split-brain: `session_db_for_named_profile` retargets launch handles to the named profile's store (idempotent when already right), `_agent_session_db` binds by profile_home/profile_name with tests covering create-placement, default passthrough, explicit retarget, name-only binding, AND loud failure when the profile store can't open — that last test is exactly the guard this kind of change usually forgets. Suggestions:
+
+1. tui_gateway/server.py:7005 (inconsistent failure semantics) — the profile_HOME branch deliberately raises when the store can't open (pinned by test), but the profile_NAME branch routes through `session_db_for_named_profile`, whose blanket `except Exception: return current` silently lands writes in the LAUNCH store — i.e., precisely the original bug, resurrected for the name-derived path whenever get_profile_dir hiccups — make both branches loud (or at minimum debug-log the fallback) so a broken profile dir can't quietly empty a profile's history again.
+
+2. tui_gateway/server.py:7010 (connection lifecycle) — the profile_home path constructs a NEW SessionDB on every `_agent_session_db` call; if `_make_agent` runs more than once per live session (rebuilds, model-switch rebinds), each construction leaks another sqlite handle unless agent teardown closes it — either cache the retargeted DB on the session record (like other per-session handles) or document who owns closing it.
+
+3. tui_gateway/server.py:7008 (nit, name derivation) — falling back to `Path(home).name` assumes the profiles-directory name always equals the canonical profile id; true under current conventions but worth one comment so a future rename/rename-back flow doesn't silently bind the wrong store.

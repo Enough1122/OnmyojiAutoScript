@@ -1,0 +1,10 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Well-factored capability split: per-model `resolutions` metadata, a single `_normalize_resolution` chokepoint keyed on resolved model + modality, correct handling of the new canonical-1.5 text path, and tests covering every combination (1080p forwarded for 1.5 text/image, soft-clamped for legacy and reference-to-video, dynamic schema description following the active model). Points:
+
+1. plugins/video_gen/xai/_normalize_resolution (~310) — silent downgrade: requesting 1080p on a non-HD path yields 720p with no signal anywhere (no warning log, and unless the result echoes the *resolved* resolution, the caller believes they got 1080p). A `logger.info("resolution %r clamped to %r for model %s/modality %s")` plus echoing the normalized value in the result payload would keep callers honest.
+2. Same function — the HD gate is exact-equality against `DEFAULT_IMAGE_TO_VIDEO_MODEL`. The docstring itself mentions date-stamped 1.5 preview aliases that reject text-to-video; any such alias passed explicitly resolves verbatim (explicit-model branch) and then gets clamped to 720p even though the real preview endpoint supports 1080p. Matching on a prefix/`startswith("grok-imagine-video-1.5")` would track upstream naming. Verify what xAI actually ships before choosing.
+3. provider.capabilities() advertises `FULL_HD_RESOLUTIONS` unconditionally while the configured legacy model only accepts standard — schema promises what one model delivers and another clamps. Acceptable given per-model normalization, but the dynamic-schema description you already update does disambiguate; consider feeding capabilities from the same per-model map so they agree. (nit)
+4. Modality gating (`in {"text", "image"}`) deliberately excludes `reference` — reference-to-1.5 stays 720p. If xAI's API treats reference-input the same as image-input for resolution support, this under-sells 1.5; verify against their docs. (nit)
+
+No blocking issues found.

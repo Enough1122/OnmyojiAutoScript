@@ -1,0 +1,3 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. gateway/stream_consumer.py — Positive: tolerating a missing `message_len_fn_for_chat` (falling back to the base `message_len_fn`) addresses the in-place-update hazard where long-lived consumer instances hold an adapter object from a pre-update class; the test simulates that class faithfully via `__getattribute__` raising AttributeError rather than just deleting the attribute, which also proves the getattr-based probe behaves under hostile attribute access. No change requested.

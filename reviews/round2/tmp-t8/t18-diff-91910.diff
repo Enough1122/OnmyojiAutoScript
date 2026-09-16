@@ -1,0 +1,23 @@
+diff --git a/agent/command_token_source.py b/agent/command_token_source.py
+index fac8aa64a4a7..5f9a7a3fb102 100644
+--- a/agent/command_token_source.py
++++ b/agent/command_token_source.py
+@@ -106,8 +106,11 @@ def _mint(command: str, label: str) -> tuple[str, Optional[float]]:
+     if stdout.lstrip().startswith("{"):
+         try:
+             payload = json.loads(stdout)
+-        except json.JSONDecodeError:
+-            payload = None
++        except json.JSONDecodeError:
++            raise CommandTokenError(
++                f"key_cmd for provider {label!r} output starts with '{{' "
++                f"but is not valid JSON"
++            )
+         if isinstance(payload, dict):
+             token = str(payload.get("access_token") or "").strip()
+             if not token:
+@@ -188,3 +191,4 @@ def build_command_token_provider(
+     if not command:
+         return None
+     return CommandTokenSource(command, provider_label)
++

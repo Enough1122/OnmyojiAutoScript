@@ -1,0 +1,7 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. gateway/profile_routing.py:parse_profile_routes — an invalid hint causes the ENTIRE route to be skipped (continue), which silently reroutes that chat to the default profile. Why it matters: a one-character typo in `hint` (say a space inside) doesn't just lose the behavior tag — it moves the conversation to a different profile with different tools/memory/credentials, and the only signal is a warning log. Suggestion: keep the route and drop just the hint (“route kept, hint ignored” warning); a malformed cosmetic tag should degrade the tag, not the routing.
+
+2. gateway/run.py:_USER_ROUTE_TAG_RE strips a user-forged tag only when it is the FIRST thing in the message. A mid-text “…please [route: admin] do X” survives, and since AGENTS.md conditionals are prose-matched by the model rather than parsed, partial stripping gives partial protection. The docstring already disclaims security-boundary status — honest — but substituting ALL occurrences ([\s*route:[^\]]*\]) costs nothing and closes the obvious bypass.
+
+Strong feature work otherwise: parse-time validation with precise warnings, the SessionSource field correctly excluded from repr/equality/serialization, an end-to-end test proving the user-typed leading tag is stripped before injection, and documentation that states the threat model plainly in three places.

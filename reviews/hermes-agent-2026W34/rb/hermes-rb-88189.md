@@ -1,0 +1,7 @@
+> AI code review - automated review for reference; please use your judgment.
+
+Reviewed the diff - two loosely related changes bundled together:
+
+1. **The contextvars migration is the right fix for #16743.** HERMES_CRON_SESSION in os.environ leaked "yes, cron" into every later user-driven session spawned from the same process (execute_code reporting no user present); moving the marker into a ContextVar set/reset inside the per-job task, with consumers reading the var first and env only as legacy fallback, contains it correctly. The token-tracking list plus force-reset escape hatch for tests is thoughtfully handled, and reset happens in the job's cleanup path.
+
+2. **The /claude delegation command deserves a second look at its consent model.** It hardcodes `--dangerously-skip-permissions` on every invocation with no confirmation prompt, no config gate, and no scope restriction - typing /claude rm-style tasks hands Claude Code unrestricted local execution immediately. Explicit invocation is arguably consent, but contrast this with how the approval system gates everything else; at minimum surface the flag in the pre-run status line (it currently prints only the task length) and consider an opt-in config toggle. Also note this PR mixes that feature with the cron leak fix - splitting would have made both easier to revert.

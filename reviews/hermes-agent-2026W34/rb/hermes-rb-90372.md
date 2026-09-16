@@ -1,0 +1,9 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Reviewed by reviewer-e (AI automated review).
+
+Clean feature slice: `prefer_observations` is forwarded identically at both recall call sites (async tool path and sync prefetch), default-off preserves current behavior, the docstring correctly flags that 0.6.1 would *silently drop* the kwarg (hence the pin bump to 0.9.1), and both forwarding paths plus the default are covered by tests. Exempting the exactly-pinned `hindsight-client` from `exclude-newer` follows the repo's stated "exact pins are pure brick-risk removal" rule. Findings:
+
+1. uv.lock [options] — two supply-chain-posture changes ride along invisibly: the global `exclude-newer` flips from a hard timestamp to the epoch placeholder backed by `exclude-newer-span = "P14D"`, which converts a frozen resolution window into a rolling one for **every** package on the next lock regeneration; and the regenerated lock drops the `python_full_version` markers on scipy/vercel-workers deps. Both may be correct consequences of regenerating with the new span policy, but they're unrelated to this feature and materially change reproducibility guarantees the pyproject comments treat carefully. Please call the span switch out explicitly in the PR description (or move it to its own commit/PR), so future bisects of dependency drift land here.
+
+2. plugins/memory/hindsight/__init__.py:1882 — nit: `prefer_observations` is now sent unconditionally on every recall, including the default-off case; harmless against the pinned 0.9.1, but if any user runs against an older self-hosted server whose SDK silently ignores unknown kwargs (the exact failure mode your own docstring warns about), a debug-level log when the flag is actually enabled would make "why are raw facts missing?" support questions diagnosable.

@@ -1,0 +1,707 @@
+diff --git a/docs/architecture/authority-continuity.json b/docs/architecture/authority-continuity.json
+new file mode 100644
+index 000000000000..3b6a2ff224b0
+--- /dev/null
++++ b/docs/architecture/authority-continuity.json
+@@ -0,0 +1,339 @@
++{
++  "schema_version": 1,
++  "repository": "NousResearch/hermes-agent",
++  "architecture_owner_issue": 90866,
++  "completion_owner_issue": 91230,
++  "captured_main": "b6bcb3e791c673e63974029bbab40cc9326803ff",
++  "invariant": "A proof object must survive from admission to the actual effect and typed settlement; coordinates, configured intent, predecessor evidence, and surviving output shape cannot be re-derived as authority downstream.",
++  "evidence_policy": "exact_object_only",
++  "pipeline": [
++    {
++      "id": "admit",
++      "requires": [
++        "qualified_identity",
++        "scope",
++        "generation",
++        "epistemic_state"
++      ]
++    },
++    {
++      "id": "carry",
++      "requires": [
++        "immutable_authority",
++        "provenance",
++        "operation_identity"
++      ]
++    },
++    {
++      "id": "effect",
++      "requires": [
++        "current_consumer",
++        "exact_target",
++        "capability_attestation"
++      ]
++    },
++    {
++      "id": "settle",
++      "requires": [
++        "typed_outcome",
++        "postconditions",
++        "retry_authority"
++      ]
++    },
++    {
++      "id": "publish",
++      "requires": [
++        "exact_object_receipt",
++        "read_back",
++        "lineage_closure"
++      ]
++    }
++  ],
++  "global_constraints": [
++    "Machine-readable repository state outranks narrative status prose.",
++    "A parent retires only after semantic exhaustiveness, not child count.",
++    "Green, review, and publication evidence never transfer across object versions.",
++    "Publication consumes runtime evidence; runtime does not depend on campaign ledgers.",
++    "Non-injective transforms retain both survivor identity and consumption proof."
++  ],
++  "interlocks": [
++    {
++      "id": "webhook",
++      "architecture_owner": {
++        "kind": "issue",
++        "number": 90989
++      },
++      "active_delivery_owner": {
++        "kind": "pull_request",
++        "number": 90995
++      },
++      "stages": [
++        {
++          "role": "effective_config",
++          "kind": "pull_request",
++          "number": 85002
++        },
++        {
++          "role": "domain_spine",
++          "kind": "pull_request",
++          "number": 90995
++        },
++        {
++          "role": "http_mechanics",
++          "kind": "pull_request",
++          "number": 90236
++        },
++        {
++          "role": "signature_verifier",
++          "kind": "pull_request",
++          "number": 85318
++        },
++        {
++          "role": "session_admission",
++          "kind": "pull_request",
++          "number": 90304
++        },
++        {
++          "role": "effect_settlement",
++          "kind": "pull_request",
++          "number": 85644
++        },
++        {
++          "role": "docs_projection",
++          "kind": "pull_request",
++          "number": 85638
++        },
++        {
++          "role": "terminal_assembler",
++          "kind": "pull_request",
++          "number": 85640
++        }
++      ],
++      "constraints": [
++        "Provider, verifier, event, and delivery identity are bound once by the domain spine.",
++        "HTTP and cryptographic authorities consume the bound namespace and exact raw body.",
++        "Session policy consumes the authenticated envelope without re-derivation.",
++        "Per-target terminal partial truth precedes documentation and final assembly.",
++        "Only the exact composed head may claim integration evidence."
++      ]
++    },
++    {
++      "id": "mcp_oauth",
++      "architecture_owner": {
++        "kind": "pull_request",
++        "number": 84963
++      },
++      "active_delivery_owner": {
++        "kind": "pull_request",
++        "number": 90888
++      },
++      "required_child_roles": [
++        {
++          "role": "oauth_lifecycle",
++          "publication": {
++            "kind": "pull_request",
++            "number": 90888
++          }
++        },
++        {
++          "role": "mcp2_transport_control_plane",
++          "publication": null
++        }
++      ],
++      "parent_retirement_gate": "semantic_exhaustiveness",
++      "parent_may_retire": false,
++      "constraints": [
++        "Protocol-era discovery and OAuth metadata discovery remain orthogonal.",
++        "No second era selector, transport factory, provider cache, or credential authority.",
++        "Original contributor provenance must survive every extracted child."
++      ]
++    },
++    {
++      "id": "compression_projection",
++      "architecture_owner": {
++        "kind": "pull_request",
++        "number": 88551
++      },
++      "active_delivery_owner": {
++        "kind": "pull_request",
++        "number": 88551
++      },
++      "specification_nodes": [
++        {
++          "kind": "issue",
++          "number": 88740
++        },
++        {
++          "kind": "issue",
++          "number": 88758
++        }
++      ],
++      "delivery_lanes": 1,
++      "proof_dimensions": [
++        "_row_id",
++        "_row_id_watermark"
++      ],
++      "constraints": [
++        "Caller stamping and projection watermarking land as one proof-preserving system.",
++        "Durable and live candidates use the same repair/projection transform.",
++        "Provider and display serialization strip internal proof metadata."
++      ]
++    },
++    {
++      "id": "publication_contracts",
++      "architecture_owner": {
++        "kind": "pull_request",
++        "number": 90307
++      },
++      "active_delivery_owner": {
++        "kind": "pull_request",
++        "number": 90307
++      },
++      "consumers": [
++        {
++          "channel": "slack",
++          "kind": "pull_request",
++          "number": 91036
++        },
++        {
++          "channel": "discord",
++          "kind": "pull_request",
++          "number": 90321
++        }
++      ],
++      "constraints": [
++        "The generic publication contract precedes channel ledgers.",
++        "Narrative counts are generated from or conformance-checked against committed ledgers.",
++        "Runtime implementation remains independent of publication validation."
++      ]
++    },
++    {
++      "id": "webhook_docs_assembly",
++      "architecture_owner": {
++        "kind": "issue",
++        "number": 90989
++      },
++      "active_delivery_owner": {
++        "kind": "pull_request",
++        "number": 85640
++      },
++      "docs_owner": {
++        "kind": "pull_request",
++        "number": 85638
++      },
++      "constraints": [
++        "Documentation follows executable composition and never defines runtime truth.",
++        "The terminal assembler is rebuilt from current main after all behavior owners publish.",
++        "Sibling tests are inputs, not substitutes for composed-object evidence."
++      ]
++    },
++    {
++      "id": "hermes_tag",
++      "architecture_owner": {
++        "kind": "issue",
++        "number": 90866
++      },
++      "active_delivery_owner": {
++        "kind": "pull_request",
++        "number": 91111
++      },
++      "next_required_consumers": [
++        "pre_gateway_dispatch",
++        "pre_tool_call"
++      ],
++      "constraints": [
++        "Kernel-only surface is implementation evidence, not runtime delivery.",
++        "One immutable decision crosses admission and a real effect seam.",
++        "Concurrent tasks, stale generations, and approval or lease replay fail closed."
++      ]
++    },
++    {
++      "id": "discord_voice_v6",
++      "architecture_owner": {
++        "kind": "issue",
++        "number": 79564
++      },
++      "active_delivery_owner": null,
++      "paired_publications": [
++        {
++          "kind": "pull_request",
++          "number": 78180
++        },
++        {
++          "kind": "pull_request",
++          "number": 78196
++        }
++      ],
++      "state_machine": [
++        "captured_utterance",
++        "transcription_settlement",
++        "transcript_routing",
++        "agent_turn_admission",
++        "optional_media_delivery",
++        "terminal_stage_receipt"
++      ],
++      "constraints": [
++        "STT fallback never bypasses transcribe-only admission.",
++        "File-only transcript routing never leaks content into Discord.",
++        "Disabled agent turns never suppress transcript persistence."
++      ]
++    },
++    {
++      "id": "windows_update_bootstrap",
++      "architecture_owner": {
++        "kind": "issue",
++        "number": 91277
++      },
++      "active_delivery_owner": {
++        "kind": "pull_request",
++        "number": 91895
++      },
++      "admission_owner": {
++        "kind": "pull_request",
++        "number": 91316
++      },
++      "historical_fossil": {
++        "kind": "pull_request",
++        "number": 60233,
++        "disposition": "invariant_only"
++      },
++      "constraints": [
++        "The mutation actor cannot execute from mutable or native artifacts owned by the target generation.",
++        "Admission binds deployment root, source generation, target generation, and operation identity.",
++        "Settlement observes the admitted generation at the admitted root."
++      ]
++    },
++    {
++      "id": "secret_provider_egress",
++      "architecture_owner": {
++        "kind": "issue",
++        "number": 77162
++      },
++      "active_delivery_owner": {
++        "kind": "pull_request",
++        "number": 77198
++      },
++      "closure_state": "open_current_main_unverified",
++      "constraints": [
++        "Arbitrarily named externally applied secret values are masked at provider egress.",
++        "Closure requires a current-main provider-wire witness bound to the exact head.",
++        "Historical partial implementations remain provenance, not closure evidence."
++      ]
++    },
++    {
++      "id": "godfile_campaign_topology",
++      "architecture_owner": {
++        "kind": "issue",
++        "number": 78647
++      },
++      "active_delivery_owner": null,
++      "selection_authority": "kill_lock_plus_current_main",
++      "survivor_unit": "semantic_slice",
++      "constraints": [
++        "The 77xxx-79xxx population is campaign provenance, not an automatic rebase queue.",
++        "Only selected semantic slices receive active delivery authority.",
++        "Authorship and supersession remain explicit when implementation ownership converges."
++      ]
++    }
++  ]
++}
+diff --git a/docs/architecture/proof-carrying-authority.md b/docs/architecture/proof-carrying-authority.md
+new file mode 100644
+index 000000000000..378da777d7ed
+--- /dev/null
++++ b/docs/architecture/proof-carrying-authority.md
+@@ -0,0 +1,184 @@
++# Proof-carrying authority continuity
++
++Tracked by [#90866](https://github.com/NousResearch/hermes-agent/issues/90866) and
++the exact-object completion doctrine in
++[#91230](https://github.com/NousResearch/hermes-agent/issues/91230).
++
++## Invariant
++
++A proof object must survive from admission to the actual effect and typed
++settlement. Coordinates, configured intent, predecessor evidence, and surviving
++output shape cannot be re-derived as authority downstream.
++
++The repository-wide execution shape is:
++
++```text
++admit exact identity, scope, generation, and epistemic state
++  -> carry immutable authority and provenance
++  -> consume it at the real effect
++  -> settle a typed outcome and retry authority
++  -> publish evidence bound to the exact object
++```
++
++This is a composition contract, not a request for one universal runtime type.
++Each subsystem may use its own physical representation, but it must preserve
++the proof dimensions required by its consequential consumer.
++
++The machine-readable contract is
++[`authority-continuity.json`](authority-continuity.json). Its conformance test
++prevents the active delivery graph from drifting back into duplicate authority,
++inherited evidence, or child-count retirement.
++
++## Global laws
++
++1. Machine-readable repository state outranks narrative status prose.
++2. A parent retires only after every surviving semantic invariant has a typed
++   destination; child count alone is insufficient.
++3. CI, review, and publication receipts never transfer across heads, sibling
++   branches, parent objects, or rebuilt bytes.
++4. Publication consumes runtime evidence. Runtime must not depend on campaign
++   ledgers to authorize effects.
++5. A non-injective transformation carries both survivor identity and proof of
++   the input state it consumed.
++
++## Active interlocks
++
++### Webhook authority chain
++
++```text
++#85002 effective configuration
++  -> #90995 canonical route/provider/verifier/delivery spine
++  -> #90236 strict HTTP, raw-body, rate, and idempotency mechanics
++     + #85318 explicit cryptographic verifier authority
++  -> #90304 session and unattended-interaction admission
++  -> #85644 per-target effect settlement and terminal partial truth
++  -> #85638 mechanically derived documentation
++  -> #85640 sole final assembler and real-listener proof
++```
++
++[#90989](https://github.com/NousResearch/hermes-agent/issues/90989) remains the
++subsystem architecture owner. Provider, verifier, event, delivery identity, and
++raw-body provenance are bound once. Downstream stages consume the immutable
++envelope rather than rereading headers or re-deriving authority. Only the
++composed head can receive integration evidence.
++
++### MCP OAuth split
++
++[#84963](https://github.com/NousResearch/hermes-agent/pull/84963) remains open
++until two credited children exist and an exhaustive coverage map assigns every
++surviving invariant to one of four dispositions:
++
++- [#90888](https://github.com/NousResearch/hermes-agent/pull/90888), the OAuth
++  lifecycle and callback-ownership child;
++- the still-owed MCP 2.0 transport/control-plane child;
++- behavior already present on current main; or
++- explicit obsolescence under the current negotiation architecture.
++
++Protocol-era discovery and OAuth metadata discovery remain orthogonal. The
++split must not create a second era selector, transport factory, provider cache,
++or credential authority.
++
++### Durable compression projection
++
++[#88551](https://github.com/NousResearch/hermes-agent/pull/88551) is the single
++implementation owner. [#88740](https://github.com/NousResearch/hermes-agent/issues/88740)
++and [#88758](https://github.com/NousResearch/hermes-agent/issues/88758) are
++interlocked specification nodes, not independent rebase lanes.
++
++A transformed durable projection needs two facts:
++
++```text
++_row_id
++    exact durable identity represented by the surviving message
++
++_row_id_watermark
++    greatest raw durable row consumed by the full projection,
++    including rows merged, stripped, or dropped
++```
++
++Caller stamping without projection-consumption proof can turn a safe fail-closed
++restore into false-positive re-adoption.
++
++### Publication contracts and channel ledgers
++
++[#90307](https://github.com/NousResearch/hermes-agent/pull/90307) precedes the
++Slack ledger in [#91036](https://github.com/NousResearch/hermes-agent/pull/91036)
++and the Discord ledger in
++[#90321](https://github.com/NousResearch/hermes-agent/pull/90321).
++
++Human-readable status counts must be generated from, or independently checked
++against, committed ledgers. A PR description is not a second status database.
++The publication layer validates runtime evidence; it does not become runtime
++authority.
++
++### Documentation and terminal assembly
++
++[#85638](https://github.com/NousResearch/hermes-agent/pull/85638) is a
++projection of delivered behavior. It does not define that behavior.
++[#85640](https://github.com/NousResearch/hermes-agent/pull/85640) remains the
++sole terminal assembler, but its branch must be rebuilt from current main after
++the behavior owners publish exact candidates.
++
++### Hermes Tag vertical consumer
++
++[#91111](https://github.com/NousResearch/hermes-agent/pull/91111) is a
++governance kernel, not delivered runtime authority. The next implementation
++must carry one immutable admission decision through a real
++`pre_gateway_dispatch` consumer into a real `pre_tool_call` effect consumer and
++typed receipt. Shadow evaluation is evidence; it is not effect enforcement.
++
++### Discord voice V6
++
++[#78180](https://github.com/NousResearch/hermes-agent/pull/78180) and
++[#78196](https://github.com/NousResearch/hermes-agent/pull/78196) share one
++voice-turn admission contract:
++
++```text
++captured utterance
++  -> bounded transcription settlement
++  -> transcript destination routing
++  -> agent-turn admission
++  -> optional TTS/media delivery
++  -> terminal per-stage receipt
++```
++
++STT fallback cannot bypass transcribe-only mode. File-only routing cannot leak
++the transcript into Discord. Disabled agent turns cannot suppress transcript
++persistence.
++
++### Windows updater bootstrap purity
++
++[#60233](https://github.com/NousResearch/hermes-agent/pull/60233) is retained
++for its invariant, not revived as a July implementation. The modern owner chain
++is [#91316](https://github.com/NousResearch/hermes-agent/pull/91316) admission
++followed by
++[#91895](https://github.com/NousResearch/hermes-agent/pull/91895) durable
++mutation authority.
++
++The actor mutating a deployment generation must not execute from mutable or
++native artifacts owned by that target generation. Settlement must observe the
++admitted target generation at the admitted deployment root.
++
++### Applied-secret provider egress
++
++[#77162](https://github.com/NousResearch/hermes-agent/issues/77162) remains open.
++[#77198](https://github.com/NousResearch/hermes-agent/pull/77198) is the active
++implementation candidate, not current-main closure evidence. Closure requires a
++provider-wire witness on the exact current-main candidate proving that an
++externally applied secret under an arbitrary name is absent from the outbound
++provider message.
++
++### God-file campaign topology
++
++[#78647](https://github.com/NousResearch/hermes-agent/issues/78647) owns the
++campaign graph. The large `#77xxx`-`#79xxx` population is provenance inventory,
++not an automatic rebase queue. KILL LOCK plus current-main truth selects the
++surviving semantic slices. Only selected slices receive active delivery
++authority, while authorship and supersession remain explicit.
++
++## What this contract does not claim
++
++This contract does not merge, release, or operationally verify any referenced
++implementation. It records current architecture ownership, missing consumers,
++retirement gates, and exact-object evidence rules so subsequent implementation
++cannot silently recreate sibling authority.
+diff --git a/tests/conformance/test_authority_continuity_manifest.py b/tests/conformance/test_authority_continuity_manifest.py
+new file mode 100644
+index 000000000000..ce6e4fcbdf38
+--- /dev/null
++++ b/tests/conformance/test_authority_continuity_manifest.py
+@@ -0,0 +1,166 @@
++"""Conformance tests for the proof-carrying authority interlock manifest."""
++
++from __future__ import annotations
++
++import json
++from pathlib import Path
++from typing import Any
++
++
++ROOT = Path(__file__).resolve().parents[2]
++MANIFEST_PATH = ROOT / "docs" / "architecture" / "authority-continuity.json"
++
++EXPECTED_PIPELINE = ["admit", "carry", "effect", "settle", "publish"]
++EXPECTED_INTERLOCKS = {
++    "compression_projection",
++    "discord_voice_v6",
++    "godfile_campaign_topology",
++    "hermes_tag",
++    "mcp_oauth",
++    "publication_contracts",
++    "secret_provider_egress",
++    "webhook",
++    "webhook_docs_assembly",
++    "windows_update_bootstrap",
++}
++EXPECTED_WEBHOOK_ORDER = [
++    85002,
++    90995,
++    90236,
++    85318,
++    90304,
++    85644,
++    85638,
++    85640,
++]
++
++
++def _manifest() -> dict[str, Any]:
++    return json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
++
++
++def _interlocks_by_id(data: dict[str, Any]) -> dict[str, dict[str, Any]]:
++    interlocks = data["interlocks"]
++    assert isinstance(interlocks, list)
++    indexed = {item["id"]: item for item in interlocks}
++    assert len(indexed) == len(interlocks), "interlock ids must be unique"
++    return indexed
++
++
++def _assert_node(node: dict[str, Any]) -> None:
++    assert node["kind"] in {"issue", "pull_request"}
++    assert isinstance(node["number"], int)
++    assert node["number"] > 0
++
++
++def test_manifest_has_one_exact_evidence_pipeline() -> None:
++    data = _manifest()
++
++    assert data["schema_version"] == 1
++    assert data["repository"] == "NousResearch/hermes-agent"
++    assert data["architecture_owner_issue"] == 90866
++    assert data["completion_owner_issue"] == 91230
++    assert data["evidence_policy"] == "exact_object_only"
++
++    pipeline = data["pipeline"]
++    assert [stage["id"] for stage in pipeline] == EXPECTED_PIPELINE
++    assert all(stage["requires"] for stage in pipeline)
++
++
++def test_manifest_covers_the_current_interlock_domains() -> None:
++    interlocks = _interlocks_by_id(_manifest())
++
++    assert set(interlocks) == EXPECTED_INTERLOCKS
++    for interlock in interlocks.values():
++        _assert_node(interlock["architecture_owner"])
++        owner = interlock.get("active_delivery_owner")
++        if owner is not None:
++            _assert_node(owner)
++        assert interlock["constraints"]
++
++
++def test_webhook_chain_has_one_spine_and_settlement_before_docs() -> None:
++    webhook = _interlocks_by_id(_manifest())["webhook"]
++
++    assert webhook["active_delivery_owner"] == {
++        "kind": "pull_request",
++        "number": 90995,
++    }
++    assert [stage["number"] for stage in webhook["stages"]] == EXPECTED_WEBHOOK_ORDER
++    assert [stage["role"] for stage in webhook["stages"]] == [
++        "effective_config",
++        "domain_spine",
++        "http_mechanics",
++        "signature_verifier",
++        "session_admission",
++        "effect_settlement",
++        "docs_projection",
++        "terminal_assembler",
++    ]
++
++
++def test_mcp_parent_cannot_retire_while_transport_child_is_missing() -> None:
++    mcp = _interlocks_by_id(_manifest())["mcp_oauth"]
++    roles = {item["role"]: item["publication"] for item in mcp["required_child_roles"]}
++
++    assert mcp["architecture_owner"]["number"] == 84963
++    assert mcp["parent_retirement_gate"] == "semantic_exhaustiveness"
++    assert mcp["parent_may_retire"] is False
++    assert roles["oauth_lifecycle"] == {
++        "kind": "pull_request",
++        "number": 90888,
++    }
++    assert roles["mcp2_transport_control_plane"] is None
++
++
++def test_compression_is_one_delivery_lane_with_two_proof_dimensions() -> None:
++    compression = _interlocks_by_id(_manifest())["compression_projection"]
++
++    assert compression["active_delivery_owner"]["number"] == 88551
++    assert compression["delivery_lanes"] == 1
++    assert {node["number"] for node in compression["specification_nodes"]} == {
++        88740,
++        88758,
++    }
++    assert compression["proof_dimensions"] == ["_row_id", "_row_id_watermark"]
++
++
++def test_publication_contract_precedes_channel_ledgers() -> None:
++    publication = _interlocks_by_id(_manifest())["publication_contracts"]
++
++    assert publication["active_delivery_owner"]["number"] == 90307
++    assert {(item["channel"], item["number"]) for item in publication["consumers"]} == {
++        ("discord", 90321),
++        ("slack", 91036),
++    }
++    assert any(
++        "Narrative counts" in constraint
++        for constraint in publication["constraints"]
++    )
++
++
++def test_fossils_and_historical_candidates_cannot_claim_current_main_closure() -> None:
++    interlocks = _interlocks_by_id(_manifest())
++
++    updater = interlocks["windows_update_bootstrap"]
++    assert updater["historical_fossil"] == {
++        "kind": "pull_request",
++        "number": 60233,
++        "disposition": "invariant_only",
++    }
++    assert updater["admission_owner"]["number"] == 91316
++    assert updater["active_delivery_owner"]["number"] == 91895
++
++    secret_egress = interlocks["secret_provider_egress"]
++    assert secret_egress["architecture_owner"]["number"] == 77162
++    assert secret_egress["active_delivery_owner"]["number"] == 77198
++    assert secret_egress["closure_state"] == "open_current_main_unverified"
++
++
++def test_godfile_campaign_selects_semantic_slices_not_pr_population() -> None:
++    campaign = _interlocks_by_id(_manifest())["godfile_campaign_topology"]
++
++    assert campaign["architecture_owner"]["number"] == 78647
++    assert campaign["active_delivery_owner"] is None
++    assert campaign["selection_authority"] == "kill_lock_plus_current_main"
++    assert campaign["survivor_unit"] == "semantic_slice"

@@ -1,0 +1,10 @@
+> AI code review — automated review for reference; please use your judgment.
+
+The core idea is right: provider outages are infrastructure failures, not worker protocol failures, and widening EX_TEMPFAIL beyond rate_limit/billing to timeout/overloaded/server_error/upstream_rate_limit (all real `FailoverReason` values, verified on main) matches the reaper's release semantics. The `_last_run_result` reset-before-set hygiene plus the display-failure preservation test are exactly the right shape. Points:
+
+1. cli.py:`_single_query_exit_code` (~1455) — this duplicates logic that a sibling open PR is simultaneously extracting into `hermes_cli/kanban_exit_codes.py::single_query_exit_code` as the stated "one source of truth" shared with the dispatcher's reap classifier. Whichever merges second will conflict, and if both land you get two divergent transient sets. Please coordinate: put the expanded set + helper into that shared module instead of a cli-local copy, so exit-code mapping and reap classification can't drift.
+2. Circuit-breaker interaction — worth a deliberate decision: with timeout/server_error counted as tempfail, a persistently dead endpoint requeues its task forever without ever incrementing failure counts, since nothing distinguishes "provider had a bad hour" from "endpoint is gone". Consider capping consecutive tempfail requeues per task (reset on success) before escalating to blocked.
+3. Behavior change beyond kanban scope: the human `chat -q` path previously exited 0 even when the query failed (summary printed, fall-through return); it now exits non-zero. Better for automation, but every existing wrapper around one-shot queries sees a contract change — please flag it in release notes and confirm no internal tooling relies on rc=0-with-error-text-on-stdout.
+4. cli.py:16125 (`self._last_run_result = None`) — resetting before run prevents an early-return path from reusing a prior turn's result; the interrupt-race test extension pins the happy-path preservation. No issue — calling it out as reviewed-and-good.
+
+No blocking issues found.

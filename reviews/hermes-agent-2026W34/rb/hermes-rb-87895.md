@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. hermes_cli/main.py:`cmd_update`/`_wait_for_update_keypress` — Positive: the pause is correctly structured as a `finally` side-channel so it fires on success *and* failure while never masking the updater's exit code or result (both directions tested, including SystemExit(7) propagation through a failing pause). The tty check prevents any wait on piped output, POSIX termios restore happens even when the read raises, and Windows gets the msvcrt path — all covered.
+
+2. Overall — Positive: scoping the flag to the two relaunch sites that open a dedicated terminal window (TUI exit-42 and /update slash command), leaving direct `hermes update` untouched, is exactly the right blast radius; the SUPPRESSed help keeps the internal flag out of user-facing help text. No change requested.

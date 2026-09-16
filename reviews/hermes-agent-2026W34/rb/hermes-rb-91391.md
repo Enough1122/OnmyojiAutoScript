@@ -1,0 +1,9 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. apps/desktop/src/app/chat/composer/hooks/use-composer-voice.ts:102 — `pending` is now hardcoded to `false`. Why it matters: any consumer that treated `pending === true` as "wait for finalize / speak later" silently changes behavior; conversely, if a durable (non-interim, non-live-tail) message can still be edited in place while streaming on some adapter path, TTS would now read partial text mid-stream instead of deferring. Suggestion: verify every streaming path really routes through `interim`/`live-tail` ids, then either drop the field or replace the constant with a comment stating the invariant ("candidates here are always finalized").
+
+2. apps/desktop/src/app/chat/composer/hooks/use-composer-voice.ts:84 — the explicit `last.interim` re-check is dead code: the `findLast` predicate two lines above already excludes `m.interim`, so the branch can never fire. Nit — remove it or keep exactly one source of truth for the filter.
+
+3. apps/desktop/src/app/chat/composer/hooks/use-composer-voice.ts:117 — `consumePendingResponse` deliberately skips marking live-tail ids as spoken, relying on hydration to rewrite them under a durable id. Why it matters: if any cancel/error path tears down a stream *without* hydration, the turn simply stays unspoken (fine), but if hydration lands *after* the user already sent a new message, the stale bubble becomes "latest unspoken" and gets read out late. Suggestion: consider also skipping candidates older than the newest user message in `pendingResponse`.
+
+4. tests — no tests accompany the fix, and duplicate-TTS regressions are highly user-visible. The selector logic is extractable (`messages` in → candidate out). Suggestion: add unit cases for interim-only history, live-tail-only history, and the hydrate-rewrite happy path.

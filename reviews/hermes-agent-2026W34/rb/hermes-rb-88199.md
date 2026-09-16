@@ -1,0 +1,3 @@
+> AI code review - automated review for reference; please use your judgment.
+
+Reviewed the diff. Reasonable platform-scoped fix: Linux window managers swallow narrow scrollbars under the resize hit-zone, so widening to 0.625rem only under an html.platform-linux class avoids changing macOS/Windows rendering. Two nits: navigator.platform is formally deprecated (fine inside Electron where the value is stable, but process.platform via preload would be the non-deprecated source); and the `*:not(.scrollbar-overlay)` widening applies to every scrollbar in the app including dense code/tool panes - if any pane looks too chunky on Linux, scoping to the specific containers would be the dial to turn.

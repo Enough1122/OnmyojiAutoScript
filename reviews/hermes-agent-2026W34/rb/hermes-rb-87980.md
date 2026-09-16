@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. apps/desktop/scripts/assert-root-install.mjs — Positive: widening the guard from vite-only to the full consumed set closes the #86443 gap (partial root install missing katex passed the old check and died mid-vite on an unresolved CSS import), and moving it to `prebuild` means a tree that can't build is rejected *before* `clean` starts deleting its own outputs. The pure `checkRootInstall` extraction makes the whole matrix unit-testable without spawning processes.
+
+2. Tests — Positive: each critical package has a dedicated missing-case test plus an all-missing-at-once assertion, the original vite-only regression is explicitly retained ("widening coverage cannot silently drop the case it already handled"), a nested app-local install proves the upward walk matches Node resolution, and the react/react-dom split check survives. No change requested.

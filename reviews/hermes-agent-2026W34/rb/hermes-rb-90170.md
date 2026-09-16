@@ -1,0 +1,10 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Solid end-to-end fix: `base: "./"` makes the build portable, the server-side rewrite anchors lazy chunks/styles/fonts to the external prefix, the new `test:build-output` gate turns "someone reintroduces a root-absolute URL" into a red CI run instead of a bug report, and the test matrix (prefixed / root / deep-route / auth-gate / legacy absolute) covers exactly the cases that bite. One security item that predates this PR but which it widens:
+
+1. hermes_cli/web_server.py:_serve_index (~17363) — `prefix` originates from the client-controlled `X-Forwarded-Prefix` header and is interpolated verbatim into href/src attributes. A caller who can reach the dashboard directly (bypassing the trusted proxy that normally owns this header) can set `X-Forwarded-Prefix: "><script>...` and get markup injected into the served index.html — reflected injection on an authenticated-surface page. This PR adds several more interpolated attributes, widening the surface. Sanitize before use: accept only `^/[A-Za-z0-9._~/-]*$` (and collapse duplicate slashes), else fall back to "". Cheap, and it also fixes malformed prefixes producing broken URLs.
+2. web/scripts/assert-relative-build.mjs — the `(?:["'`]|url\(\s*["']?)\/assets\/`` regex will also trip on legitimate runtime API strings like ``fetch("/assets/...")`` should any endpoint ever live there. Intentional strictness is fine — just be ready for that failure mode to mean "rename the endpoint", not "fix the build". (nit)
+3. The deep-route test loading both entry and lazily-imported sibling chunks through the real TestClient is exactly the proof this needed — Vite's relative dynamic imports resolve against the importing module URL, and this pins that behavior. (positive)
+4. Minor: the './'-form rewrites duplicate the absolute-form list (fonts/ds-assets/favicon); a single loop over `(attr, path)` tuples would keep the two lists from drifting when the next asset directory appears. (nit)
+
+No blocking issues found.

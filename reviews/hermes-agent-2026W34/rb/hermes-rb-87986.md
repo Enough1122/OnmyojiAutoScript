@@ -1,0 +1,3 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. tests/skills/test_fetch_transcript.py — Positive: solid coverage expansion for a skill script — URL variants (embed/live/shorts/bare-id), the youtube_transcript_api contract via sys.modules stubs (languages passthrough, missing-dependency exit with actionable install command), JSON output shape (duration formatting incl. zero and hour cases, --timestamps, --text-only, error-to-JSON mapping for disabled-captions/no-transcript/network), all without network access. No change requested.

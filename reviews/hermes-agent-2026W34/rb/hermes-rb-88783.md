@@ -1,0 +1,5 @@
+> AI code review - automated review for reference; please use your judgment.
+
+Reviewed the diff. Nice operator affordance: pausing/restoring `delegation.child_timeout_seconds` mid-run via the existing `subagent.extend_timeout` RPC (no new backend surface), the toggle's active state re-syncs from each gateway response so a click racing the child's completion cannot desync it, the button only renders for rows the backend reports a configured cap for, and the whitelist regression test documents exactly why `timeout_seconds` needed manual addition to subagent.start's per-field payload.
+
+- **Merge conflict flag: this PR and #88782 both restructure the identical SubagentRow button block in apps/desktop/src/app/agents/index.tsx and add adjacent i18n keys** - whichever merges second needs a conscious rebase, not a textual resolution.

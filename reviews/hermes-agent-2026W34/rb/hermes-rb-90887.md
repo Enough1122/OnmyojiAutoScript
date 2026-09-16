@@ -1,0 +1,11 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Reviewed by reviewer-e (AI automated review).
+
+This closes the "looks delivered / never reached Discord" class properly from three angles: refusing silent log fallback when the route declares a real target but `delivery_info` went missing, refusing home/DM fallback when an explicit `chat_id` rendered empty (`explicit_chat_id` captured pre-render), and blocking hostile payloads from rewriting literal target fields (`_LITERAL_TARGET_KEYS`) while keeping `{…}` templating available deliberately. The exactly-once claim/clear discipline around failure paths and the new test file (store-vs-send split, explicit-target precedence, dedup) match the failure modes well. Findings:
+
+1. gateway/platforms/webhook.py:377 — the dedup store keeps exactly **one** digest per `chat_id`, so the guarantee degrades quietly: an interim status send claims digest S, the final response F then overwrites it, and any later retry of S (e.g. `_send_with_retry` racing past completion) hashes to something ≠ F and fans out again — a stale intermediate lands in Discord after the final answer. Similarly, once the map exceeds 4096 entries the eviction drops 1024 arbitrary claims, re-opening duplicates under load. Consider storing a small deque of recent digests per chat_id and logging when eviction discards a live-looking session; at minimum document that exactly-once is best-effort beyond these bounds.
+
+2. gateway/platforms/webhook.py:356 — `_route_name_from_session_chat_id` splits on the *first* colon, so a route name containing ":" yields a wrong/partial route name and the missing-`delivery_info` refuse-fallback guard silently no-ops for it (falls through to plain log). Route names are config-authored, so this is low likelihood — but validating route names at registration (`^[A-Za-z0-9_-]+$`) or partitioning from the right (`rsplit(":", 1)`, since delivery ids are generated) removes the sharp edge entirely.
+
+3. gateway/platforms/webhook.py:1610 — a successful cross-platform delivery now emits three near-duplicate INFO lines ("Delivering response…", "[Discord] Sending response…", "Delivered response…"). Consolidate to one structured line (platform, chat_id, chars, route, message_id) — at webhook scale this triples log volume for zero extra signal.

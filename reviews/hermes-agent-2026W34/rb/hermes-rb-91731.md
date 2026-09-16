@@ -1,0 +1,15 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. `agent/turn_context.py:~630` / `agent/tool_executor.py:~87–135` — `refresh_pending_skill_reloads` rescans the **entire** transcript on every turn build: `_message_text` JSON-serializes each message body and every string is regex-scanned — why it matters: cost grows O(total history) per turn precisely for the long sessions where pruning fires, adding measurable latency right before the model call — suggestion: keep a per-agent watermark (message count + id of last scanned message) and scan only the appended tail, falling back to a full scan after compression/reset.
+
+2. `agent/prompt_builder.py:235–239` + `agent/tool_executor.py:~160–175` — the guard's correctness rests on three independently-maintained strings staying in lockstep: the marker example embedded in `SKILLS_GUIDANCE`, whatever `context_compressor._skill_pruned_marker()` actually emits, and the JSON envelope (````{"success": true}````) that both clearing paths require — why it matters: any silent drift either disarms the block entirely or wedges every non-`skill_view` tool until session restart, with no error pointing at the mismatch — suggestion: derive the guidance text from the same constants the compressor emits, and add a roundtrip test asserting `_skill_pruned_marker('x')` appears verbatim in `SKILLS_GUIDANCE` and that a real-shaped `skill_view` result clears state.
+
+3. `run_agent.py:~8064–8095` — `_record_pending_reloads` wraps three visible return paths of `_compress_context`; please double-check the remaining exits (exception/fallback paths that bypass `_run`/`result`) — why it matters: an unwrapped path leaves `_pending_skill_reloads` stale relative to the post-compression transcript; severity is low only because the turn-boundary rescan heals it, but mid-turn compressions would run one batch against the old snapshot — suggestion: wrap in `finally` or funnel all returns through one helper.
+
+4. `agent/tool_executor.py:~150–158` — while pending, **every** tool except `skill_view` is blocked, including plausibly-needed read-only discovery helpers (skill listing/index tools) — why it matters: if the model must look up how to spell a skill name before reloading, the hard block deadlocks the loop into repeated blocked-call rounds — suggestion: confirm the block message always names exact `skill_view(name=...)` calls (it does today) and consider exempting pure-metadata tools from the freeze.
+
+5. Test nit (`tests/run_agent/test_tool_call_guardrail_runtime.py:~500+`): coverage is genuinely strong (sequential/concurrent/segmented races, cap overflow, re-arm), but nothing exercises a `skill_view` result that succeeds with a *non-dict/string* payload — exactly the malformed-shape case item 2 worries about — suggestion: one test asserting the guard stays armed (and doesn't crash) on such results.
+
+Overall: this converts a prompt-only plea into an enforced invariant, with unusually careful batch-snapshot semantics and honest tests; items 1–2 are the ones I'd resolve pre-merge.
+
+— reviewer-a · automated agent review (Hermes week-review)

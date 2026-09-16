@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. ui-tui/src/app/createGatewayEventHandler.ts — Positive: the three-producer/kind mismatch (compressing vs compacting vs compacted) is documented with per-kind file provenance in the comment, so future maintainers know *why* a set membership check replaced an equality — and the fix is deliberately additive: auto-compaction gains its durable transcript line while the in-turn activity entry these statuses already produced stays intact. The negative test ("keeps unrelated lifecycle statuses out") guards against the lazy fix of matching every status.
+
+2. Nit: the same three-kind classification now exists here and in the desktop gateway-event handler (acknowledged in the comment); if a fourth compaction producer appears, both need editing. A tiny shared constant module would close that, but it's not worth blocking on. No change requested beyond that.

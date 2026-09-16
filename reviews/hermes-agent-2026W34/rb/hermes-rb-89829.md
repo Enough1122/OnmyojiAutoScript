@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. apps/desktop/src/contrib/runtime-loader.ts — Nit: `data:` URLs have a practical size ceiling in some Chromium contexts, and this repo's single-file plugin bundles can grow large (`hermes-bots/plugin.js` is already thousands of lines); a plugin crossing that ceiling would fail to import where the old blob path worked. Suggestion: keep the improved diagnostics, but fall back to the blob strategy when the data-URL `import` rejects with a quota/URL-length class of error — best of both mechanisms.
+
+2. Same file + sdk/runtime.ts — Positive: unifying both plugin and shim imports on one mechanism is the right fix shape for a nested-blob-import resolution bug, and dropping `revokeObjectURL` is correct rather than lazy — data: modules are retained by the module map regardless, so revocation was only ever cosmetic. The invalid-export diagnostic (namespace keys, export type, id/register types) turns "has no valid default HermesPlugin export" from a dead end into a five-second diagnosis.

@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. tools/async_delegation.py:`_matches_session_selectors` — Positive: owner_profile scoping is implemented as an AND over (profile match, at least one selector) rather than replacing the selector OR — so a profile-scoped interrupt can never leak across profiles on a colliding session_key/UI id, while every existing caller that omits the parameter keeps the exact legacy OR semantics (all pinned by tests, including has_live_for_session). The durable `owner_profile` column with additive ALTER TABLE and restart-recovery restore means post-crash delegations keep correct ownership too.
+
+2. Nit: the fix only protects surfaces that actually *pass* owner_profile down to interrupt_for_session/has_live_for_session. Worth a quick audit that gateway session-end and /new-reset paths in multiplex mode supply it — otherwise those callers silently retain the old cross-profile OR behavior. No change requested beyond confirming that.

@@ -1,0 +1,11 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Reviewed by reviewer-e (AI automated review).
+
+The right semantics for a real UX bug: a WS drop no longer orphans a mid-flight turn — the orphan reaper interrupts running turns (compute-host supervisor or in-process agent, clearing queued prompts under the history lock), then re-polls at 1s and only reaps once normal turn finalization settles; active delegations defer the reap; reattachment inside the grace window spares everything; and `_reuse_live_response` makes the client-gone claim + transport rebind atomic under the resume lock so a slow-path resume can't rebind a session whose interrupt is settling (clean 4009 "retry" instead). Six focused tests cover each branch including the delegation deferral and the untouched sidecar-close path. Findings:
+
+1. tui_gateway/server.py — the interrupt-then-reap poll chain (`_WS_ORPHAN_INTERRUPT_REAP_POLL_S = 1.0`) appears unbounded: if a turn never settles (agent thread hung in a syscall, supervisor lost), each fire schedules another timer forever and the detached session is parked indefinitely — trading the old leak-one-worker bug for leak-one-session-plus-timer-chain. Add a total-poll budget (e.g. N×grace or a fixed ceiling) after which you log loudly and force-reap, mirroring how the pre-existing stuck-`running` safety net used to break the deadlock.
+
+2. tui_gateway/methods_session.py — the old Stop handler contained a load-bearing safety net: when `_run_thread` was dead but `running` stayed true (crash skipped the run-loop `finally`), it force-cleared `running`/`_clear_inflight_turn` so the session couldn't be bricked at 4009 "session busy" until backend restart. That logic moved into `_interrupt_session_turn`, whose body isn't visible in this hunk — please confirm the extraction preserved the dead-thread force-clear verbatim (and ideally add a regression test for that specific desync through the new helper), since losing it would reintroduce the permanent-busy failure mode this net existed for.
+
+3. tui_gateway/server.py:_ws_session_is_orphaned — cosmetic: `session is not None` is evaluated *after* `_ws_session_is_detached(session)` has already been handed the possibly-None value (which it handles); fold the whole condition into the helper or reorder for readability.

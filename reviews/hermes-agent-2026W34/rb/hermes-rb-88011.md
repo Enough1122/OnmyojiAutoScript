@@ -1,0 +1,3 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. Overall — Positive: `max_runtime_seconds` is now surfaced consistently across every machine-readable surface (CLI create/list/show JSON, `kanban_list` summaries, `kanban_show`), with `null` for unset so consumers can distinguish "no cap" from a zero/falsey value rather than guessing. Tests cover set and unset through both CLI slash paths and the tools layer, and the docs state the field's presence and null semantics explicitly in both reference pages. No change requested.

@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. agent/trace_upload.py — Positive: the provenance principle is stated and enforced — `cwd`/`gitBranch` describe where the *session ran*, which the session row already records, so reading them from the exporting shell mislabeled transcripts (and a live `git rev-parse` reported the branch checked out *now*, not at session time). The three-state `git_branch` contract (None = probe for back-compat callers, "" = known unavailable suppresses the subprocess, value = verbatim) is exactly the right granularity, and bulk exports no longer fan out one git subprocess per session.
+
+2. Tests — Positive: the CLI-level tests assert the negative space too — the exporting process's own directory must not appear in records, no probe runs during bulk export, and a session without a recorded branch exports an empty one rather than guessing from the shell. No change requested.

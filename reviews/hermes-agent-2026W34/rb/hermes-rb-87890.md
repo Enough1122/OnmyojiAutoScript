@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. hermes_cli/config.py:`copy_config_backup` — Positive: closing the "briefly world-readable secrets backup" window matters because config backups carry API keys; keeping mkstemp's already-open descriptor through the copy eliminates the close-reopen symlink-swap race, and `os.replace` swaps the directory entry itself so a pre-planted destination symlink can't redirect secret bytes to another file (both tested — including the victim file staying untouched). Consolidating four independent shutil.copy2 call sites onto one hardened path is exactly how this should be maintained.
+
+2. Tests — Positive: the copy-time inspection asserts the temp descriptor is 0600 *before* the destination exists, symlink destinations are replaced rather than followed, managed/container/shared modes keep the permissive copy, and a copy failure leaves the previous backup intact with zero temp residue. No change requested.

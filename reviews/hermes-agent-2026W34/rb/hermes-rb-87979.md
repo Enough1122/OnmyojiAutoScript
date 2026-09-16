@@ -1,0 +1,3 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. hermes_cli/skin_engine.py — Positive: both variants are fully specified palettes (not generated overlays), the light variant is correctly registered in `LIGHT_AUTHORED` so the palette validator treats it as human-tuned, and the acid-lime accent (#C9FF38 / #31520E on light) is pinned by test. Docs table and sample mockups included. No change requested.

@@ -1,0 +1,3 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. agent/credential_pool.py:`_env_payload` — Positive: the `credential_pool_sources.<provider>` extension is scoped correctly — appended only in the else branch (never polluting canonical fixed slots), deduped against already-present names, resolved through the active secret scope so Bitwarden names work transparently, and unresolvable slots are skipped rather than fatal (both tested, including the partial-resolution case). Registering the top-level key in `_OPEN_DICT_TOP_LEVEL_KEYS` keeps `hermes config set` writable for it. No change requested.

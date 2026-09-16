@@ -1,0 +1,3 @@
+> AI code review - automated review for reference; please use your judgment.
+
+Reviewed the diff. Correct argparse repair: with `reason` declared as nargs="*" *before* --kind/--ids, any typed reason tokens greedily consumed everything after task_id, making `block <id> --kind needs_input <words>` unparseable. Moving reason to the end lets interspersed flags work while keeping bulk --ids semantics, and the new parser-level test module pins all three usage shapes (kind+reason, bare reason, kind+bulk-ids).

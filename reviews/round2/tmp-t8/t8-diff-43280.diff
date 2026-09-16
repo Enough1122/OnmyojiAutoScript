@@ -1,0 +1,79 @@
+diff --git a/packages/app/src/context/server-session.test.ts b/packages/app/src/context/server-session.test.ts
+index 2ebf5f88ef0b..fb224f1ce45c 100644
+--- a/packages/app/src/context/server-session.test.ts
++++ b/packages/app/src/context/server-session.test.ts
+@@ -267,6 +267,39 @@ describe("server session", () => {
+     expect(store.data.message.root.map((message) => message.id)).toEqual([user.id, assistant.id])
+   })
+ 
++  test("clamps oversized message requests to the server page limit", async () => {
++    const requests: { sessionID: string; limit: number; cursor?: string }[] = []
++    const all = Array.from({ length: 400 }, (_, index) => ({
++      id: `msg_${String(399 - index).padStart(3, "0")}`,
++      type: "user" as const,
++      text: "hello",
++      time: { created: 400 - index },
++    }))
++    const client = {
++      session: {
++        messages: () => {
++          throw new Error("legacy message endpoint called")
++        },
++      },
++    } as unknown as OpencodeClient
++    const messageApi = {
++      list: async (input: { sessionID: string; limit: number; cursor?: string }) => {
++        requests.push(input)
++        const start = input.cursor ? Number(input.cursor) : 0
++        const page = all.slice(start, start + input.limit)
++        const end = start + page.length
++        return { data: page, cursor: { previous: null, next: end < all.length ? String(end) : null } }
++      },
++    } as unknown as MessageApi
++    const store = createServerSession(client, {} as SessionApi, messageApi)
++    store.remember(session("root"))
++
++    await store.sync("root", { messageLimit: 400 })
++
++    expect(requests.map((request) => request.limit)).toEqual([200, 200])
++    expect(store.data.message.root).toHaveLength(400)
++  })
++
+   test("extends a current page to include the user for split assistant turns", async () => {
+     const user = { id: "msg_1_user", type: "user", text: "hello", time: { created: 1 } } as const
+     const assistant = (id: string, created: number) => ({
+diff --git a/packages/app/src/context/server-session.ts b/packages/app/src/context/server-session.ts
+index c5d98682f03c..cc34fb206fd8 100644
+--- a/packages/app/src/context/server-session.ts
++++ b/packages/app/src/context/server-session.ts
+@@ -29,6 +29,8 @@ const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)
+ const SKIP_PARTS = new Set(["patch", "step-start", "step-finish"])
+ const initialMessagePageSize = 20
+ const historyMessagePageSize = 200
++// SessionMessagesQuery in @opencode-ai/protocol rejects anything above this.
++const messagePageMax = 200
+ const sessionInfoLimit = 2_048
+ const emptyIDs: ReadonlySet<string> = new Set()
+ 
+@@ -536,14 +538,19 @@ export function createServerSession(
+ 
+   const fetchMessages = async (sessionID: string, limit: number, before?: string, onAttempt?: () => void) => {
+     if (messageApi && (await options?.protocol) !== "v1") {
++      const pageSize = Math.min(Math.max(limit, 1), messagePageMax)
+       const request = (cursor?: string) =>
+         (options?.retry ?? retry)(() => {
+           onAttempt?.()
+-          return messageApi.list(cursor ? { sessionID, limit, cursor } : { sessionID, limit, order: "desc" })
++          return messageApi.list(
++            cursor ? { sessionID, limit: pageSize, cursor } : { sessionID, limit: pageSize, order: "desc" },
++          )
+         })
+       const first = await request(before)
+       const pages = [first]
+-      while (pages.at(-1)?.cursor.next && needsOlderTurnRoot(pages.flatMap((page) => page.data).toReversed())) {
++      while (pages.at(-1)?.cursor.next) {
++        const underfilled = limit > messagePageMax && pages.reduce((total, page) => total + page.data.length, 0) < limit
++        if (!underfilled && !needsOlderTurnRoot(pages.flatMap((page) => page.data).toReversed())) break
+         const response = await request(pages.at(-1)!.cursor.next ?? undefined)
+         pages.push(response)
+         if (!response.data.length) break

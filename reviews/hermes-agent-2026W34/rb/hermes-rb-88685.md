@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. CROSS-PR GAP — please coordinate: this PR fixes `new_text` forwarding in **two** of the memory dispatch sites (`agent_runtime_helpers.invoke_tool` + `tool_executor`), but the open refactor **#88692** extracted a *third* site — `agent/tool_dispatch.py`'s `invoke_tool` memory branch — whose visible code still passes only `action/target/content/old_text/operations` (no `new_text`). Whichever of these merges second must carry the fix into all three sites, or the alias silently breaks again on the tool_dispatch path. Suggestion: add the one-line `new_text=next_args.get("new_text")` to tool_dispatch.py here (it's independent), plus a mirror of the precedence test against that path.
+
+2. Overall — Positive: the docstring nails why unit tests on `memory_tool` can't catch this (the alias resolves inside the tool; only the call sites stand between schema promise and implementation), both fixed paths are tested through real entry points, and the content-wins-when-both-set precedence test pins documented behavior rather than inventing new semantics.

@@ -1,0 +1,5 @@
+> AI code review - automated review for reference; please use your judgment.
+
+Reviewed the diff. Well-engineered suite hygiene fix for a documented 16-25 GB OOM incident: a pytest-gated WeakSet registry in SessionDB.__init__ plus an autouse teardown that closes whatever a test forgot, fixing the class at the source instead of patching ~40 files. The design notes are unusually good - why WeakSet never pins, why close() unregisters the atexit hook, why closing pre-existing instances is deliberately allowed, and why per-file spawn isolation masked the leak in CI. The companion RLIMIT_AS cap (Linux-only, env-overridable, never fails the run when setrlimit refuses) is a sensible belt-and-braces backstop.
+
+Nit: production processes never populate the registry (gated on HERMES_TEST_ISOLATION), which is correct - worth one sentence in the registry comment restating that so nobody "simplifies" the gate away.

@@ -1,0 +1,7 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. hermes_cli/mcp_config.py:586-601 — Nit: when the user *declines* the "Save config anyway?" confirm (or the fix-and-save prompt), `cmd_mcp_add` falls through to a bare `return`, so the process exits 0 — indistinguishable from a successful save for any script wrapping `hermes mcp add`. Why it matters: automation can't tell "aborted by choice" from "persisted"; the PR's whole point is making exit codes truthful. Suggestion: return 1 (or a distinct code) from declined paths too.
+
+2. hermes_cli/mcp_config.py:100-119 — Positive: switching the read-modify-write base from `load_config()` to `read_user_config_raw()` fixes a latent bug beyond the headline one — the old path re-serialized defaults, managed overlays, and expanded env refs back into the user's config.yaml on every save; and the post-write verification (re-read from disk, compare the exact entry) is the right shape for save_config()'s fire-and-forget contract, with all three call sites now branching on the result and rc propagation covered through the `cmd_mcp` wrapper test.
+
+3. tests — Positive: the `.managed` = nixos fixture exercises a real refusal mode end-to-end (no config.yaml created, message on stderr, rc 1, no "Saved" line), which pins exactly the false-success this PR eliminates. No change requested.

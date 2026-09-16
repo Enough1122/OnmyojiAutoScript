@@ -1,0 +1,866 @@
+diff --git a/gateway/platforms/base.py b/gateway/platforms/base.py
+index 6bae26aa052b..03bdfed65b97 100644
+--- a/gateway/platforms/base.py
++++ b/gateway/platforms/base.py
+@@ -1953,6 +1953,18 @@ def _log_safe_path(path: str) -> str:
+     re.IGNORECASE,
+ )
+ 
++# Image generators can return a hosted artifact and instruct delivery as
++# ``MEDIA:https://.../image.png``. Local-path MEDIA handling intentionally
++# rejects URLs, so keep this grammar separate and explicit. The receiver (or
++# platform adapter) remains responsible for bounded, SSRF-safe URI fetching.
++REMOTE_MEDIA_TAG_RE = re.compile(
++    r'''MEDIA:\s*(?P<url>https?://[^\s<>"'`]+)''',
++    re.IGNORECASE,
++)
++_REMOTE_MEDIA_IMAGE_EXTS = frozenset({
++    ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".tiff", ".svg",
++})
++
+ # Paths NOT covered by MEDIA_TAG_CLEANUP_RE's extension alternation — both
+ # extension-less files (Caddyfile, Dockerfile, Makefile) and files with an
+ # unknown extension (.py, .log, .weirdext, ...) — are validated and delivered
+@@ -4938,7 +4950,10 @@ def _mask_json_string_media(content: str) -> str:
+         # capturing the (escape-aware) string body up to the closing quote.
+         for m in re.finditer(r'(?<=[:,{\[])\s*"((?:[^"\\\n]|\\.)*)"', content):
+             seg = m.group(1)
+-            if re.search(r'MEDIA:\s*(?:~/|/|[A-Za-z]:[/\\])', seg):
++            if re.search(
++                r'MEDIA:\s*(?:~/|/|[A-Za-z]:[/\\]|https?://)', seg,
++                re.IGNORECASE,
++            ):
+                 for i in range(m.start(1), m.end(1)):
+                     if chars[i] != '\n':
+                         chars[i] = ' '
+@@ -5061,6 +5076,55 @@ def extract_media(content: str) -> Tuple[List[Tuple[str, bool]], str]:
+         
+         return media, cleaned
+ 
++    @staticmethod
++    def extract_remote_media_urls(content: str) -> Tuple[List[str], str]:
++        """Extract explicit hosted ``MEDIA:http(s)://`` attachment URLs.
++
++        Only URLs whose path ends in a normal deliverable extension are
++        consumed. Unknown URLs stay visible instead of disappearing. Query
++        strings are preserved because generated-image CDNs commonly sign URLs.
++        """
++        from urllib.parse import urlsplit
++        from tools.url_safety import is_safe_url
++
++        urls: List[str] = []
++        spans: List[Tuple[int, int]] = []
++        seen: set[str] = set()
++        masked = BasePlatformAdapter._mask_protected_spans(content)
++        masked = BasePlatformAdapter._mask_json_string_media(masked)
++        trailing = ".,;:!?)]}*_" + _MEDIA_CJK_TERMINATORS
++
++        for match in REMOTE_MEDIA_TAG_RE.finditer(masked):
++            raw_url = match.group("url")
++            url = raw_url.rstrip(trailing)
++            try:
++                parsed = urlsplit(url)
++            except ValueError:
++                continue
++            if (
++                parsed.scheme.lower() not in {"http", "https"}
++                or not parsed.netloc
++                or Path(parsed.path).suffix.lower() not in _REMOTE_MEDIA_IMAGE_EXTS
++                or not is_safe_url(url)
++            ):
++                continue
++            if url not in seen:
++                seen.add(url)
++                urls.append(url)
++            spans.append((match.start(), match.start("url") + len(url)))
++
++        if not spans:
++            return [], content
++        chars = list(content)
++        for start, end in spans:
++            for index in range(start, end):
++                if chars[index] != "\n":
++                    chars[index] = " "
++        cleaned = "".join(chars)
++        cleaned = re.sub(r"[ \t]+\n", "\n", cleaned)
++        cleaned = re.sub(r"\n{3,}", "\n\n", cleaned).strip()
++        return urls, cleaned
++
+     @staticmethod
+     def strip_media_directives_for_display(text: str) -> str:
+         """Strip MEDIA: directives from streamed/display text.
+@@ -5077,6 +5141,7 @@ def strip_media_directives_for_display(text: str) -> str:
+         ):
+             return text
+         cleaned = _strip_media_tag_directives(text)
++        _remote_urls, cleaned = BasePlatformAdapter.extract_remote_media_urls(cleaned)
+         cleaned = re.sub(r'\n{3,}', '\n\n', cleaned)
+         return cleaned.rstrip()
+ 
+@@ -6386,8 +6451,18 @@ async def _stop_typing_task() -> None:
+                 media_files, response = self.extract_media(response)
+                 media_files = self.filter_media_delivery_paths(media_files)
+ 
++                # Extract hosted MEDIA:http(s) URLs separately from local MEDIA
++                # paths. Image generators commonly return this exact shape.
++                remote_media_urls, response = self.extract_remote_media_urls(response)
++
+                 # Extract image URLs and send them as native platform attachments
+                 images, text_content = self.extract_images(response)
++                if remote_media_urls:
++                    seen_image_urls = {url for url, _alt in images}
++                    images.extend(
++                        (url, "") for url in remote_media_urls
++                        if url not in seen_image_urls
++                    )
+                 # Strip any remaining internal directives from message body (fixes #1561).
+                 # _strip_media_directives shares MEDIA_TAG_CLEANUP_RE, so a MEDIA: tag
+                 # with an unknown extension is intentionally left in the body for
+@@ -6554,6 +6629,80 @@ async def _stop_typing_task() -> None:
+                         except OSError:
+                             pass
+ 
++                # Send text + attachments as one protocol message when the live
++                # adapter exposes the optional atomic capability. Seed uses this
++                # to produce one A2A reply with TextPart + FileParts instead of a
++                # caption task followed by disconnected attachment tasks.
++                delivery_adapter = self._final_delivery_adapter(event.source)
++                atomic_file_sender = getattr(
++                    delivery_adapter, "send_message_with_files", None
++                )
++                if callable(atomic_file_sender):
++                    from typing import cast
++                    from urllib.parse import unquote as _unquote, urlsplit as _urlsplit
++
++                    atomic_file_sender = cast(
++                        Callable[..., Awaitable[SendResult]], atomic_file_sender
++                    )
++
++                    atomic_paths = [path for path, _is_voice in media_files]
++                    atomic_paths.extend(local_files)
++                    atomic_urls: List[str] = []
++                    remaining_images: List[Tuple[str, str]] = []
++                    try:
++                        atomic_params = inspect.signature(
++                            atomic_file_sender
++                        ).parameters.values()
++                        supports_file_urls = any(
++                            param.name == "file_urls"
++                            or param.kind is inspect.Parameter.VAR_KEYWORD
++                            for param in atomic_params
++                        )
++                    except (TypeError, ValueError):
++                        supports_file_urls = False
++
++                    for image_url, alt_text in images:
++                        if image_url.startswith("file://"):
++                            atomic_paths.append(_unquote(image_url[7:]))
++                        elif (
++                            supports_file_urls
++                            and _urlsplit(image_url).scheme.lower() in {"http", "https"}
++                        ):
++                            atomic_urls.append(image_url)
++                        else:
++                            remaining_images.append((image_url, alt_text))
++
++                    # Preserve order while collapsing the same attachment found
++                    # through more than one extractor.
++                    atomic_paths = list(dict.fromkeys(atomic_paths))
++                    atomic_urls = list(dict.fromkeys(atomic_urls))
++                    if atomic_paths or atomic_urls:
++                        logger.info(
++                            "[%s] Sending response with %d attachment(s) atomically to %s",
++                            delivery_adapter.name,
++                            len(atomic_paths) + len(atomic_urls),
++                            event.source.chat_id,
++                        )
++                        atomic_kwargs: Dict[str, Any] = {
++                            "chat_id": event.source.chat_id,
++                            "content": text_content,
++                            "file_paths": atomic_paths,
++                            "reply_to": _reply_anchor_for_event(event),
++                            "metadata": _final_thread_metadata,
++                        }
++                        if supports_file_urls:
++                            atomic_kwargs["file_urls"] = atomic_urls
++                        result = await atomic_file_sender(**atomic_kwargs)
++                        _record_delivery(result)
++
++                        # The atomic call owns both the caption and every source
++                        # it attempted, even on failure. Never emit a caption-only
++                        # fallback or retry the same attachment as a second task.
++                        text_content = ""
++                        media_files = []
++                        local_files = []
++                        images = remaining_images
++
+                 # Send the text portion. A reconnect may have replaced this
+                 # adapter while its in-flight handler was still producing a
+                 # final response; that response is a new message, so resolve
+diff --git a/plugins/platforms/a2a/adapter.py b/plugins/platforms/a2a/adapter.py
+index e54fa659ab6c..cfbbda109dfc 100644
+--- a/plugins/platforms/a2a/adapter.py
++++ b/plugins/platforms/a2a/adapter.py
+@@ -30,8 +30,10 @@
+ from __future__ import annotations
+ 
+ import asyncio
++import base64
+ import json
+ import logging
++import mimetypes
+ import os
+ import re
+ import sqlite3
+@@ -377,6 +379,7 @@ def __init__(self, config, **kwargs):
+         # requests sharing a context).
+         self._pending: Dict[str, tuple[str, Future]] = {}
+         self._pending_order: Dict[str, deque[str]] = {}
++        self._pending_output_parts: Dict[str, list[dict]] = {}
+         self._pending_lock = threading.Lock()
+ 
+         # Orphaned task watchdog
+@@ -649,8 +652,9 @@ def _add_pending(self, task_id: str, context_id: str) -> Future:
+             self._pending_order.setdefault(context_id, deque()).append(task_id)
+         return fut
+ 
+-    def _pop_pending(self, task_id: str) -> None:
++    def _pop_pending(self, task_id: str) -> list[dict]:
+         with self._pending_lock:
++            output_parts = self._pending_output_parts.pop(task_id, [])
+             entry = self._pending.pop(task_id, None)
+             if entry:
+                 order = self._pending_order.get(entry[0])
+@@ -661,6 +665,7 @@ def _pop_pending(self, task_id: str) -> None:
+                         pass
+                     if not order:
+                         self._pending_order.pop(entry[0], None)
++            return output_parts
+ 
+     def _resolve_task(self, task_id: str, state: str, text: str) -> bool:
+         with self._pending_lock:
+@@ -670,11 +675,19 @@ def _resolve_task(self, task_id: str, state: str, text: str) -> bool:
+                 return True
+         return False
+ 
+-    def _resolve_oldest_for_context(self, context_id: str, state: str, text: str) -> bool:
++    def _resolve_oldest_for_context(
++        self,
++        context_id: str,
++        state: str,
++        text: str,
++        output_parts: Optional[list[dict]] = None,
++    ) -> bool:
+         with self._pending_lock:
+             for task_id in self._pending_order.get(context_id, ()):
+                 entry = self._pending.get(task_id)
+                 if entry and not entry[1].done():
++                    if output_parts:
++                        self._pending_output_parts[task_id] = output_parts
+                     entry[1].set_result((state, text))
+                     return True
+         return False
+@@ -893,15 +906,21 @@ def _forward_to_profile(self, agent: dict, peer: str, context_id: str, framed_te
+                     self._title_forward_session(profile, session_id, session_title)
+             return security.redact_outbound((proc.stdout or "").strip()), protocol.STATE_COMPLETED
+ 
+-    def _finalize_task(self, pending: dict, state: str, reply: str) -> tuple[str, str]:
+-        """Record the outcome of a dispatched task. Returns (state, reply) after
+-        redaction and input-required detection."""
++    def _finalize_task(
++        self, pending: dict, state: str, reply: str
++    ) -> tuple[str, str, list[dict]]:
++        """Record a dispatched task outcome and return state, text, and Parts."""
+         task_id = pending["task_id"]
+         context_id = pending["context_id"]
+         peer = pending["peer"]
+-        self._pop_pending(task_id)
++        output_parts = self._pop_pending(task_id)
+ 
+         reply = security.redact_outbound(reply or "")
++        if output_parts:
++            output_parts = [dict(part) for part in output_parts]
++            for part in output_parts:
++                if isinstance(part.get("text"), str):
++                    part["text"] = reply
+ 
+         # The agent flags clarification requests with a leading marker; map
+         # them to the A2A input-required state so the peer knows to answer.
+@@ -921,9 +940,9 @@ def _finalize_task(self, pending: dict, state: str, reply: str) -> tuple[str, st
+         else:
+             protocol.metrics.tasks_failed += 1
+ 
+-        self.tasks.complete(task_id, state, reply)
++        self.tasks.complete(task_id, state, reply, output_parts=output_parts)
+         self._send_push_notification(task_id, context_id, reply, state)
+-        return state, reply
++        return state, reply, output_parts
+ 
+     def _await_reply(self, pending: dict, keepalive=None) -> tuple[str, str]:
+         """Block until the task's future resolves (or times out).
+@@ -953,11 +972,13 @@ def _rpc_message_send(self, req_id: Any, params: dict, peer: str, agent: Optiona
+         if terminal is not None:
+             result = protocol.send_message_response(terminal) if v1_response else terminal
+             return protocol.jsonrpc_result(req_id, result)
++        assert pending is not None
+         state, reply = self._await_reply(pending)
+-        state, reply = self._finalize_task(pending, state, reply)
++        state, reply, output_parts = self._finalize_task(pending, state, reply)
+         task = protocol.build_task(
+             pending["task_id"], pending["context_id"], state, reply,
+             created_at=pending["created_iso"],
++            output_parts=output_parts,
+         )
+         result = protocol.send_message_response(task) if v1_response else task
+         return protocol.jsonrpc_result(req_id, result)
+@@ -979,15 +1000,25 @@ def _sse_write(handler, chunk: str) -> None:
+         handler.wfile.write(chunk.encode("utf-8"))
+         handler.wfile.flush()
+ 
+-    def _emit_terminal(self, handler, task_id: str, context_id: str, state: str, reply: str,
+-                       req_id: Any = None) -> None:
++    def _emit_terminal(
++        self,
++        handler,
++        task_id: str,
++        context_id: str,
++        state: str,
++        reply: str,
++        req_id: Any = None,
++        output_parts: Optional[list[dict]] = None,
++    ) -> None:
+         """Emit the final artifact/status events and close the stream (v1.0:
+         closure signals terminal state, no ``final`` field).
+ 
+         ``req_id`` is threaded into JSON-RPC-wrapped SSE frames per §9.4."""
+-        if reply and state == protocol.STATE_COMPLETED:
++        if (reply or output_parts) and state == protocol.STATE_COMPLETED:
+             self._sse_write(handler, protocol.sse_data(
+-                protocol.artifact_update(task_id, context_id, reply), req_id))
++                protocol.artifact_update(
++                    task_id, context_id, reply, output_parts=output_parts
++                ), req_id))
+             self._sse_write(handler, protocol.sse_data(
+                 protocol.status_update(task_id, context_id, state), req_id))
+         else:
+@@ -1012,6 +1043,7 @@ def _rpc_message_stream(self, handler, req_id: Any, params: dict, peer: str, age
+                 )
+                 return
+ 
++            assert pending is not None
+             task_id, context_id = pending["task_id"], pending["context_id"]
+             self._sse_write(handler, protocol.sse_data(protocol.stream_task(
+                 protocol.build_task(task_id, context_id, protocol.STATE_SUBMITTED, created_at=pending["created_iso"])),
+@@ -1021,8 +1053,16 @@ def _rpc_message_stream(self, handler, req_id: Any, params: dict, peer: str, age
+ 
+             state, reply = self._await_reply(
+                 pending, keepalive=lambda: self._sse_write(handler, ": keepalive\n\n"))
+-            state, reply = self._finalize_task(pending, state, reply)
+-            self._emit_terminal(handler, task_id, context_id, state, reply, req_id=req_id)
++            state, reply, output_parts = self._finalize_task(pending, state, reply)
++            self._emit_terminal(
++                handler,
++                task_id,
++                context_id,
++                state,
++                reply,
++                req_id=req_id,
++                output_parts=output_parts,
++            )
+         except (BrokenPipeError, ConnectionResetError):
+             logger.debug("A2A: stream client disconnected")
+ 
+@@ -1051,7 +1091,16 @@ def _rpc_tasks_subscribe(self, handler, req_id: Any, params: dict, agent: Option
+                         state, reply = rec["state"], rec.get("reply", "")
+                         break
+                     self._sse_write(handler, ": keepalive\n\n")
+-            self._emit_terminal(handler, task_id, rec["context_id"], state, reply, req_id=req_id)
++            current = self.tasks.get(task_id, *self._scope_for_agent(agent)) or rec
++            self._emit_terminal(
++                handler,
++                task_id,
++                rec["context_id"],
++                state,
++                reply,
++                req_id=req_id,
++                output_parts=current.get("output_parts", []),
++            )
+         except (BrokenPipeError, ConnectionResetError):
+             logger.debug("A2A: subscribe client disconnected")
+ 
+@@ -1248,6 +1297,90 @@ async def send(
+             logger.debug("A2A: send() for context %s had no pending waiter", chat_id)
+         return SendResult(success=True, message_id=message_id)
+ 
++    async def send_message_with_files(
++        self,
++        chat_id: str,
++        content: str,
++        file_paths: list[str],
++        reply_to: Optional[str] = None,
++        metadata: Optional[Dict[str, Any]] = None,
++        file_urls: Optional[list[str]] = None,
++    ) -> SendResult:
++        """Fulfil one pending task with a text Part plus A2A v1 FileParts."""
++        message_id = str(int(time.time() * 1000))
++        if not (metadata or {}).get("notify"):
++            logger.debug("A2A: ignoring non-final file send for context %s", chat_id)
++            return SendResult(success=True, message_id=message_id)
++
++        from tools.url_safety import is_safe_url
++
++        parts: list[dict] = []
++        if content:
++            parts.append(protocol.text_part(content))
++        for raw_path in file_paths:
++            path = self.validate_media_delivery_path(raw_path)
++            if not path:
++                return SendResult(
++                    success=False,
++                    error="A2A FilePart path is outside the media delivery policy",
++                )
++            try:
++                size = os.path.getsize(path)
++            except OSError as exc:
++                return SendResult(success=False, error=f"A2A FilePart unreadable: {exc}")
++            if size > 25 * 1024 * 1024:
++                return SendResult(
++                    success=False,
++                    error=f"A2A FilePart exceeds 25 MiB limit: {os.path.basename(path)}",
++                )
++            try:
++                with open(path, "rb") as handle:
++                    raw = base64.b64encode(handle.read()).decode("ascii")
++            except OSError as exc:
++                return SendResult(success=False, error=f"A2A FilePart unreadable: {exc}")
++            parts.append({
++                "raw": raw,
++                "filename": os.path.basename(path),
++                "mediaType": mimetypes.guess_type(path)[0] or "application/octet-stream",
++            })
++        for raw_url in file_urls or []:
++            try:
++                parsed = urllib.parse.urlsplit(raw_url)
++            except ValueError:
++                parsed = None
++            if (
++                parsed is None
++                or parsed.scheme.lower() not in {"http", "https"}
++                or not parsed.netloc
++                or parsed.username is not None
++                or parsed.password is not None
++                or not is_safe_url(raw_url)
++            ):
++                return SendResult(
++                    success=False,
++                    error="A2A FilePart URI must be an http(s) URL without userinfo",
++                )
++            filename = os.path.basename(urllib.parse.unquote(parsed.path)) or "attachment"
++            parts.append({
++                "url": raw_url,
++                "filename": filename,
++                "mediaType": mimetypes.guess_type(parsed.path)[0] or "application/octet-stream",
++            })
++
++        if not parts:
++            return SendResult(success=False, error="A2A reply contained no text or files")
++        if not self._resolve_oldest_for_context(
++            chat_id,
++            protocol.STATE_COMPLETED,
++            content or "",
++            output_parts=parts,
++        ):
++            logger.debug(
++                "A2A: send_message_with_files() for context %s had no pending waiter",
++                chat_id,
++            )
++        return SendResult(success=True, message_id=message_id)
++
+     async def on_processing_complete(self, event: MessageEvent, outcome: ProcessingOutcome) -> None:
+         """Resolve the task future when processing ends without a reply send.
+ 
+diff --git a/plugins/platforms/a2a/protocol.py b/plugins/platforms/a2a/protocol.py
+index f1522fccb1d5..e98e309ff433 100644
+--- a/plugins/platforms/a2a/protocol.py
++++ b/plugins/platforms/a2a/protocol.py
+@@ -371,6 +371,7 @@ def build_task(
+     agent_text: str = "",
+     *,
+     created_at: str = "",
++    output_parts: Optional[list[dict]] = None,
+ ) -> dict:
+     """Build an A2A v1.0 Task object for a message/send result.
+ 
+@@ -388,11 +389,11 @@ def build_task(
+     }
+     if agent_text:
+         task["status"]["message"] = text_message(ROLE_AGENT, agent_text, context_id)
+-        if state == STATE_COMPLETED:
+-            task["artifacts"] = [{
+-                "artifactId": uuid.uuid4().hex,
+-                "parts": [text_part(agent_text)],
+-            }]
++    if state == STATE_COMPLETED and (output_parts or agent_text):
++        task["artifacts"] = [{
++            "artifactId": uuid.uuid4().hex,
++            "parts": copy.deepcopy(output_parts or [text_part(agent_text)]),
++        }]
+     return task
+ 
+ 
+@@ -408,7 +409,12 @@ def status_update(task_id: str, context_id: str, state: str, text: str = "") ->
+     return {"statusUpdate": {"taskId": task_id, "contextId": context_id, "status": status}}
+ 
+ 
+-def artifact_update(task_id: str, context_id: str, text: str) -> dict:
++def artifact_update(
++    task_id: str,
++    context_id: str,
++    text: str = "",
++    output_parts: Optional[list[dict]] = None,
++) -> dict:
+     """v1.0 StreamResponse with an artifactUpdate member."""
+     return {
+         "artifactUpdate": {
+@@ -416,7 +422,7 @@ def artifact_update(task_id: str, context_id: str, text: str) -> dict:
+             "contextId": context_id,
+             "artifact": {
+                 "artifactId": uuid.uuid4().hex,
+-                "parts": [text_part(text)],
++                "parts": copy.deepcopy(output_parts or [text_part(text)]),
+             },
+         }
+     }
+@@ -607,6 +613,7 @@ def create(self, task_id: str, context_id: str, peer: str,
+             "tenant": tenant or "",
+             "state": STATE_SUBMITTED,
+             "reply": "",
++            "output_parts": [],
+             "created_at": time.time(),
+             "created_iso": now_iso(),
+             "push_url": "",
+@@ -687,7 +694,13 @@ def get(self, task_id: str, agent_slug: str = "", tenant: str = "") -> Optional[
+                 return None
+             return dict(rec)
+ 
+-    def complete(self, task_id: str, state: str, reply: str = "") -> Optional[dict]:
++    def complete(
++        self,
++        task_id: str,
++        state: str,
++        reply: str = "",
++        output_parts: Optional[list[dict]] = None,
++    ) -> Optional[dict]:
+         """Transition a task to a terminal state. Idempotent."""
+         watchers: list[Future] = []
+         with self._lock:
+@@ -696,6 +709,7 @@ def complete(self, task_id: str, state: str, reply: str = "") -> Optional[dict]:
+                 return None
+             rec["state"] = state
+             rec["reply"] = reply
++            rec["output_parts"] = copy.deepcopy(output_parts or [])
+             rec["completed_at"] = time.time()
+             watchers = self._watchers.pop(task_id, [])
+             self._trim_locked()
+@@ -777,6 +791,7 @@ def to_task(rec: dict, history_length: Optional[int] = None, include_artifacts:
+             rec["state"],
+             rec.get("reply", ""),
+             created_at=rec.get("created_iso", ""),
++            output_parts=rec.get("output_parts", []),
+         )
+         if not include_artifacts:
+             task.pop("artifacts", None)
+diff --git a/tests/gateway/test_atomic_filepart_delivery.py b/tests/gateway/test_atomic_filepart_delivery.py
+new file mode 100644
+index 000000000000..b920515afe65
+--- /dev/null
++++ b/tests/gateway/test_atomic_filepart_delivery.py
+@@ -0,0 +1,228 @@
++"""Atomic text + attachment delivery for FilePart-capable adapters."""
++
++import asyncio
++from unittest.mock import AsyncMock
++
++from gateway.config import Platform, PlatformConfig
++from gateway.platforms.base import (
++    BasePlatformAdapter,
++    MessageEvent,
++    MessageType,
++    ProcessingOutcome,
++    SendResult,
++)
++from gateway.session import SessionSource, build_session_key
++
++
++class _AtomicAdapter(BasePlatformAdapter):
++    @property
++    def name(self) -> str:
++        return "atomic-test"
++
++    def __init__(self, *, atomic_success: bool = True):
++        super().__init__(
++            PlatformConfig(enabled=True, token="fake-token", typing_indicator=False),
++            Platform.API_SERVER,
++        )
++        self.atomic_success = atomic_success
++        self.atomic_calls: list[dict] = []
++        self.text_calls: list[dict] = []
++        self.document_calls: list[str] = []
++        self.image_calls: list[tuple[str, str]] = []
++        self.outcomes: list[ProcessingOutcome] = []
++
++    async def connect(self, *, is_reconnect: bool = False) -> bool:
++        return True
++
++    async def disconnect(self) -> None:
++        return None
++
++    async def send(self, chat_id, content, reply_to=None, metadata=None) -> SendResult:
++        self.text_calls.append({"chat_id": chat_id, "content": content})
++        return SendResult(success=True, message_id="text-1")
++
++    async def send_message_with_files(
++        self,
++        chat_id,
++        content,
++        file_paths,
++        file_urls=None,
++        reply_to=None,
++        metadata=None,
++    ) -> SendResult:
++        self.atomic_calls.append(
++            {
++                "chat_id": chat_id,
++                "content": content,
++                "file_paths": list(file_paths),
++                "file_urls": list(file_urls or []),
++                "reply_to": reply_to,
++                "metadata": metadata,
++            }
++        )
++        if self.atomic_success:
++            return SendResult(success=True, message_id="atomic-1")
++        return SendResult(success=False, error="atomic send failed")
++
++    async def send_document(
++        self,
++        chat_id,
++        file_path,
++        caption=None,
++        file_name=None,
++        reply_to=None,
++        metadata=None,
++        **kwargs,
++    ) -> SendResult:
++        self.document_calls.append(str(file_path))
++        return SendResult(success=True, message_id="doc-1")
++
++    async def send_multiple_images(
++        self,
++        chat_id,
++        images,
++        metadata=None,
++        human_delay=0.0,
++    ) -> None:
++        self.image_calls.extend(images)
++
++    async def get_chat_info(self, chat_id: str) -> dict:
++        return {"id": chat_id}
++
++    async def on_processing_complete(self, event, outcome) -> None:
++        self.outcomes.append(outcome)
++
++
++def _event() -> MessageEvent:
++    return MessageEvent(
++        text="generate an image",
++        message_type=MessageType.TEXT,
++        source=SessionSource(platform=Platform.API_SERVER, chat_id="hugin", chat_type="dm"),
++        message_id="customer-turn-1",
++    )
++
++
++def test_local_media_uses_one_atomic_text_and_file_send(tmp_path, monkeypatch):
++    image = tmp_path / "generated.png"
++    image.write_bytes(b"\x89PNG\r\n\x1a\n")
++    monkeypatch.setattr("gateway.platforms.base.MEDIA_DELIVERY_SAFE_ROOTS", (tmp_path,))
++
++    adapter = _AtomicAdapter()
++    adapter.set_message_handler(
++        AsyncMock(return_value=f"Her er billedet.\nMEDIA:{image}")
++    )
++    event = _event()
++
++    asyncio.run(
++        adapter._process_message_background(event, build_session_key(event.source))
++    )
++
++    assert len(adapter.atomic_calls) == 1
++    assert adapter.atomic_calls[0]["content"] == "Her er billedet."
++    assert adapter.atomic_calls[0]["file_paths"] == [str(image.resolve())]
++    assert adapter.atomic_calls[0]["file_urls"] == []
++    assert adapter.text_calls == []
++    assert adapter.document_calls == []
++    assert adapter.image_calls == []
++    assert adapter.outcomes == [ProcessingOutcome.SUCCESS]
++
++
++def test_remote_media_url_uses_one_atomic_text_and_filepart_uri_send():
++    url = "https://files-cdn.x.ai/generated/hugin-raven.png"
++    adapter = _AtomicAdapter()
++    adapter.set_message_handler(
++        AsyncMock(return_value=f"Her er billedet. MEDIA:{url}")
++    )
++    event = _event()
++
++    asyncio.run(
++        adapter._process_message_background(event, build_session_key(event.source))
++    )
++
++    assert len(adapter.atomic_calls) == 1
++    assert adapter.atomic_calls[0]["content"] == "Her er billedet."
++    assert adapter.atomic_calls[0]["file_paths"] == []
++    assert adapter.atomic_calls[0]["file_urls"] == [url]
++    assert adapter.text_calls == []
++    assert adapter.image_calls == []
++    assert adapter.outcomes == [ProcessingOutcome.SUCCESS]
++
++
++def test_uppercase_https_remote_media_stays_atomic():
++    url = "HTTPS://files-cdn.x.ai/generated/hugin-raven.png"
++    adapter = _AtomicAdapter()
++    adapter.set_message_handler(
++        AsyncMock(return_value=f"Her er billedet. MEDIA:{url}")
++    )
++    event = _event()
++
++    asyncio.run(
++        adapter._process_message_background(event, build_session_key(event.source))
++    )
++
++    assert len(adapter.atomic_calls) == 1
++    assert adapter.atomic_calls[0]["file_urls"] == [url]
++    assert adapter.text_calls == []
++    assert adapter.image_calls == []
++
++
++def test_non_image_remote_media_stays_visible():
++    content = "Her er rapporten. MEDIA:https://files-cdn.x.ai/report.pdf"
++
++    urls, cleaned = BasePlatformAdapter.extract_remote_media_urls(content)
++
++    assert urls == []
++    assert cleaned == content
++
++
++def test_private_remote_media_url_stays_visible_and_is_not_delivered():
++    content = "MEDIA:http://127.0.0.1/private/image.png"
++
++    urls, cleaned = BasePlatformAdapter.extract_remote_media_urls(content)
++
++    assert urls == []
++    assert cleaned == content
++
++
++def test_remote_media_directive_is_hidden_from_streaming_display():
++    url = "https://files-cdn.x.ai/generated/hugin-raven.png"
++
++    cleaned = BasePlatformAdapter.strip_media_directives_for_display(
++        f"Her er billedet. MEDIA:{url}"
++    )
++
++    assert cleaned == "Her er billedet."
++
++
++def test_remote_media_inside_serialized_tool_output_is_not_delivered():
++    content = (
++        '{"result":"Her er billedet. '
++        'MEDIA:https://files-cdn.x.ai/generated/stale.png"}'
++    )
++
++    urls, cleaned = BasePlatformAdapter.extract_remote_media_urls(content)
++
++    assert urls == []
++    assert cleaned == content
++
++
++def test_atomic_failure_does_not_emit_caption_or_split_attachment(tmp_path, monkeypatch):
++    image = tmp_path / "generated.png"
++    image.write_bytes(b"\x89PNG\r\n\x1a\n")
++    monkeypatch.setattr("gateway.platforms.base.MEDIA_DELIVERY_SAFE_ROOTS", (tmp_path,))
++
++    adapter = _AtomicAdapter(atomic_success=False)
++    adapter.set_message_handler(
++        AsyncMock(return_value=f"Her er billedet.\nMEDIA:{image}")
++    )
++    event = _event()
++
++    asyncio.run(
++        adapter._process_message_background(event, build_session_key(event.source))
++    )
++
++    assert len(adapter.atomic_calls) == 1
++    assert adapter.text_calls == []
++    assert adapter.document_calls == []
++    assert adapter.image_calls == []
++    assert adapter.outcomes == [ProcessingOutcome.FAILURE]
+diff --git a/tests/plugins/test_a2a_phase23.py b/tests/plugins/test_a2a_phase23.py
+index 933ae037c990..2fd258d80829 100644
+--- a/tests/plugins/test_a2a_phase23.py
++++ b/tests/plugins/test_a2a_phase23.py
+@@ -103,6 +103,55 @@ def _send_body(text, ctx="", method="message/send"):
+ 
+ 
+ class TestStreamResponseFormat:
++    def test_blocking_reply_carries_text_and_hosted_image_filepart(self, monkeypatch):
++        adapter, base = _make_live_adapter(monkeypatch)
++        image_url = "https://files-cdn.x.ai/generated/hugin-raven.png"
++
++        async def fake_handle_message(event):
++            await adapter.send_message_with_files(
++                event.source.chat_id,
++                "Her er billedet.",
++                [],
++                file_urls=[image_url],
++                metadata={"notify": True},
++            )
++
++        adapter.handle_message = fake_handle_message  # type: ignore
++
++        async def run():
++            assert await adapter.connect() is True
++            try:
++                response = await asyncio.to_thread(
++                    _post_json, base + "/", _send_body("lav et billede")
++                )
++                task = response["result"]
++                assert task["status"]["state"] == protocol.STATE_COMPLETED
++                expected_parts = [
++                    {"text": "Her er billedet.", "mediaType": "text/plain"},
++                    {
++                        "url": image_url,
++                        "filename": "hugin-raven.png",
++                        "mediaType": "image/png",
++                    },
++                ]
++                assert task["artifacts"][0]["parts"] == expected_parts
++
++                polled = await asyncio.to_thread(
++                    _post_json,
++                    base + "/",
++                    {
++                        "jsonrpc": "2.0",
++                        "id": "2",
++                        "method": "tasks/get",
++                        "params": {"taskId": task["id"]},
++                    },
++                )
++                assert polled["result"]["artifacts"][0]["parts"] == expected_parts
++            finally:
++                await adapter.disconnect()
++
++        asyncio.run(run())
++
+     def test_status_update_shape(self):
+         ev = protocol.status_update("task-1", "ctx-1", protocol.STATE_WORKING)
+         assert set(ev.keys()) == {"statusUpdate"}

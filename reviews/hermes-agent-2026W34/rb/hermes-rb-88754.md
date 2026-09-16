@@ -1,0 +1,3 @@
+> AI code review - automated review for reference; please use your judgment.
+
+Reviewed the diff. Pure docs correction and it matches the described behavior: the module docstring claimed colon syntax did not exist while switch_model has supported provider:model shorthand (converted to vendor/model slugs when slash-less, preserved as variant suffixes otherwise). Carries the usual contributors identity file again - unrelated to the change.

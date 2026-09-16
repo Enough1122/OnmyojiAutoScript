@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. gateway/slash_commands.py:`_save_gateway_config_key` — Positive detail: popping `_RAW_CONFIG_CACHE[str(config_path)]` after an atomic write fixes a subtle stale-read where a *same-size* edit (none→high) kept serving the old raw config to the next `/reasoning` status in the same process — exactly the kind of cache-invalidation gap that produces "I set it but nothing changed" reports.
+
+2. Overall — Positive: both commands now resolve status AND persist --global under the routed profile's home (`_profile_runtime_scope`), closing the #87939 dual-step where reads/writes landed on the default profile; the /fast tier+model resolution moved inside the same scope so a follow-up /fast can't report the default profile after a persisted write. The tests assert byte-for-byte that the default home is untouched while the routed home changes, across status reads, typed --global writes, picker callbacks, and the write-then-status sequence. No change requested.

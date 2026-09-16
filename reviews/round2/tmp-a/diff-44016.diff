@@ -1,0 +1,1332 @@
+diff --git a/.changeset/strict-shell-analysis.md b/.changeset/strict-shell-analysis.md
+new file mode 100644
+index 000000000000..ed2a71c91aa7
+--- /dev/null
++++ b/.changeset/strict-shell-analysis.md
+@@ -0,0 +1,6 @@
++---
++"@opencode-ai/core": patch
++---
++
++Harden portable shell permission analysis so unsupported syntax, hidden shell
++side effects, and unknown directory changes cannot inherit narrower approvals.
+diff --git a/packages/core/src/permission.ts b/packages/core/src/permission.ts
+index 5c35f89b9f80..9161687aedfc 100644
+--- a/packages/core/src/permission.ts
++++ b/packages/core/src/permission.ts
+@@ -42,6 +42,7 @@ export const AssertInput = Schema.Struct({
+   id: ID.pipe(Schema.optional),
+   ...RequestFields,
+   agent: Agent.ID.pipe(Schema.optional),
++  resourceMode: Schema.Literals(["wildcard", "exact"]).pipe(Schema.optional),
+ }).annotate({ identifier: "Permission.AssertInput" })
+ export type AssertInput = typeof AssertInput.Type
+ 
+@@ -117,6 +118,7 @@ export class Service extends Context.Service<Service, Interface>()("@opencode/Pe
+ interface Pending {
+   readonly request: Request
+   readonly agent?: Agent.ID
++  readonly resourceMode?: AssertInput["resourceMode"]
+   readonly deferred: Deferred.Deferred<void, DeclinedError | CorrectedError>
+ }
+ 
+@@ -177,8 +179,22 @@ const layer = Layer.effect(
+       return false
+     })
+ 
+-    function denied(input: Pick<Request, "action" | "resources">, rules: Permission.Ruleset) {
+-      return input.resources.some((resource) => evaluate(input.action, resource, rules).effect === "deny")
++    function evaluated(
++      input: Pick<AssertInput, "action" | "resourceMode">,
++      resource: string,
++      rules: Permission.Ruleset,
++    ) {
++      if (input.resourceMode !== "exact") return evaluate(input.action, resource, rules)
++      for (let index = rules.length - 1; index >= 0; index--) {
++        const rule = rules[index]
++        if (!Wildcard.match(input.action, rule.action)) continue
++        if (rule.resource === resource || rule.resource === "*" || rule.effect !== "allow") return rule
++      }
++      return { action: input.action, resource: "*", effect: "ask" as const }
++    }
++
++    function denied(input: Pick<AssertInput, "action" | "resources" | "resourceMode">, rules: Permission.Ruleset) {
++      return input.resources.some((resource) => evaluated(input, resource, rules).effect === "deny")
+     }
+ 
+     function relevant(input: AssertInput, rules: Permission.Ruleset) {
+@@ -189,7 +205,7 @@ const layer = Layer.effect(
+       const rules = yield* configured(input.sessionID, input.agent)
+       if (denied(input, rules)) return { effect: "deny" as const, rules }
+       const all = [...rules, ...(yield* savedRules())]
+-      const effects = input.resources.map((resource) => evaluate(input.action, resource, all).effect)
++      const effects = input.resources.map((resource) => evaluated(input, resource, all).effect)
+       const effect: Permission.Effect = effects.includes("deny") ? "deny" : effects.includes("ask") ? "ask" : "allow"
+       return { effect, rules: all }
+     })
+@@ -206,11 +222,11 @@ const layer = Layer.effect(
+       }
+     }
+ 
+-    const create = (request: Request, agent?: Agent.ID) =>
++    const create = (request: Request, agent?: Agent.ID, resourceMode?: AssertInput["resourceMode"]) =>
+       Effect.uninterruptible(
+         Effect.gen(function* () {
+           const deferred = yield* Deferred.make<void, DeclinedError | CorrectedError>()
+-          const item = { request, agent, deferred }
++          const item = { request, agent, resourceMode, deferred }
+           if (pending.has(request.id))
+             return yield* Effect.die(new Error(`Duplicate pending permission ID: ${request.id}`))
+           pending.set(request.id, item)
+@@ -224,7 +240,7 @@ const layer = Layer.effect(
+     const ask = Effect.fn("Permission.ask")(function* (input: AssertInput) {
+       const result = yield* evaluateInput(input)
+       const value = request(input)
+-      if (result.effect === "ask") yield* create(value, input.agent)
++      if (result.effect === "ask") yield* create(value, input.agent, input.resourceMode)
+       return { id: value.id, effect: result.effect }
+     })
+ 
+@@ -240,7 +256,7 @@ const layer = Layer.effect(
+             })
+           }
+           if (result.effect === "allow") return
+-          const item = yield* create(request(input), input.agent)
++          const item = yield* create(request(input), input.agent, input.resourceMode)
+           return yield* restore(Deferred.await(item.deferred)).pipe(
+             // Deliberate defect tunnel: leaves wrap execution in blanket `mapError`, which
+             // must not convert a user's decline into model-facing tool output. The decline
+@@ -305,12 +321,11 @@ const layer = Layer.effect(
+               Effect.catchTag("Session.NotFoundError", () => Effect.undefined),
+             )
+             if (!rules) continue
+-            if (denied(item.request, rules)) continue
++            const asserted = { ...item.request, resourceMode: item.resourceMode }
++            if (denied(asserted, rules)) continue
+             const effective = [...rules, ...rememberedRules]
+             if (
+-              !item.request.resources.every(
+-                (resource) => evaluate(item.request.action, resource, effective).effect === "allow",
+-              )
++              !item.request.resources.every((resource) => evaluated(asserted, resource, effective).effect === "allow")
+             )
+               continue
+             yield* bus.publish(Permission.Event.Replied, {
+diff --git a/packages/core/src/shell/parse.ts b/packages/core/src/shell/parse.ts
+index bfc0b047ec96..786262ddefa2 100644
+--- a/packages/core/src/shell/parse.ts
++++ b/packages/core/src/shell/parse.ts
+@@ -2,7 +2,6 @@ export * as ShellParse from "./parse.js"
+ 
+ import { Effect } from "effect"
+ import { fileURLToPath } from "url"
+-import os from "os"
+ import path from "path"
+ import type { Node } from "web-tree-sitter"
+ import { shellParserWasm } from "#shell-parser-wasm"
+@@ -10,8 +9,16 @@ import { ShellSelect } from "./select.js"
+ 
+ type Part = { type: string; text: string }
+ type SourceToken = { raw: string; value: string }
+-const CWD = new Set(["cd", "chdir", "popd", "pushd", "push-location", "set-location"])
++const CWD = new Set(["cd", "chdir", "popd", "pushd", "sl", "pop-location", "push-location", "set-location"])
+ const POWERSHELL_PATH_FLAGS = new Set(["-literalpath", "-path"])
++const PORTABLE_BASH_SHELLS = new Set(["bash", "dash", "ksh", "sh"])
++
++export type Result = {
++  commands: Array<{ resource: string; save: string }>
++  directories: string[]
++  analysis: "complete" | "opaque"
++  directoryUnknown: boolean
++}
+ 
+ const ARITY: Record<string, number> = {
+   cat: 1,
+@@ -157,9 +164,10 @@ export const scan = Effect.fnUntraced(function* (
+   command: string,
+   shell: string,
+   cwd: string,
+-  options?: { portable?: boolean },
++  options?: { portable?: boolean; env?: Record<string, string | undefined> },
+ ) {
+-  if (options?.portable) return yield* Effect.promise(() => scanPortable(command, shell, cwd))
++  if (options?.portable)
++    return yield* Effect.promise(() => scanPortable(command, shell, cwd, options.env ?? process.env))
+   return yield* scanLegacy(command, shell, cwd)
+ })
+ 
+@@ -169,7 +177,7 @@ const scanLegacy = Effect.fnUntraced(function* (command: string, shell: string,
+   const tree = (powershell ? parsers.ps : parsers.bash).parse(command)
+   if (!tree) return yield* Effect.fail(new Error("Failed to parse shell command"))
+ 
+-  return yield* Effect.acquireUseRelease(
++  const result = yield* Effect.acquireUseRelease(
+     Effect.succeed(tree),
+     (tree) =>
+       Effect.sync(() =>
+@@ -195,15 +203,34 @@ const scanLegacy = Effect.fnUntraced(function* (command: string, shell: string,
+       ),
+     (tree) => Effect.sync(() => tree.delete()),
+   )
++  return { ...result, analysis: "complete" as const, directoryUnknown: false }
+ })
+ 
+-async function scanPortable(command: string, shell: string, cwd: string) {
+-  const { ShellScan } = await import("./scan.js")
++async function scanPortable(
++  command: string,
++  shell: string,
++  cwd: string,
++  env: Record<string, string | undefined>,
++): Promise<Result> {
+   const powershell = ShellSelect.ps(shell)
++  const shellName = ShellSelect.name(shell)
++  if ((!powershell && !PORTABLE_BASH_SHELLS.has(shellName)) || shellStartupUnknown(shellName, env))
++    return {
++      commands: [{ resource: command, save: command }],
++      directories: [],
++      analysis: "opaque" as const,
++      directoryUnknown: true,
++    }
++
++  const { ShellScan } = await import("./scan.js")
+   const result = powershell ? ShellScan.scanPowerShell(command) : ShellScan.scan(command)
+-  if (result.kind === "opaque") return { commands: [{ resource: command, save: command }], directories: [] }
+-  const carriage = powershell ? command.search(/\r(?!\n)/) : -1
+-  if (carriage >= 0) return { commands: [], directories: [] }
++  if (result.kind === "opaque")
++    return {
++      commands: [{ resource: command, save: command }],
++      directories: [],
++      analysis: "opaque" as const,
++      directoryUnknown: true,
++    }
+ 
+   const parsed = result.commands.reduce(
+     (output, item) => {
+@@ -215,7 +242,7 @@ async function scanPortable(command: string, shell: string, cwd: string) {
+           : index
+       if (index >= 0) output.cursor = index + item.resource.length
+       const before = command.slice(0, Math.max(0, offset))
+-      const name = powershell ? item.words[0]?.toLowerCase() : item.words[0]
++      const name = powershell ? powerShellCommandName(item.words[0]) : item.words[0]
+       if (!name) return output
+       if (powershell && name === "<") return output
+       if (
+@@ -226,9 +253,13 @@ async function scanPortable(command: string, shell: string, cwd: string) {
+       )
+         return output
+       const tokens = powershell ? powerShellSourceTokens(item.resource) : sourceTokens(item.resource)
+-      const sourceHead = powershell ? item.words[0] : tokens.find((token) => token.value === item.words[0])?.raw
+-      if (CWD.has(name) && (powershell || sourceHead === item.words[0])) {
+-        output.directories.push(...portableDirectoryArgs(item.words, tokens, powershell, cwd, shell))
++      const location = directoryCommand(item.words, powershell)
++      if (location) {
++        output.opaque ||= /[<>]/.test(item.resource)
++        const directory = portableDirectoryArgs(location.words, tokens, powershell, cwd, shell, env, location.name)
++        output.directories.push(...directory.values)
++        output.directoryUnknown ||= directory.unknown || location.wrapped
++        output.directoryChanges++
+         return output
+       }
+       const save = powershell ? powerShellSourcePrefix(tokens, item.words) : bashSourcePrefix(tokens, item.words)
+@@ -241,10 +272,27 @@ async function scanPortable(command: string, shell: string, cwd: string) {
+     {
+       commands: [] as Array<{ resource: string; save: string }>,
+       directories: [] as string[],
++      directoryUnknown: false,
++      directoryChanges: 0,
++      opaque: false,
+       cursor: 0,
+     },
+   )
+-  return { commands: parsed.commands, directories: parsed.directories }
++  const changesDirectoryEnvironment =
++    parsed.directoryChanges > 0 && result.commands.some((item) => mutatesDirectoryEnvironment(item.words, powershell))
++  if (parsed.opaque)
++    return {
++      commands: [{ resource: command, save: command }],
++      directories: [],
++      analysis: "opaque" as const,
++      directoryUnknown: true,
++    }
++  return {
++    commands: parsed.commands,
++    directories: parsed.directories,
++    analysis: "complete" as const,
++    directoryUnknown: parsed.directoryUnknown || parsed.directoryChanges > 1 || changesDirectoryEnvironment,
++  }
+ }
+ 
+ function bashResource(resource: string, before: string) {
+@@ -333,37 +381,125 @@ function portableDirectoryArgs(
+   powershell: boolean,
+   cwd: string,
+   shell: string,
++  env: Record<string, string | undefined>,
++  name: string,
+ ) {
++  if (["popd", "pushd", "pop-location", "push-location"].includes(name)) return { values: [], unknown: true }
+   if (!powershell) {
+     const start = tokens.findIndex((token) => token.value === command[0])
+-    if (start < 0) return []
+-    return directoryArgs(
+-      tokens.slice(start).map((token) => ({ type: "word", text: token.raw })),
+-      false,
+-      cwd,
+-      shell,
++    if (start < 0) return { values: [], unknown: true }
++    const tokensAfterCommand = tokens.slice(start + 1)
++    const endOfOptions = tokensAfterCommand.findIndex((token) => token.value === "--")
++    const args = tokensAfterCommand.filter((token, index) =>
++      endOfOptions >= 0 ? index > endOfOptions : token.raw === "-" || !token.raw.startsWith("-"),
+     )
++    if (args.length === 0) {
++      const home = environment(env, "HOME")
++      if (["cd", "chdir"].includes(name) && home) return { values: [home], unknown: start > 0 }
++      return { values: [], unknown: true }
++    }
++    const values = args.map((token) => directoryArgument(token.value, false, cwd, shell, env))
++    return {
++      values: values.filter((value) => value !== undefined),
++      unknown:
++        start > 0 ||
++        args.length > 1 ||
++        values.some((value) => value === undefined) ||
++        (Boolean(environment(env, "CDPATH")) &&
++          values.some((value) => value !== undefined && !path.isAbsolute(value) && !value.startsWith("~"))),
++    }
+   }
+ 
+   const start = tokens.findIndex((token) => token.value.toLowerCase() === command[0]?.toLowerCase())
+-  if (start < 0) return []
++  if (start < 0) return { values: [], unknown: true }
+   const directories: string[] = []
++  let unknown = false
+   let expectsPath = false
++  let argumentsSeen = 0
+   for (const part of tokens.slice(start + 1).map((token) => token.raw)) {
+     if (expectsPath) {
+-      const value = directoryArgument(part, true, cwd, shell)
++      const value = directoryArgument(part, true, cwd, shell, env)
+       if (value) directories.push(value)
++      else unknown = true
++      argumentsSeen++
+       expectsPath = false
+       continue
+     }
+     if (part.startsWith("-")) {
++      const separator = part.indexOf(":")
++      if (separator > 0) {
++        const parameter = part.slice(1, separator).toLowerCase()
++        if (["literalpath", "path"].some((name) => name.startsWith(parameter))) {
++          const value = directoryArgument(part.slice(separator + 1), true, cwd, shell, env)
++          if (value) directories.push(value)
++          else unknown = true
++          argumentsSeen++
++          expectsPath = false
++          continue
++        }
++        unknown = true
++      }
+       expectsPath = POWERSHELL_PATH_FLAGS.has(part.toLowerCase())
+       continue
+     }
+-    const value = directoryArgument(part, true, cwd, shell)
++    const value = directoryArgument(part, true, cwd, shell, env)
+     if (value) directories.push(value)
++    else unknown = true
++    argumentsSeen++
+   }
+-  return directories
++  if (expectsPath) unknown = true
++  if (argumentsSeen === 0) {
++    const home = environment(env, "HOME")
++    if (["cd", "chdir", "set-location", "sl"].includes(name) && home) directories.push(home)
++    else unknown = true
++  }
++  return { values: directories, unknown }
++}
++
++function directoryCommand(words: string[], powershell: boolean) {
++  const name = powershell ? powerShellCommandName(words[0]) : words[0]
++  if (CWD.has(name)) return { name, words, wrapped: false }
++  if (powershell || !["builtin", "command"].includes(name ?? "")) return
++  const index = words.findIndex((word, index) => index > 0 && !word.startsWith("-"))
++  const wrapped = words[index]
++  if (!CWD.has(wrapped)) return
++  return { name: wrapped, words: words.slice(index), wrapped: true }
++}
++
++function mutatesDirectoryEnvironment(words: string[], powershell: boolean): boolean {
++  const powerShellName = powershell ? powerShellCommandName(words[0]) : undefined
++  if (powershell)
++    return (
++      ["clear-item", "move-item", "new-item", "remove-item", "rename-item", "set-item"].includes(
++        powerShellName ?? "",
++      ) &&
++      words.slice(1).some((word) => /^env:/i.test(word))
++    )
++
++  let index = 0
++  while (["builtin", "command"].includes(words[index] ?? "")) {
++    const name = words[index]
++    const start = words.findIndex((word, offset) => offset > index && !word.startsWith("-"))
++    if (name === "command" && words.some((option, offset) => offset > index && offset < start && /[vV]/.test(option)))
++      return false
++    if (start < 0) return false
++    index = start
++  }
++
++  const name = words[index]
++  const variable = (word: string | undefined) => /^(?:CDPATH|HOME)(?:\+?=|$)/.test(word ?? "")
++  if (["declare", "export", "local", "read", "readonly", "typeset", "unset"].includes(name ?? ""))
++    return words.some((word, offset) => offset > index && variable(word))
++  const target =
++    name === "printf" ? words[words.findIndex((word, offset) => offset > index && word === "-v") + 1] : undefined
++  return variable(target)
++}
++
++function shellStartupUnknown(shell: string, env: Record<string, string | undefined>) {
++  if (shell === "bash")
++    return Boolean(environment(env, "BASH_ENV")) || Object.keys(env).some((key) => key.startsWith("BASH_FUNC_"))
++  if (shell === "ksh") return Boolean(environment(env, "ENV"))
++  return false
+ }
+ 
+ function sourceTokens(resource: string) {
+@@ -426,12 +562,7 @@ function sourceTokens(resource: string) {
+     }
+     if (char === "\\" && index + 1 < resource.length) {
+       if (resource[index + 1] === "\n") {
+-        finish()
+-        index++
+-        continue
+-      }
+-      if (!raw && /\s/.test(resource[index + 1])) {
+-        index++
++        raw += char + resource[++index]
+         continue
+       }
+       raw += char + resource[++index]
+@@ -651,37 +782,56 @@ function directoryArgs(command: Part[], powershell: boolean, cwd: string, shell:
+   return directories
+ }
+ 
+-function directoryArgument(value: string, powershell: boolean, cwd: string, shell: string) {
++function directoryArgument(
++  value: string,
++  powershell: boolean,
++  cwd: string,
++  shell: string,
++  env: Record<string, string | undefined> = process.env,
++) {
+   const quote = value[0]
+   const text = (quote === '"' || quote === "'") && value.at(-1) === quote ? value.slice(1, -1) : value
+-  if (!powershell) return expandKnownDirectory(text)
++  if (!powershell) return expandKnownDirectory(text, env)
+ 
+   // PowerShell exposes environment variables through $env:NAME and provides these
+   // automatic directory variables. Expand only values we can determine without executing code.
+   return expandKnownDirectory(
+     text
+-      .replace(/\$\{env:([^}]+)\}/gi, (_, key: string) => environment(key) ?? "")
+-      .replace(/\$env:([A-Za-z_][A-Za-z0-9_]*)/gi, (_, key: string) => environment(key) ?? "")
++      .replace(/\$\{env:([^}]+)\}/gi, (_, key: string) => environment(env, key) ?? "")
++      .replace(/\$env:([A-Za-z_][A-Za-z0-9_]*)/gi, (_, key: string) => environment(env, key) ?? "")
+       .replace(/\$(HOME|PWD|PSHOME)(?=$|[\\/])/gi, (_, key: string) => {
+-        if (key.toUpperCase() === "HOME") return os.homedir()
++        if (key.toUpperCase() === "HOME") return environment(env, "HOME") ?? ""
+         if (key.toUpperCase() === "PWD") return cwd
+         return path.dirname(shell)
+       }),
++    env,
+   )
+ }
+ 
+-function expandKnownDirectory(value: string) {
++function expandKnownDirectory(value: string, env: Record<string, string | undefined> = process.env) {
+   // Unknown shell expressions cannot be resolved safely during permission analysis.
+-  if (value.includes("$") || value.includes("`") || value.startsWith("(")) return
+-  if (value === "~") return os.homedir()
+-  if (value.startsWith("~/") || value.startsWith("~\\")) return path.join(os.homedir(), value.slice(2))
++  if (value.includes("$") || value.includes("`") || value.startsWith("(") || value === "-") return
++  if (value === "~") return environment(env, "HOME")
++  if (value.startsWith("~/") || value.startsWith("~\\")) {
++    const home = environment(env, "HOME")
++    return home ? path.join(home, value.slice(2)) : undefined
++  }
++  if (value.startsWith("~")) return
+   return value
+ }
+ 
+-function environment(key: string) {
+-  if (process.platform !== "win32") return process.env[key]
+-  const name = Object.keys(process.env).find((item) => item.toLowerCase() === key.toLowerCase())
+-  return name ? process.env[name] : undefined
++function environment(env: Record<string, string | undefined>, key: string) {
++  if (process.platform !== "win32") return env[key]
++  const name = Object.keys(env)
++    .filter((item) => item.toLowerCase() === key.toLowerCase())
++    .sort()[0]
++  return name ? env[name] : undefined
++}
++
++function powerShellCommandName(value: string | undefined) {
++  const name = (value ?? "").toLowerCase()
++  if (/^[a-z_][a-z0-9_.-]*\\[a-z_][a-z0-9_.-]*$/i.test(name)) return name.slice(name.lastIndexOf("\\") + 1)
++  return name
+ }
+ 
+ function prefix(tokens: string[]) {
+diff --git a/packages/core/src/shell/scan.ts b/packages/core/src/shell/scan.ts
+index 495518c6290b..c16781f6255c 100644
+--- a/packages/core/src/shell/scan.ts
++++ b/packages/core/src/shell/scan.ts
+@@ -33,8 +33,18 @@ const BASH_COMPOUND_KEYWORDS = new Set([
+   "do",
+   "done",
+   "coproc",
++  "time",
++])
++const POWERSHELL_LOCATIONS = new Set([
++  "set-location",
++  "cd",
++  "chdir",
++  "sl",
++  "push-location",
++  "pushd",
++  "pop-location",
++  "popd",
+ ])
+-const POWERSHELL_LOCATIONS = new Set(["set-location", "cd", "chdir", "sl", "push-location", "pushd"])
+ const BASH_REDIRECTS = ["&>>", "&>", "<<<", "<<-", "<<", "<>", "<&", ">&", ">|", ">>", ">", "<"]
+ const MAX_BASH_INPUT_LENGTH = 64 * 1024
+ const MAX_SUBSTITUTION_DEPTH = 32
+@@ -55,7 +65,8 @@ function scanBash(input: string, depth: number): Result {
+     const separator = /^(?:&&|\|\||\|&|[;&|])/.exec(suffix)?.[0]
+     const remaining = separator ? suffix.slice(separator.length).trim() : suffix
+     if (separator && !remaining) return nested
+-    const prefixed = separator ? remaining : /^[<>]/.test(remaining) ? `: ${remaining}` : undefined
++    if (!separator && /^[<>]/.test(remaining)) return { kind: "opaque", reason: "invalid-structure" }
++    const prefixed = separator ? remaining : undefined
+     if (!prefixed) return { kind: "opaque", reason: "compound-command" }
+     const rest = scanBash(prefixed, depth + 1)
+     if (rest.kind === "opaque") return rest
+@@ -68,8 +79,10 @@ function scanBash(input: string, depth: number): Result {
+   const nestedCommands: Array<{ resource: string; words: string[] }> = []
+   const words: string[] = []
+   const assignmentWords: boolean[] = []
++  const quotedWords: boolean[] = []
+   let word = ""
+   let wordStarted = false
++  let wordQuoted = false
+   let assignmentWord = false
+   let assignmentHeadUnsafe = false
+   let segment = 0
+@@ -83,16 +96,19 @@ function scanBash(input: string, depth: number): Result {
+   let redirectTarget = false
+   let hasRedirect = false
+   let terminalBackground = false
++  let parameterExpansion = 0
+ 
+   const finishWord = () => {
+     if (!wordStarted) return
+     if (!redirectTarget) {
+       words.push(word)
+       assignmentWords.push(assignmentWord)
++      quotedWords.push(wordQuoted)
+     }
+     redirectTarget = false
+     word = ""
+     wordStarted = false
++    wordQuoted = false
+     assignmentWord = false
+     assignmentHeadUnsafe = false
+   }
+@@ -101,16 +117,20 @@ function scanBash(input: string, depth: number): Result {
+     const resource = input.slice(segment, end).trim()
+     const name = assignmentWords.findIndex((assignment) => !assignment)
+     if (name >= 0 && /[*?[]/.test(words[name])) compound = true
++    if (name >= 0 && quotedWords[name] && BASH_COMPOUND_KEYWORDS.has(words[name] ?? "")) invalidStructure = true
+     if (resource && name >= 0)
+       commands.push({
+         resource,
+         words: words.slice(name),
+       })
+-    else if (!(assignmentWords.length > 0 && assignmentWords.every(Boolean)) && (hasRedirect || boundary || separated))
+-      invalidStructure = true
++    else if (hasRedirect || boundary || separated) {
++      const assignmentOnly = assignmentWords.length > 0 && assignmentWords.every(Boolean)
++      if (!assignmentOnly || hasRedirect || boundary) invalidStructure = true
++    }
+     commands.push(...nestedCommands.splice(0))
+     words.length = 0
+     assignmentWords.length = 0
++    quotedWords.length = 0
+     separated = true
+     hasRedirect = false
+   }
+@@ -132,6 +152,8 @@ function scanBash(input: string, depth: number): Result {
+           index++
+           if (next !== "\n") word += next
+         } else word += char
++      } else if (char === "$" && input[index + 1] === "{" && bashParameterUnsafe(input, index)) {
++        return { kind: "opaque", reason: "dynamic-execution" }
+       } else if ((char === "$" && input[index + 1] === "(") || char === "`") {
+         const substitution = bashSubstitution(input, index)
+         if (!substitution || depth >= MAX_SUBSTITUTION_DEPTH) return { kind: "opaque", reason: "command-substitution" }
+@@ -152,12 +174,14 @@ function scanBash(input: string, depth: number): Result {
+     if (char === "'") {
+       quote = "single"
+       wordStarted = true
++      wordQuoted = true
+       if (!assignmentWord) assignmentHeadUnsafe = true
+       continue
+     }
+     if (char === '"') {
+       quote = "double"
+       wordStarted = true
++      wordQuoted = true
+       if (!assignmentWord) assignmentHeadUnsafe = true
+       continue
+     }
+@@ -166,6 +190,7 @@ function scanBash(input: string, depth: number): Result {
+       wordStarted = true
+       if (input[index + 1] === "\n") index++
+       else {
++        wordQuoted = true
+         if (!assignmentWord) assignmentHeadUnsafe = true
+         word += input[++index]
+       }
+@@ -182,6 +207,8 @@ function scanBash(input: string, depth: number): Result {
+       index = substitution.end
+       continue
+     }
++    if (char === "$" && input[index + 1] === "{" && bashParameterUnsafe(input, index))
++      return { kind: "opaque", reason: "dynamic-execution" }
+     if ((char === "<" || char === ">") && input[index + 1] === "(") {
+       const substitution = bashParenthesized(input, index + 1)
+       if (!substitution || depth >= MAX_SUBSTITUTION_DEPTH) return { kind: "opaque", reason: "command-substitution" }
+@@ -222,7 +249,12 @@ function scanBash(input: string, depth: number): Result {
+       index += redirect.length - 1
+       continue
+     }
+-    if ("()".includes(char) || (char === "!" && !wordStarted)) compound = true
++    const emptyBrace = (char === "{" && input[index + 1] === "}") || (char === "}" && input[index - 1] === "{")
++    if (!emptyBrace) {
++      if (char === "{" && input[index - 1] === "$") parameterExpansion++
++      else if (char === "}" && parameterExpansion > 0) parameterExpansion--
++      else if ("(){}".includes(char) || (char === "!" && !wordStarted)) compound = true
++    }
+     if (/\s/.test(char) && char !== "\n") {
+       finishWord()
+       continue
+@@ -285,10 +317,10 @@ function bashConditionalCommands(commands: Array<{ resource: string; words: stri
+       continue
+     }
+     const offset = command.resource.indexOf(keyword!) + keyword!.length
++    const trailing = command.resource.slice(offset).trim()
+     const inline =
+-      command.words.length > 1
+-        ? { resource: command.resource.slice(offset).trim(), words: command.words.slice(1) }
+-        : undefined
++      command.words.length > 1 ? { resource: trailing, words: command.words.slice(1) } : undefined
++    if (!inline && trailing) return
+     if (index === 0) {
+       if (inline) normalized.push(inline)
+       hasCommand = Boolean(inline)
+@@ -400,6 +432,7 @@ function bashSubstitution(input: string, start: number) {
+   let level = 1
+   for (let index = start + 2; index < input.length; index++) {
+     const char = input[index]
++    if (char === "$" && input[index + 1] === "{") return
+     if (quote === "single") {
+       if (char === "'") quote = undefined
+       continue
+@@ -436,6 +469,25 @@ function bashSubstitution(input: string, start: number) {
+   }
+ }
+ 
++function bashParameterUnsafe(input: string, start: number) {
++  for (let index = start + 2; index < input.length; index++) {
++    const char = input[index]
++    if (char === "\\") {
++      index++
++      continue
++    }
++    if (char === "$" && input[index + 1] === "{") return true
++    if (char !== "}") continue
++    const body = input.slice(start + 2, index)
++    if (/^[\s|!]/.test(body) || body.includes("[")) return true
++    const parameter = /^#?(?:[A-Za-z_][A-Za-z0-9_]*|[0-9]+|[-#$?*@])/.exec(body)?.[0]
++    if (!parameter) return true
++    const operator = body.slice(parameter.length)
++    return operator.startsWith(":") && !/^:[-=?+]/.test(operator)
++  }
++  return true
++}
++
+ export function scanPowerShell(input: string): Result {
+   return scanPowerShellNested(input, 0)
+ }
+@@ -443,6 +495,7 @@ export function scanPowerShell(input: string): Result {
+ function scanPowerShellNested(input: string, depth: number): Result {
+   if (input.length > MAX_BASH_INPUT_LENGTH || depth >= MAX_SUBSTITUTION_DEPTH)
+     return { kind: "opaque", reason: "invalid-structure" }
++  if (/[‘’“”]/.test(input)) return { kind: "opaque", reason: "invalid-structure" }
+   const commands: Array<{ resource: string; words: string[] }> = []
+   const nestedCommands: Array<{ resource: string; words: string[] }> = []
+   const words: string[] = []
+@@ -482,7 +535,7 @@ function scanPowerShellNested(input: string, depth: number): Result {
+         word += "'"
+         index++
+       } else if ((quote === "single" && char === "'") || (quote === "double" && char === '"')) quote = undefined
+-      else if (char === "`" && index + 1 < input.length) word += input[++index]
++      else if (quote === "double" && char === "`" && index + 1 < input.length) word += input[++index]
+       else {
+         if (quote === "double" && char === "$" && input[index + 1] === "(") dynamic = true
+         word += char
+@@ -636,6 +689,8 @@ function powerShellOpaqueReason(command: Command): OpaqueReason | undefined {
+     return "dynamic-execution"
+ 
+   const name = shellCommandName(head)
++  if (["import-alias", "ipal", "new-alias", "nal", "sal", "set-alias"].includes(name)) return "dynamic-execution"
++  if (command.words.some((word) => /^alias:/i.test(word))) return "dynamic-execution"
+   if (["return", "throw", "exit", "break", "continue"].includes(name) && command.words.length > 1)
+     return "dynamic-execution"
+   if (!POWERSHELL_LOCATIONS.has(name)) return
+diff --git a/packages/core/src/tool/plugin/shell.ts b/packages/core/src/tool/plugin/shell.ts
+index 1d91c8e58b0c..be8105c0f82b 100644
+--- a/packages/core/src/tool/plugin/shell.ts
++++ b/packages/core/src/tool/plugin/shell.ts
+@@ -208,33 +208,47 @@ export const Plugin = {
+                         Config.latest(yield* config.entries(), "experimental")?.portable_shell_scanner === true
+                       const parsed = yield* ShellParse.scan(invocation.command, invocation.shell, target.absolute, {
+                         portable,
++                        env: invocation.env,
+                       })
+-                      const directories = yield* Effect.forEach(parsed.directories, (directory) =>
+-                        mutation.resolve({ path: path.resolve(target.absolute, directory), kind: "directory" }),
+-                      )
+-                      const external = [target, ...directories]
+-                        .map((item) => item.externalDirectory)
+-                        .filter((item) => item !== undefined)
+-                        .filter(
+-                          (item, index, items) =>
+-                            items.findIndex((other) => other.resource === item.resource) === index,
+-                        )
+-                      if (external.length > 0)
++                      if (parsed.directoryUnknown)
+                         yield* permission.assert({
+                           action: "external_directory",
+-                          resources: external.map((item) => item.resource),
+-                          save: external.map((item) => item.save),
++                          resources: ["*"],
++                          save: [],
+                           sessionID: context.sessionID,
+                           agent: context.agent,
++                          resourceMode: "exact",
+                           source,
+                         })
++                      if (!parsed.directoryUnknown) {
++                        const directories = yield* Effect.forEach(parsed.directories, (directory) =>
++                          mutation.resolve({ path: path.resolve(target.absolute, directory), kind: "directory" }),
++                        )
++                        const external = [target, ...directories]
++                          .map((item) => item.externalDirectory)
++                          .filter((item) => item !== undefined)
++                          .filter(
++                            (item, index, items) =>
++                              items.findIndex((other) => other.resource === item.resource) === index,
++                          )
++                        if (external.length > 0)
++                          yield* permission.assert({
++                            action: "external_directory",
++                            resources: external.map((item) => item.resource),
++                            save: external.map((item) => item.save),
++                            sessionID: context.sessionID,
++                            agent: context.agent,
++                            source,
++                          })
++                      }
+                       if (parsed.commands.length > 0)
+                         yield* permission.assert({
+                           action: name,
+                           resources: parsed.commands.map((command) => command.resource),
+-                          save: parsed.commands.map((command) => command.save),
++                          save: parsed.analysis === "opaque" ? [] : parsed.commands.map((command) => command.save),
+                           sessionID: context.sessionID,
+                           agent: context.agent,
++                          resourceMode: parsed.analysis === "opaque" ? "exact" : undefined,
+                           source,
+                         })
+                     }
+diff --git a/packages/core/test/permission.test.ts b/packages/core/test/permission.test.ts
+index ac83bf7f28ec..7ad0846e91f6 100644
+--- a/packages/core/test/permission.test.ts
++++ b/packages/core/test/permission.test.ts
+@@ -269,6 +269,107 @@ describe("Permission", () => {
+     }),
+   )
+ 
++  it.effect("does not apply scoped wildcard allows to exact resources", () =>
++    Effect.gen(function* () {
++      yield* setup([
++        { action: "shell", resource: "*", effect: "ask" },
++        { action: "shell", resource: "echo *", effect: "allow" },
++      ])
++      const service = yield* Permission.Service
++      const resource = "echo ok; for x in 1; do touch /tmp/victim; done"
++
++      expect(
++        yield* service.ask(assertion({ action: "shell", resources: [resource], resourceMode: "wildcard" })),
++      ).toMatchObject({ effect: "allow" })
++      expect(
++        yield* service.ask(
++          assertion({
++            id: Permission.ID.create("per_exact"),
++            action: "shell",
++            resources: [resource],
++            resourceMode: "exact",
++          }),
++        ),
++      ).toMatchObject({ effect: "ask" })
++      expect(yield* service.get(Permission.ID.create("per_exact"))).not.toHaveProperty("resourceMode")
++    }),
++  )
++
++  it.effect("conservatively applies scoped denies to exact resources", () =>
++    Effect.gen(function* () {
++      yield* setup([
++        { action: "shell", resource: "*", effect: "allow" },
++        { action: "shell", resource: "touch *", effect: "deny" },
++      ])
++      const service = yield* Permission.Service
++      expect(
++        yield* service.ask(
++          assertion({
++            action: "shell",
++            resources: ["echo ok; for x in 1; do touch /tmp/victim; done"],
++            resourceMode: "exact",
++          }),
++        ),
++      ).toMatchObject({ effect: "deny" })
++
++      yield* setRules([{ action: "shell", resource: "*", effect: "allow" }])
++      expect(
++        yield* service.ask(
++          assertion({
++            id: Permission.ID.create("per_unconditional"),
++            action: "shell",
++            resources: ["echo ok; for x in 1; do touch /tmp/victim; done"],
++            resourceMode: "exact",
++          }),
++        ),
++      ).toMatchObject({ effect: "allow" })
++    }),
++  )
++
++  it.effect("does not persist wildcard-shaped exact resources", () =>
++    Effect.gen(function* () {
++      yield* setup([{ action: "shell", resource: "*", effect: "ask" }])
++      const service = yield* Permission.Service
++      yield* service.ask(assertion({ action: "shell", resources: ["*"], save: [], resourceMode: "exact" }))
++      yield* service.reply({ requestID: Permission.ID.create("per_test"), reply: "always" })
++
++      const saved = yield* PermissionSaved.Service
++      expect(yield* saved.list({ projectID: Project.ID.global })).toEqual([])
++    }),
++  )
++
++  it.effect("conservatively applies external-directory denies to unknown locations", () =>
++    Effect.gen(function* () {
++      yield* setup([
++        { action: "external_directory", resource: "*", effect: "ask" },
++        { action: "external_directory", resource: "/etc/*", effect: "deny" },
++      ])
++      const service = yield* Permission.Service
++      expect(
++        yield* service.ask(
++          assertion({ action: "external_directory", resources: ["*"], save: [], resourceMode: "exact" }),
++        ),
++      ).toMatchObject({ effect: "deny" })
++    }),
++  )
++
++  it.effect("allows an exact resource after it is explicitly saved", () =>
++    Effect.gen(function* () {
++      yield* setup([
++        { action: "shell", resource: "*", effect: "ask" },
++        { action: "shell", resource: "echo *", effect: "allow" },
++      ])
++      const resource = "echo ok; for x in 1; do touch /tmp/victim; done"
++      const saved = yield* PermissionSaved.Service
++      yield* saved.add({ projectID: Project.ID.global, action: "shell", resources: [resource] })
++
++      const service = yield* Permission.Service
++      expect(
++        yield* service.ask(assertion({ action: "shell", resources: [resource], resourceMode: "exact" })),
++      ).toMatchObject({ effect: "allow" })
++    }),
++  )
++
+   it.effect("resolves an asked permission once", () =>
+     Effect.gen(function* () {
+       yield* setup()
+diff --git a/packages/core/test/shell-parse-parity.test.ts b/packages/core/test/shell-parse-parity.test.ts
+index fd70e2ec7587..7b13bfe40ca2 100644
+--- a/packages/core/test/shell-parse-parity.test.ts
++++ b/packages/core/test/shell-parse-parity.test.ts
+@@ -9,20 +9,36 @@ describe("ShellParse portable parity", () => {
+       const scanned = shell === "pwsh" ? ShellScan.scanPowerShell(command) : ShellScan.scan(command)
+       const portable = await Effect.runPromise(ShellParse.scan(command, shell, "/workspace", { portable: true }))
+ 
+-      if (scanned.kind === "opaque") {
++      if (portable.analysis === "opaque") {
+         expect({ command, portable }).toEqual({
+           command,
+-          portable: { commands: [{ resource: command, save: command }], directories: [] },
++          portable: {
++            commands: [{ resource: command, save: command }],
++            directories: [],
++            analysis: "opaque",
++            directoryUnknown: true,
++          },
+         })
+         continue
+       }
++      if (scanned.kind === "opaque") throw new Error(`Portable parse unexpectedly completed opaque input: ${command}`)
++
++      const legacy = await Effect.runPromise(ShellParse.scan(command, shell, "/workspace"))
+       if (shell === "pwsh" && /\r(?!\n)/.test(command)) {
+-        expect(portable).toEqual({ commands: [], directories: [] })
++        expect(
++          portable.commands.length + portable.directories.length + Number(portable.directoryUnknown),
++          command,
++        ).toBeGreaterThan(0)
+         continue
+       }
+-
+-      const legacy = await Effect.runPromise(ShellParse.scan(command, shell, "/workspace"))
+-      expect({ command, portable }).toEqual({ command, portable: legacy })
++      expect({
++        command,
++        commandsCovered: portable.commands.every((item) =>
++          legacy.commands.some((candidate) => candidate.resource === item.resource),
++        ),
++      }).toEqual({ command, commandsCovered: true })
++      if (portable.commands.length !== legacy.commands.length)
++        expect(portable.directories.length + Number(portable.directoryUnknown), command).toBeGreaterThan(0)
+     }
+   })
+ })
+diff --git a/packages/core/test/shell-parse.test.ts b/packages/core/test/shell-parse.test.ts
+index 4d9bf8d7795f..13852ee78843 100644
+--- a/packages/core/test/shell-parse.test.ts
++++ b/packages/core/test/shell-parse.test.ts
+@@ -15,6 +15,8 @@ describe("ShellParse", () => {
+         { resource: "npm run test -- --watch", save: "npm run test *" },
+       ],
+       directories: [],
++      analysis: "complete",
++      directoryUnknown: false,
+     })
+   })
+ 
+@@ -42,18 +44,210 @@ describe("ShellParse", () => {
+   test("portable scanning authorizes opaque heredocs without inferring directories", async () => {
+     const command = "cat <<'EOF'\nstatic body\nEOF"
+     const portable = await Effect.runPromise(ShellParse.scan(command, "/bin/bash", "/workspace", { portable: true }))
+-    expect(portable).toEqual({ commands: [{ resource: command, save: command }], directories: [] })
++    expect(portable).toEqual({
++      commands: [{ resource: command, save: command }],
++      directories: [],
++      analysis: "opaque",
++      directoryUnknown: true,
++    })
++  })
++
++  test.each(["FOO=bar > /tmp/victim", "echo ok; for x in 1; do touch /tmp/victim; done"])(
++    "marks effectful opaque Bash input as exact and directory-unknown: %s",
++    async (command) => {
++      const portable = await Effect.runPromise(ShellParse.scan(command, "/bin/bash", "/workspace", { portable: true }))
++      expect(portable).toMatchObject({
++        analysis: "opaque",
++        directoryUnknown: true,
++        commands: [{ resource: command, save: command }],
++      })
++    },
++  )
++
++  test("keeps PowerShell carriage-return commands under authorization", async () => {
++    const portable = await Effect.runPromise(
++      ShellParse.scan("Get-ChildItem\rRemove-Item victim", "pwsh", "C:\\workspace", { portable: true }),
++    )
++    expect(portable.commands.map((command) => command.resource)).toEqual(["Get-ChildItem", "Remove-Item victim"])
+   })
+ 
+-  test.each(['c"\\d" relative', "'cd' /tmp", "c''d /tmp", "c\\\nd /tmp"])(
+-    "portable scanning keeps source-shaped command heads under shell authorization: %s",
++  test.each(["fish", "nu", "cmd.exe", "/custom/shell"])(
++    "fails closed for unsupported shell families: %s",
++    async (shell) => {
++      const command = "echo (/usr/bin/touch /tmp/victim)"
++      const portable = await Effect.runPromise(ShellParse.scan(command, shell, "/workspace", { portable: true }))
++      expect(portable).toMatchObject({
++        analysis: "opaque",
++        directoryUnknown: true,
++        commands: [{ resource: command, save: command }],
++      })
++    },
++  )
++
++  test.each(['target=/etc; cd "$target"; pwd', "cd -; pwd", "pushd; pwd"])(
++    "preserves uncertainty for unresolved directory changes: %s",
+     async (command) => {
+       const portable = await Effect.runPromise(ShellParse.scan(command, "/bin/bash", "/workspace", { portable: true }))
+-      expect(portable.commands.map((item) => item.resource)).toEqual([command])
+-      expect(portable.directories).toEqual([])
++      expect(portable.directoryUnknown).toBe(true)
+     },
+   )
+ 
++  test("resolves a zero-argument cd from the invocation environment", async () => {
++    const portable = await Effect.runPromise(
++      ShellParse.scan("cd; pwd", "/bin/bash", "/workspace", { portable: true, env: { HOME: "/session-home" } }),
++    )
++    expect(portable.directories).toEqual(["/session-home"])
++    expect(portable.directoryUnknown).toBe(false)
++  })
++
++  test.each(["'cd' /tmp", "c''d /tmp"])("recognizes quoted directory commands: %s", async (command) => {
++    const portable = await Effect.runPromise(ShellParse.scan(command, "/bin/bash", "/workspace", { portable: true }))
++    expect(portable.commands).toEqual([])
++    expect(portable.directories).toEqual(["/tmp"])
++  })
++
++  test("recognizes a line-spliced directory command", async () => {
++    const portable = await Effect.runPromise(
++      ShellParse.scan("c\\\nd /tmp", "/bin/bash", "/workspace", { portable: true }),
++    )
++    expect(portable.commands).toEqual([])
++    expect(portable.directories).toEqual(["/tmp"])
++    expect(portable.directoryUnknown).toBe(false)
++  })
++
++  test("resolves line splices inside directory operands", async () => {
++    const portable = await Effect.runPromise(
++      ShellParse.scan("cd before\\\nafter", "/bin/bash", "/workspace", { portable: true }),
++    )
++    expect(portable.directories).toEqual(["beforeafter"])
++    expect(portable.directoryUnknown).toBe(false)
++  })
++
++  test.each(["command cd /tmp", "builtin cd /tmp"])(
++    "keeps wrapped Bash directory commands uncertain: %s",
++    async (command) => {
++      const portable = await Effect.runPromise(ShellParse.scan(command, "/bin/bash", "/workspace", { portable: true }))
++      expect(portable.commands).toEqual([])
++      expect(portable.directoryUnknown).toBe(true)
++    },
++  )
++
++  test("keeps redirected directory changes under exact shell authorization", async () => {
++    const command = "cd . > victim"
++    const portable = await Effect.runPromise(ShellParse.scan(command, "/bin/bash", "/workspace", { portable: true }))
++    expect(portable).toEqual({
++      commands: [{ resource: command, save: command }],
++      directories: [],
++      analysis: "opaque",
++      directoryUnknown: true,
++    })
++  })
++
++  test("does not widen saved permissions across line splices", async () => {
++    const portable = await Effect.runPromise(
++      ShellParse.scan("rm\\\necho harmless", "/bin/bash", "/workspace", { portable: true }),
++    )
++    expect(portable.commands).toEqual([{ resource: "rm\\\necho harmless", save: "rm\\\necho *" }])
++  })
++
++  test("does not widen saved permissions across escaped leading whitespace", async () => {
++    const portable = await Effect.runPromise(
++      ShellParse.scan("\\ rm harmless", "/bin/bash", "/workspace", { portable: true }),
++    )
++    expect(portable.commands).toEqual([{ resource: "\\ rm harmless", save: "\\ rm *" }])
++  })
++
++  test("keeps a genuinely different quoted command under shell authorization", async () => {
++    const command = 'c"\\d" relative'
++    const portable = await Effect.runPromise(ShellParse.scan(command, "/bin/bash", "/workspace", { portable: true }))
++    expect(portable.commands.map((item) => item.resource)).toEqual([command])
++    expect(portable.directories).toEqual([])
++  })
++
++  test.each(["sl C:\\outside", "Microsoft.PowerShell.Management\\Set-Location C:\\outside"])(
++    "recognizes PowerShell location aliases and module-qualified commands: %s",
++    async (command) => {
++      const portable = await Effect.runPromise(ShellParse.scan(command, "pwsh", "C:\\workspace", { portable: true }))
++      expect(portable.commands).toEqual([])
++      expect(portable.directories).toEqual(["C:\\outside"])
++    },
++  )
++
++  test("extracts colon-separated PowerShell path parameters", async () => {
++    const portable = await Effect.runPromise(
++      ShellParse.scan("Set-Location -LiteralPath:/etc", "pwsh", "C:\\workspace", {
++        portable: true,
++        env: { HOME: "C:\\workspace" },
++      }),
++    )
++    expect(portable.commands).toEqual([])
++    expect(portable.directories).toEqual(["/etc"])
++    expect(portable.directoryUnknown).toBe(false)
++  })
++
++  test("keeps leading-hyphen Bash directory operands", async () => {
++    const portable = await Effect.runPromise(
++      ShellParse.scan("cd -- -/../../../etc; cat passwd", "/bin/bash", "/tmp/project", {
++        portable: true,
++        env: { HOME: "/tmp/project" },
++      }),
++    )
++    expect(portable.directories).toEqual(["-/../../../etc"])
++    expect(portable.directoryUnknown).toBe(false)
++  })
++
++  test("keeps session CDPATH and sequential directory changes uncertain", async () => {
++    const cdpath = await Effect.runPromise(
++      ShellParse.scan("cd foo; pwd", "/bin/bash", "/workspace", {
++        portable: true,
++        env: { HOME: "/home/test", CDPATH: "/outside" },
++      }),
++    )
++    expect(cdpath.directoryUnknown).toBe(true)
++
++    const sequential = await Effect.runPromise(
++      ShellParse.scan("cd deep; cd ../../denied; pwd", "/bin/bash", "/workspace", { portable: true }),
++    )
++    expect(sequential.directoryUnknown).toBe(true)
++  })
++
++  test.each([
++    ["export H''OME=/etc; cd; cat passwd", "/bin/bash", { HOME: "/workspace" }],
++    ["builtin export H''OME=/etc; cd; cat passwd", "/bin/bash", { HOME: "/workspace" }],
++    ["command export H''OME=/etc; cd; cat passwd", "/bin/bash", { HOME: "/workspace" }],
++    ["command builtin export H''OME=/etc; cd; cat passwd", "/bin/bash", { HOME: "/workspace" }],
++    ["Set-Item Env:T /etc; Set-Location $env:T; Get-Content passwd", "pwsh", { HOME: "/workspace", T: "/workspace" }],
++  ] as const)("keeps same-invocation directory environment mutation uncertain: %s", async (command, shell, env) => {
++    const portable = await Effect.runPromise(ShellParse.scan(command, shell, "/workspace", { portable: true, env }))
++    expect(portable.directoryUnknown).toBe(true)
++  })
++
++  test.each(["command -v export HOME=/etc; cd", "command -V export HOME=/etc; cd"])(
++    "keeps query-only Bash wrappers statically resolved: %s",
++    async (command) => {
++      const portable = await Effect.runPromise(
++        ShellParse.scan(command, "/bin/bash", "/workspace", { portable: true, env: { HOME: "/workspace" } }),
++      )
++      expect(portable.directories).toEqual(["/workspace"])
++      expect(portable.directoryUnknown).toBe(false)
++    },
++  )
++
++  test.each([
++    ["/bin/bash", { HOME: "/workspace", BASH_ENV: "/tmp/hook" }],
++    ["/bin/zsh", { HOME: "/tmp/hooks" }],
++    ["/bin/ksh", { HOME: "/workspace", ENV: "/tmp/hook" }],
++  ] as const)("fails closed for shell startup hooks: %s", async (shell, env) => {
++    const command = "echo safe"
++    const portable = await Effect.runPromise(ShellParse.scan(command, shell, "/workspace", { portable: true, env }))
++    expect(portable).toEqual({
++      commands: [{ resource: command, save: command }],
++      directories: [],
++      analysis: "opaque",
++      directoryUnknown: true,
++    })
++  })
++
+   test("splits PowerShell commands case-insensitively", async () => {
+     const result = await Effect.runPromise(
+       ShellParse.scan(
+@@ -73,6 +267,8 @@ describe("ShellParse", () => {
+     expect(result).toEqual({
+       commands: [{ resource: "git status", save: "git status *" }],
+       directories: ["src dir"],
++      analysis: "complete",
++      directoryUnknown: false,
+     })
+   })
+ 
+diff --git a/packages/core/test/shell-scan/adversarial.test.ts b/packages/core/test/shell-scan/adversarial.test.ts
+index b03b7b2543ec..9fda3f7099f2 100644
+--- a/packages/core/test/shell-scan/adversarial.test.ts
++++ b/packages/core/test/shell-scan/adversarial.test.ts
+@@ -6,7 +6,6 @@ describe("ShellScan adversarial corpus", () => {
+     ['FOO=bar BAR="x y" git status', ["git"]],
+     ["git status && npm test || printf failed", ["git", "npm", "printf"]],
+     [`printf '%s\\n' "$(rm -rf /)"`, ["printf", "rm"]],
+-    ["echo ${arr[$(rm -rf /)]}", ["echo", "rm"]],
+     ["cat <(printf secret)", ["cat", "printf"]],
+     ["(git status)", ["git"]],
+     ["{ git status; }", ["git"]],
+@@ -46,6 +45,7 @@ describe("ShellScan adversarial corpus", () => {
+     "echo $((1 + 2))",
+     "f(){ rm -rf /; }; f",
+     "! rm -rf /",
++    "echo ${arr[$(rm -rf /)]}",
+   ])("keeps structurally uncertain Bash input opaque: %s", (input) => {
+     expect(ShellScan.scan(input).kind).toBe("opaque")
+   })
+diff --git a/packages/core/test/shell-scan/generated.test.ts b/packages/core/test/shell-scan/generated.test.ts
+index 2d1300a6a7b6..597f6e836b39 100644
+--- a/packages/core/test/shell-scan/generated.test.ts
++++ b/packages/core/test/shell-scan/generated.test.ts
+@@ -71,7 +71,6 @@ describe("ShellScan generated properties", () => {
+   test("keeps wrappers and shell evaluators at their delegated boundary", () => {
+     const prefixes = ["", "FOO=bar ", "FOO=bar BAR=baz "]
+     const wrapped = [
+-      "time git status",
+       "command git status",
+       "builtin printf ok",
+       "exec git status",
+@@ -90,6 +89,7 @@ describe("ShellScan generated properties", () => {
+ 
+     for (const prefix of prefixes) {
+       for (const command of wrapped) expect(ShellScan.scan(prefix + command).kind).toBe("scanned")
++      expect(ShellScan.scan(`${prefix}time git status`).kind).toBe("opaque")
+     }
+   })
+ })
+diff --git a/packages/core/test/shell-scan/scan.test.ts b/packages/core/test/shell-scan/scan.test.ts
+index 34d202614279..c31a0cfcc701 100644
+--- a/packages/core/test/shell-scan/scan.test.ts
++++ b/packages/core/test/shell-scan/scan.test.ts
+@@ -122,7 +122,6 @@ describe("ShellScan", () => {
+     ["(git status)", ["git"]],
+     ["{ git status; }", ["git"]],
+     ["{ rm -rf /; } &", ["rm"]],
+-    ["{ rm -rf /; } >out", ["rm"]],
+     ["{ rm -rf /; }; echo safe", ["rm", "echo"]],
+     ["if true; then rm -rf /; else echo safe; fi", ["true", "rm", "echo"]],
+     ["if true; then rm x; elif false; then echo y; else echo z; fi", ["true", "rm", "false", "echo", "echo"]],
+@@ -186,6 +185,33 @@ describe("ShellScan", () => {
+   test("does not invent a command for assignment-only input", () => {
+     expect(ShellScan.scan("FOO=bar")).toEqual({ kind: "scanned", commands: [] })
+   })
++
++  test("fails closed when assignment-only statements affect later commands", () => {
++    expect(ShellScan.scan("PATH=.; git status").kind).toBe("opaque")
++  })
++
++  test.each(["echo ${url:-http://example.test}", "printf '%s' \"${PATH//:/$'\\n'}\""])(
++    "keeps non-executing parameter expansions scannable: %s",
++    (command) => expect(ShellScan.scan(command).kind).toBe("scanned"),
++  )
++
++  test.each([
++    "FOO=bar > /tmp/victim",
++    ":; { touch /tmp/victim; }",
++    "t{ouch,ouch} /tmp/victim",
++    "{fd}>/tmp/log touch /tmp/victim",
++    "time touch /tmp/victim",
++    "printf '%s' \"$(printf safe ${x%)}; touch /tmp/victim)\"",
++    'echo "${ /usr/bin/touch /tmp/victim; }"',
++    "s=abc; x='a[$(touch /tmp/victim)0]'; printf '%s' \"${s:x}\"",
++    "ref='x[$(touch /tmp/victim)0]'; printf '%s' \"${!ref}\"",
++    `printf '%s' "${"${".repeat(1000)}x${"}".repeat(1000)}"`,
++    "{ echo safe; } > /tmp/victim",
++    "if true; then echo safe; fi > /tmp/victim",
++    "if true; then :; 'if' victim; fi",
++  ])("fails closed when Bash can execute an unreported side effect: %s", (command) => {
++    expect(ShellScan.scan(command).kind).toBe("opaque")
++  })
+ })
+ 
+ describe("ShellScan PowerShell", () => {
+@@ -276,6 +302,17 @@ describe("ShellScan PowerShell", () => {
+     })
+   })
+ 
++  test("does not treat backticks as escapes in verbatim strings", () => {
++    const result = ShellScan.scanPowerShell("Write-Output 'safe`'; Remove-Item victim; '`'")
++    expect(result.kind).toBe("scanned")
++    if (result.kind === "opaque") return
++    expect(result.commands.map((command) => command.words[0])).toContain("Remove-Item")
++  })
++
++  test("fails closed for PowerShell smart quotes", () => {
++    expect(ShellScan.scanPowerShell("Write-Output 'safe’; Remove-Item victim; ‘tail'").kind).toBe("opaque")
++  })
++
+   test("excludes PowerShell redirects and their targets from words", () => {
+     expect(ShellScan.scanPowerShell("Get-Content in.txt > out.txt 2>&1 | Out-File all.log")).toEqual({
+       kind: "scanned",
+@@ -295,6 +332,10 @@ describe("ShellScan PowerShell", () => {
+     "Get-ChildItem |",
+     "Set-Location $target; git status",
+     "Set-Location $(Resolve-Path ..); git status",
++    "Set-Alias jump Set-Location; jump /etc; Get-Content passwd",
++    "Set-Item alias:jump Set-Location; jump /etc; Get-Content passwd",
++    "Import-Alias ./aliases.csv; jump /etc; Get-Content passwd",
++    "ipal ./aliases.csv; jump /etc; Get-Content passwd",
+   ])("returns opaque for dynamic PowerShell execution: %s", (command) => {
+     expect(ShellScan.scanPowerShell(command).kind).toBe("opaque")
+   })
+diff --git a/packages/core/test/tool-shell.test.ts b/packages/core/test/tool-shell.test.ts
+index a2576e9f9ce2..12c168c80b55 100644
+--- a/packages/core/test/tool-shell.test.ts
++++ b/packages/core/test/tool-shell.test.ts
+@@ -542,14 +542,13 @@ describe("ShellTool", () => {
+     { timeout: 15_000 },
+   )
+ 
+-  it.live("does not add external-directory permission for an experimental portable heredoc", () =>
++  it.live("fails closed for an experimental portable heredoc", () =>
+     Effect.acquireUseRelease(
+       Effect.promise(() => tmpdir()),
+       (tmp) =>
+         Effect.gen(function* () {
+           if (isWindows) return
+           reset()
+-          denyAction = "external_directory"
+           yield* Effect.promise(() =>
+             Bun.write(
+               path.join(tmp.path, "opencode.json"),
+@@ -560,7 +559,9 @@ describe("ShellTool", () => {
+             executeTool(registry, call({ command: "cat <<'EOF'\nhello\nEOF" }, "call-portable-heredoc")),
+           )
+           expect(settled.status).toBe("completed")
+-          expect(assertions.map((item) => item.action)).toEqual(["shell"])
++          expect(assertions.map((item) => item.action)).toEqual(["external_directory", "shell"])
++          expect(assertions[0]).toMatchObject({ resources: ["*"], save: [], resourceMode: "exact" })
++          expect(assertions[1]).toMatchObject({ save: [], resourceMode: "exact" })
+           expect(settled.content?.[0]).toMatchObject({ type: "text", text: "hello\n" })
+         }),
+       (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]().then(() => undefined)),
+diff --git a/packages/www/content/docs/(Configure)/permissions.mdx b/packages/www/content/docs/(Configure)/permissions.mdx
+index d8f41e345717..de241deb8173 100644
+--- a/packages/www/content/docs/(Configure)/permissions.mdx
++++ b/packages/www/content/docs/(Configure)/permissions.mdx
+@@ -141,8 +141,18 @@ permission scanner. The default remains the tree-sitter scanner.
+ ```
+ 
+ When enabled, the portable scanner is authoritative and tree-sitter is not
+-consulted. Unsupported syntax, including heredocs, requests permission for the
+-original shell command without inferring external directories.
++consulted. It analyzes Bash-compatible shells (`bash`, `dash`, `ksh`, and `sh`)
++and PowerShell. Other shells and unsupported syntax, including heredocs, are
++treated as opaque. `zsh` is opaque because it always loads `.zshenv`; shell
++startup-hook environments such as `BASH_ENV` and `ENV` are also opaque because
++they can execute code outside the submitted command.
++
++Opaque input requests permission for the complete original command. A scoped
++wildcard allow such as `echo *` cannot authorize opaque input; only an exact
++rule, a previously saved exact approval, or an unconditional action-wide allow
++can do so. Opaque prompts are one-time and cannot create a saved approval.
++Because opaque input may also hide a directory change, it requests unknown
++external-directory access without offering to save that broad access.
+ 
+ ## Defaults
+ 

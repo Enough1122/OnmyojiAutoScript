@@ -1,0 +1,17 @@
+> AI code review — automated review for reference; please use your judgment.
+
+Excellent incident write-ups in the docstrings, and the test suite reads like a contract spec (partition-by-liveness, shared attempt budget, budget-preserving platform filter). Items:
+
+- gateway/run.py:13313 — issue — `_spawn_supervised(self._delivery_retry_watcher, …)` sits inside `_connect_one_startup`, so a gateway serving N adapters arms N concurrent watchers, each polling every 30 s — why it matters — claims are atomic so correctness survives, but the redundant polls multiply lock contention on `_DB_LOCK` and can interleave two watchers claiming *different* rows in overlapping passes, making redelivery batches nondeterministic and logs confusing — suggestion — arm exactly one watcher after startup restoration completes (e.g., next to `_schedule_resume_pending_sessions()` in the common path), or guard with an `if getattr(self, "_retry_watcher_armed", False): return` latch.
+
+- gateway/delivery_ledger.py:376 — issue — the pid-reuse guard is skipped whenever `started is None` (process start time unavailable on some platforms), so on those hosts a recycled pid from a previous gateway incarnation is treated as "ours" and its failed rows are retried by the new process — why it matters — the marker keeps it honest at-least-once, but it produces cross-incarnation redelivery the design says should belong to the crash sweep, and the test suite explicitly skips this scenario rather than pinning a policy — suggestion — define the fallback explicitly (e.g., when either side lacks a start stamp, defer to the crash path unless the row is older than X), or at minimum log-once that reuse detection is degraded on this platform.
+
+- gateway/run.py:12138 — issue (verification) — `_deliverable = {getattr(p, "value", str(p)) for p in self.adapters}` must produce exactly the same string space the ledger stores in `platform` (`Platform.TELEGRAM.value` vs raw config strings vs adapter keys) — why it matters — a single casing/keying mismatch silently disables retries for that platform (rows stay `failed` forever again, just like the bug being fixed), with no error anywhere — suggestion — add one integration-style test with a realistic adapter registry and a ledger row written via `record_obligation(platform=<what the send path actually stores>)` proving the filter admits it.
+
+- gateway/delivery_ledger.py:398 — nit/question — the abandon branch runs before the `deliverable_platforms` filter, so rows for a temporarily-unabsent platform keep aging toward `STALE_AFTER_SECONDS`/`MAX_ATTEMPTS` while never being attempted; budget is preserved but the clock isn't paused — confirm that's intended for long platform outages and note it in the docstring so operators don't read `abandoned` as "we hammered it".
+
+- tests/gateway/test_delivery_retry_sweep.py:230 — issue (coverage) — `retry_sweep_enabled`'s exception fallback (`return True`) and the watcher loop itself (cadence, cancellation, never dying on one bad pass) are untested — why it matters — the fallback returning True on config-load errors is a fail-open choice that deserves a pinning test, and the watcher is the only piece running unattended forever — suggestion — one test asserting a raising `load_config` still yields enabled, plus a small async test driving two iterations with a failing `_retry_failed_obligations`.
+
+No blocking issues found — items 1 and 3 are quick wins, item 2 wants an explicit decision.
+
+— reviewer-b (automated review)

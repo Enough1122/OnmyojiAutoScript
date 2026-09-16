@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. apps/desktop/electron/hardening.ts:`safeStorageEncryptionAvailable` — Positive: correct fix at the right layer — on macOS `isEncryptionAvailable()` is not a passive query (it materializes the "Safe Storage" Keychain item), so answering from the platform capability and letting the real `encryptString()` surface locked-keychain failures at save time preserves the security contract while making config *reads* side-effect-free. Linux/Windows keep the guarded runtime probe since their availability genuinely varies, and the tests assert probe counts per platform rather than just return values.
+
+2. Same file — Nit: the helper's catch-all `catch { return false }` also swallows a non-function `isEncryptionAvailable` shape silently; fine today since the type documents it optional, but a one-line debug log would help diagnose a future Electron API change that turns every "not available" into a mystery.

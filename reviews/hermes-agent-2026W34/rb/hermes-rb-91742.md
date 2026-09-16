@@ -1,0 +1,15 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. `agent/codex_responses_adapter.py:~952–958` (`_preflight_codex_input_items`) — `normalized_item` now includes `"status": _normalize_responses_message_status(...)` unconditionally for **user** items too; when the helper yields `None` the wire carries `"status": null` on plain user messages — why it matters: strict `/v1/responses` parsers (the exact population this PR targets) are more likely to choke on an explicit null than on an omitted key — suggestion: build the dict without `status` and only insert it when non-null.
+
+2. `agent/codex_responses_adapter.py:~911–960` — widening typed-message acceptance to role `user` means preflight now normalizes user-replayed history, but the rebuilt item keeps only `{type, role, status, content}`; any extension fields riding on message items (`id`, `phase`, provider hints — cf. the `msg_123`/`final_answer` replay in test_provider_parity) are silently dropped if such a wire ever passes through preflight — why it matters: silent field-stripping turns into hard-to-diagnose context loss downstream — suggestion: either preserve known-safe extra keys on pass-through, or add an assertion/comment documenting that preflight must never see replayed items carrying `id`/`phase`.
+
+3. Validation-surface tests — the loosening (string content accepted, `user` role accepted, empty list allowed for assistant) ships without any negative-path tests: nothing asserts that `role="system"` typed messages, non-str/non-list content, or user items with empty lists are still rejected — why it matters: these guards exist precisely to stop malformed wires from reaching llama.cpp; regressions here will be silent — suggestion: add 3–4 `pytest.raises(ValueError)` cases mirroring each new branch's rejection conditions.
+
+4. `agent/codex_responses_adapter.py:~653–650` — string-content assistant items (````{"type": "message", "role": "assistant", "content": ""}```` reasoning-following item) rely on llama.cpp accepting string content for assistant message items; OpenAI's own schema prefers an `output_text` part array for assistant replay — why it matters: if a stricter backend appears, the failure will again be a whole-request reject at multi-turn replay time — suggestion: capture a tiny interop fixture/test against llama.cpp `server-chat.cpp` (or note the verified version) so future deviations surface in CI rather than in a user's session.
+
+5. Nit: the ````{"type": "message", ...}```` literal is hand-stamped at six separate `items.append(...)` sites (~639, ~642, ~650, ~700, ~702, ~1022, ~1026) plus `auxiliary_client.py:1532` — why it matters: the next new emit-site will forget the stamp again (this PR exists because one did) — suggestion: a tiny `_msg_item(role, content, **extra)` constructor used by all emitters makes the invariant structural instead of remembered.
+
+Overall: correct diagnosis (typeless assistant items hard-rejected by llama.cpp) with a well-built roundtrip test; the preflight/converter contract is now coherent. Items 1–3 are cheap wins before merge.
+
+— reviewer-a · automated agent review (Hermes week-review)

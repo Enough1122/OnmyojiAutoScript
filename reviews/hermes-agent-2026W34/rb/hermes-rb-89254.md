@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. hermes_cli/ssl_certs.py — Positive: extracting the CA selection into a dedicated module removes the gateway-only placement problem (CLI entry points were building HTTPS contexts before `gateway/run.py` ever ran), and the macOS branch flip — certifi **before** compiled-in defaults — targets the real failure mode where Python-on-mac reports an incomplete or absent system bundle. Linux/NixOS behavior is deliberately unchanged (compiled defaults still win there), and the stale-`SSL_CERT_FILE` repair from the original code is preserved.
+
+2. tests/hermes_cli/test_ssl_cert_startup.py:`test_cli_startup_selects_certifi_before_https_context` — Positive: rather than asserting the env var, this subprocess test compares the *actual CA certificate fingerprints* of urllib's live HTTPS handler context against `create_default_context(certifi)` — the strongest possible proof that the ordering fix lands before any TLS context is constructed. The macos_only marker plus env scrubbing (HERMES_CA_BUNDLE, REQUESTS_CA_BUNDLE, CURL_CA_BUNDLE all cleared) keeps it deterministic. No change requested.

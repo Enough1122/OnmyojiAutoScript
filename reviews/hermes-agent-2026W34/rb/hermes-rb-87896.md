@@ -1,0 +1,3 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. hermes_cli/pt_input_extras.py:`install_modified_cursor_key_aliases` — Positive: registering every `CSI 1;<mod>{A,B,C,D,H,F}` variant with `setdefault` is exactly right — user/downstream mappings win, plain sequences stay untouched, and the idempotency test pins that. The tests drive the *real* Vt100Parser rather than asserting dict contents, including the exact reported four-arrow leak sequence. The docstring's bitmask explanation (1..16 combos plus 129..144 keypad-flag ORs) documents why each range exists. No change requested.

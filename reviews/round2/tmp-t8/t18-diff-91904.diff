@@ -1,0 +1,157 @@
+diff --git a/apps/desktop/src/components/assistant-ui/thread/assistant-message.test.tsx b/apps/desktop/src/components/assistant-ui/thread/assistant-message.test.tsx
+index 82f1f44b549a..efea141607f4 100644
+--- a/apps/desktop/src/components/assistant-ui/thread/assistant-message.test.tsx
++++ b/apps/desktop/src/components/assistant-ui/thread/assistant-message.test.tsx
+@@ -12,6 +12,7 @@ import { $displayTimestamps } from '@/store/display-timestamps'
+ 
+ import { stubThreadEnvironment } from '../test-utils'
+ 
++import { isOwnerDirectedAssistantText } from './assistant-message'
+ import { formatTimelineRange, formatTimelineTimestamp } from './timestamp'
+ 
+ import { Thread } from '.'
+@@ -27,11 +28,11 @@ afterEach(() => {
+   cleanup()
+ })
+ 
+-function userMessage(): ThreadMessage {
++function userMessage(content = 'question one'): ThreadMessage {
+   return {
+     id: 'user-1',
+     role: 'user',
+-    content: [{ type: 'text', text: 'question one' }],
++    content: [{ type: 'text', text: content }],
+     attachments: [],
+     createdAt,
+     metadata: { custom: { timelineTimestamp: createdAt.getTime() / 1000 } }
+@@ -70,13 +71,15 @@ function assistantMessage(): ThreadMessage {
+ 
+ function Harness({
+   assistant = assistantMessage(),
++  user = userMessage(),
+   onBranchInNewChat
+ }: {
+   assistant?: ThreadMessage
++  user?: ThreadMessage
+   onBranchInNewChat?: (messageId: string) => void
+ }) {
+   const runtime = useExternalStoreRuntime<ThreadMessage>({
+-    messages: [userMessage(), assistant],
++    messages: [user, assistant],
+     isRunning: false,
+     onNew: async () => {}
+   })
+@@ -88,6 +91,50 @@ function Harness({
+   )
+ }
+ 
++describe('inter-agent assistant audience handling', () => {
++  it('recognizes owner-directed report markers', () => {
++    expect(isOwnerDirectedAssistantText('【给 Kuro 的独立汇报】\nDone.')).toBe(true)
++    expect(isOwnerDirectedAssistantText('[for you]\nDone.')).toBe(true)
++    expect(isOwnerDirectedAssistantText('For you: Done.')).toBe(true)
++    expect(isOwnerDirectedAssistantText('Ordinary reply to the other bot.')).toBe(false)
++  })
++
++  it('keeps owner-directed reports visible instead of collapsing them under the triggering bot', async () => {
++    render(
++      <Harness
++        assistant={
++          {
++            ...assistantMessage(),
++            content: [{ text: '【给 Kuro 的独立汇报】\nOwner-visible report.', type: 'text' }]
++          } as unknown as ThreadMessage
++        }
++        user={userMessage('Message from 🤖 reviewer (@reviewer): PASS relay')}
++      />
++    )
++
++    expect(await screen.findByText('For you')).toBeTruthy()
++    expect(await screen.findByText(/Owner-visible report/)).toBeTruthy()
++    expect(screen.queryByText('Replied to reviewer')).toBeNull()
++  })
++
++  it('still collapses ordinary inter-agent replies', async () => {
++    render(
++      <Harness
++        assistant={
++          {
++            ...assistantMessage(),
++            content: [{ text: 'ACK, reviewer.', type: 'text' }]
++          } as unknown as ThreadMessage
++        }
++        user={userMessage('Message from 🤖 reviewer (@reviewer): PASS relay')}
++      />
++    )
++
++    expect(await screen.findByText('Replied to reviewer')).toBeTruthy()
++    expect(screen.queryByText('For you')).toBeNull()
++  })
++})
++
+ describe('AssistantMessage branch button visibility (bug #2 fix)', () => {
+   it('shows the Branch in new chat button when a handler is provided (open chat)', async () => {
+     render(<Harness onBranchInNewChat={() => undefined} />)
+diff --git a/apps/desktop/src/components/assistant-ui/thread/assistant-message.tsx b/apps/desktop/src/components/assistant-ui/thread/assistant-message.tsx
+index f2cfdc09c11d..98c27ea2bad2 100644
+--- a/apps/desktop/src/components/assistant-ui/thread/assistant-message.tsx
++++ b/apps/desktop/src/components/assistant-ui/thread/assistant-message.tsx
+@@ -50,6 +50,13 @@ const EMPTY_PARTS: readonly unknown[] = []
+ // constant MESSAGE_PARTS_COMPONENTS, so nothing per-message is captured here.
+ const MESSAGE_PARTS = <MessagePrimitive.Parts components={MESSAGE_PARTS_COMPONENTS} />
+ 
++export const OWNER_DIRECTED_ASSISTANT_RE =
++  /^(?:【\s*(?:给|給)\s*[^】\n]{1,64}?\s*的\s*(?:独立汇报|獨立匯報|汇报|匯報|报告|報告)\s*】|\[(?:for you|owner report|to owner)\]|(?:for you|to (?:the )?owner)\s*[:：—-])/iu
++
++export function isOwnerDirectedAssistantText(text: string): boolean {
++  return OWNER_DIRECTED_ASSISTANT_RE.test(text.trim())
++}
++
+ interface MessageActionProps {
+   messageId: string
+   /** Lazy accessor — reads the live message text at action time. Passing the
+@@ -147,20 +154,30 @@ const InterAgentCollapsedNotice: FC<{ sender: string }> = ({ sender }) => (
+  */
+ const InterAgentAssistantMessage: FC<AssistantMessageProps & { sender: string }> = ({ sender, ...props }) => {
+   const isRunning = useAuiState(s => s.message.status?.type === 'running')
++  const isOwnerDirected = useAuiState(s => isOwnerDirectedAssistantText(messageContentText(s.message.content as never)))
+ 
+   return (
+     <AssistantMessageBody
+       {...props}
+-      collapsedNotice={isRunning ? null : <InterAgentCollapsedNotice sender={sender} />}
++      audienceBadge={isOwnerDirected ? <OwnerDirectedBadge /> : null}
++      collapsedNotice={isRunning || isOwnerDirected ? null : <InterAgentCollapsedNotice sender={sender} />}
+     />
+   )
+ }
+ 
+-const AssistantMessageBody: FC<AssistantMessageProps & { collapsedNotice?: null | ReactNode }> = ({
+-  collapsedNotice = null,
+-  onBranchInNewChat,
+-  onDismissError
+-}) => {
++const OwnerDirectedBadge: FC = () => (
++  <div
++    className="mb-1 inline-flex w-fit items-center gap-1 rounded-full border border-(--ui-stroke-tertiary) bg-(--ui-control-background) px-2 py-0.5 text-[0.6875rem] font-medium leading-4 text-(--ui-text-secondary)"
++    data-slot="aui_owner-directed-badge"
++  >
++    <Codicon aria-hidden name="person" size="0.75rem" />
++    <span>For you</span>
++  </div>
++)
++
++const AssistantMessageBody: FC<
++  AssistantMessageProps & { audienceBadge?: null | ReactNode; collapsedNotice?: null | ReactNode }
++> = ({ audienceBadge = null, collapsedNotice = null, onBranchInNewChat, onDismissError }) => {
+   const messageId = useAuiState(s => s.message.id)
+   const messageRuntime = useMessageRuntime()
+   const { t } = useI18n()
+@@ -218,6 +235,7 @@ const AssistantMessageBody: FC<AssistantMessageProps & { collapsedNotice?: null
+             className="wrap-anywhere min-w-0 max-w-full overflow-hidden text-pretty text-[length:var(--conversation-text-font-size)] leading-(--dt-line-height) text-foreground"
+             data-slot="aui_assistant-message-content"
+           >
++            {audienceBadge}
+             {/* Todos render in the composer status stack now, not inline. */}
+             {MESSAGE_PARTS}
+             <AssistantStatusSlot />

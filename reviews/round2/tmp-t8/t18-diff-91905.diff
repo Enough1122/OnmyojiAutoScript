@@ -1,0 +1,529 @@
+diff --git a/cli.py b/cli.py
+index b53906386ac3..94bfa9d4726b 100644
+--- a/cli.py
++++ b/cli.py
+@@ -488,6 +488,7 @@ def load_cli_config() -> Dict[str, Any]:
+ 
+         "display": {
+             "compact": False,
++            "banner": True,
+             "resume_display": "full",
+             # Recap tuning for /resume — see hermes_cli/config.py DEFAULT_CONFIG.
+             "resume_exchanges": 10,
+@@ -5012,6 +5013,7 @@ def __init__(
+         self.console = Console()
+         self.config = CLI_CONFIG
+         self.compact = compact if compact is not None else CLI_CONFIG["display"].get("compact", False)
++        self.banner_enabled = bool(CLI_CONFIG["display"].get("banner", True))
+         # tool_progress: "off", "new", "all", "verbose" (from config.yaml display section)
+         # YAML 1.1 parses bare `off` as boolean False — normalise to string.
+         _raw_tp = CLI_CONFIG["display"].get("tool_progress", "all")
+@@ -8362,8 +8364,12 @@ def finalize_preloaded_skills(self) -> None:
+             ).strip()
+             self.preloaded_skills = loaded_skills
+ 
+-    def show_banner(self):
+-        """Display the welcome banner in Claude Code style."""
++    def show_banner(self, *, show_chrome: bool = True):
++        """Display welcome chrome and always surface operational notices."""
++        if not show_chrome:
++            self._show_startup_notices()
++            return
++
+         self.console.clear()
+         ctx_len = None
+         if hasattr(self, 'agent') and self.agent and hasattr(self.agent, 'context_compressor'):
+@@ -8473,6 +8479,13 @@ def _refresh_banner_snapshot() -> None:
+                 except Exception:
+                     logger.debug("banner snapshot save failed", exc_info=True)
+         
++        self._show_startup_notices(ctx_len)
++
++    def _show_startup_notices(self, ctx_len=None):
++        """Surface startup warnings independently of optional welcome chrome."""
++        if ctx_len is None and hasattr(self, 'agent') and self.agent and hasattr(self.agent, 'context_compressor'):
++            ctx_len = self.agent.context_compressor.context_length
++
+         # Tool discovery is intentionally deferred on the Termux bare prompt
+         # path; availability warnings are shown once tools are initialized.
+         # On the snapshot fast path (warm launch), the check walks every
+@@ -11872,25 +11885,26 @@ def process_command(self, command: str) -> bool:
+             # and gets mangled by patch_stdout).
+             if self._app:
+                 cc = ChatConsole()
+-                term_w = shutil.get_terminal_size().columns
+-                if self.compact or term_w < 80:
+-                    cc.print(_build_compact_banner())
+-                else:
+-                    tools = get_tool_definitions(enabled_toolsets=self.enabled_toolsets, quiet_mode=True)
+-                    cwd = os.getenv("TERMINAL_CWD", os.getcwd())
+-                    ctx_len = None
+-                    if hasattr(self, 'agent') and self.agent and hasattr(self.agent, 'context_compressor'):
+-                        ctx_len = self.agent.context_compressor.context_length
+-                    build_welcome_banner(
+-                        console=cc,
+-                        model=self.model,
+-                        cwd=cwd,
+-                        tools=tools,
+-                        enabled_toolsets=self.enabled_toolsets,
+-                        session_id=self.session_id,
+-                        context_length=ctx_len,
+-                        provider=self.provider,
+-                    )
++                if self.banner_enabled:
++                    term_w = shutil.get_terminal_size().columns
++                    if self.compact or term_w < 80:
++                        cc.print(_build_compact_banner())
++                    else:
++                        tools = get_tool_definitions(enabled_toolsets=self.enabled_toolsets, quiet_mode=True)
++                        cwd = os.getenv("TERMINAL_CWD", os.getcwd())
++                        ctx_len = None
++                        if hasattr(self, 'agent') and self.agent and hasattr(self.agent, 'context_compressor'):
++                            ctx_len = self.agent.context_compressor.context_length
++                        build_welcome_banner(
++                            console=cc,
++                            model=self.model,
++                            cwd=cwd,
++                            tools=tools,
++                            enabled_toolsets=self.enabled_toolsets,
++                            session_id=self.session_id,
++                            context_length=ctx_len,
++                            provider=self.provider,
++                        )
+                 _cprint("  ✨ (◕‿◕)✨ Fresh start! Screen cleared and conversation reset.\n")
+                 # Show a random tip on new session
+                 try:
+@@ -11905,7 +11919,7 @@ def process_command(self, command: str) -> bool:
+                 except Exception:
+                     pass
+             else:
+-                self.show_banner()
++                self.show_banner(show_chrome=self.banner_enabled)
+                 print("  ✨ (◕‿◕)✨ Fresh start! Screen cleared and conversation reset.\n")
+                 # Show a random tip on new session
+                 try:
+@@ -17359,14 +17373,15 @@ def run(self):
+         # responses, and prompt all appear pinned to the bottom — empty
+         # space stays above, not below.  This prints enough blank lines to
+         # scroll the cursor to the last row before any content is rendered.
+-        try:
+-            _term_lines = shutil.get_terminal_size().lines
+-            if _term_lines > 2:
+-                print("\n" * (_term_lines - 1), end="", flush=True)
+-        except Exception:
+-            pass
++        if self.banner_enabled:
++            try:
++                _term_lines = shutil.get_terminal_size().lines
++                if _term_lines > 2:
++                    print("\n" * (_term_lines - 1), end="", flush=True)
++            except Exception:
++                pass
+ 
+-        self.show_banner()
++        self.show_banner(show_chrome=self.banner_enabled)
+         # Surface any active supply-chain security advisories right after the
+         # welcome banner. Quiet/single-query paths call this themselves.
+         self._show_security_advisories()
+diff --git a/hermes_cli/config_defaults.py b/hermes_cli/config_defaults.py
+index 2de954030719..41e2cf6a12d4 100644
+--- a/hermes_cli/config_defaults.py
++++ b/hermes_cli/config_defaults.py
+@@ -1267,6 +1267,8 @@
+     
+     "display": {
+         "compact": False,
++        # Show welcome/session chrome in interactive CLI and TUI surfaces.
++        "banner": True,
+         "personality": "",
+         "resume_display": "full",
+         # Recap tuning for /resume and startup resume. The defaults match the
+diff --git a/tests/cli/test_cli_context_warning.py b/tests/cli/test_cli_context_warning.py
+index 2fe11647ea6b..aed003be24d7 100644
+--- a/tests/cli/test_cli_context_warning.py
++++ b/tests/cli/test_cli_context_warning.py
+@@ -59,6 +59,28 @@ def test_warning_for_below_minimum_context(self, cli_obj):
+         minimum_calls = [c for c in calls if f"{MINIMUM_CONTEXT_LENGTH:,}" in c]
+         assert minimum_calls
+ 
++    def test_disabled_banner_keeps_operational_warnings(self, cli_obj):
++        """Banner suppression hides chrome, not tool/model/runtime warnings."""
++        cli_obj.agent.context_compressor.context_length = 32768
++
++        with patch.object(cli_obj, "_show_tool_availability_warnings") as tool_warnings, \
++             patch("cli.build_welcome_banner") as welcome_banner, \
++             patch("hermes_cli.model_switch.is_nous_hermes_non_agentic", return_value=True), \
++             patch("agent.skill_utils.get_project_skills_dirs", return_value=[]), \
++             patch(
++                 "agent.skill_utils.get_untrusted_project_skills_root",
++                 return_value=("/repo/.hermes/skills", 2),
++             ):
++            cli_obj.show_banner(show_chrome=False)
++
++        tool_warnings.assert_called_once_with()
++        welcome_banner.assert_not_called()
++        cli_obj.console.clear.assert_not_called()
++        output = "\n".join(str(call) for call in cli_obj.console.print.call_args_list)
++        assert "too low" in output
++        assert "NOT agentic" in output
++        assert "hermes skills trust" in output
++
+ 
+     def test_warning_for_2048_context(self, cli_obj):
+         """Warning shown for 2048 tokens (common LM Studio default)."""
+diff --git a/tests/cli/test_cli_new_session.py b/tests/cli/test_cli_new_session.py
+index f35e218b6ff4..925f2d4e5660 100644
+--- a/tests/cli/test_cli_new_session.py
++++ b/tests/cli/test_cli_new_session.py
+@@ -243,6 +243,18 @@ def test_clear_command_starts_new_session_before_redrawing(tmp_path):
+     assert cli.conversation_history == []
+ 
+ 
++def test_clear_command_suppresses_banner_when_disabled(tmp_path):
++    cli = _prepare_cli_with_active_session(tmp_path)
++    cli.console = MagicMock()
++    cli.show_banner = MagicMock()
++    cli.banner_enabled = False
++
++    cli.process_command("/clear")
++
++    cli.console.clear.assert_called_once()
++    cli.show_banner.assert_called_once_with(show_chrome=False)
++
++
+ def test_new_session_resets_token_counters(tmp_path):
+     """Regression test for #2099: /new must zero all token counters."""
+     cli = _prepare_cli_with_active_session(tmp_path)
+diff --git a/tests/tui_gateway/test_display_banner.py b/tests/tui_gateway/test_display_banner.py
+new file mode 100644
+index 000000000000..57f3ed239f08
+--- /dev/null
++++ b/tests/tui_gateway/test_display_banner.py
+@@ -0,0 +1,23 @@
++"""Behavioral coverage for the interactive banner preference."""
++
++from unittest.mock import patch
++
++from hermes_cli.config_defaults import DEFAULT_CONFIG
++from tui_gateway import server
++
++
++def test_banner_defaults_to_enabled_for_compatibility():
++    assert DEFAULT_CONFIG["display"].get("banner", True) is True
++
++
++def test_tui_gateway_resolves_disabled_banner_from_config():
++    with patch.object(server, "_load_cfg", return_value={"display": {"banner": False}}):
++        assert server.resolve_banner_enabled() is False
++
++
++def test_tui_gateway_defaults_banner_on_for_missing_or_invalid_display():
++    with patch.object(server, "_load_cfg", return_value={}):
++        assert server.resolve_banner_enabled() is True
++
++    with patch.object(server, "_load_cfg", return_value={"display": "invalid"}):
++        assert server.resolve_banner_enabled() is True
+diff --git a/tui_gateway/entry.py b/tui_gateway/entry.py
+index 00b801011b30..795b79c13341 100644
+--- a/tui_gateway/entry.py
++++ b/tui_gateway/entry.py
+@@ -437,7 +437,11 @@ def main():
+         "params": {
+             "type": "gateway.ready",
+             # change_events: see tui_gateway/ws.py — clients demote legacy polls.
+-            "payload": {"skin": resolve_skin(), "change_events": True},
++            "payload": {
++                "skin": resolve_skin(),
++                "banner_enabled": server.resolve_banner_enabled(),
++                "change_events": True,
++            },
+         },
+     }):
+         _log_exit("startup write failed (broken stdout pipe before first event)")
+diff --git a/tui_gateway/server.py b/tui_gateway/server.py
+index 48d8039c53e7..7c6d28e9503f 100644
+--- a/tui_gateway/server.py
++++ b/tui_gateway/server.py
+@@ -3746,6 +3746,14 @@ def resolve_skin() -> dict:
+         return {}
+ 
+ 
++def resolve_banner_enabled() -> bool:
++    """Return the interactive banner preference for TUI boot payloads."""
++    display = _load_cfg().get("display")
++    if not isinstance(display, dict):
++        return True
++    return bool(display.get("banner", True))
++
++
+ # Signature of the last skin broadcast: (name, active user-file mtime). Lets the
+ # per-tool reconcile fire ``skin.changed`` on any real move — a name switch OR a
+ # live color edit to the active skin — and nothing else.
+diff --git a/tui_gateway/ws.py b/tui_gateway/ws.py
+index 1afaba0991a1..3c2695237a55 100644
+--- a/tui_gateway/ws.py
++++ b/tui_gateway/ws.py
+@@ -341,6 +341,7 @@ async def handle_ws(
+         # (#60800). The skin payload is small (a dict of strings/arrays),
+         # so the to_thread overhead is negligible.
+         skin_payload = await asyncio.to_thread(server.resolve_skin)
++        banner_enabled = await asyncio.to_thread(server.resolve_banner_enabled)
+         ready_ok = await transport.write_async(
+             {
+                 "jsonrpc": "2.0",
+@@ -350,7 +351,11 @@ async def handle_ws(
+                     # change_events: this backend broadcasts pet.changed /
+                     # cron.changed / sessions.changed, so clients can demote
+                     # their legacy polls to slow backstops.
+-                    "payload": {"skin": skin_payload, "change_events": True},
++                    "payload": {
++                        "skin": skin_payload,
++                        "banner_enabled": banner_enabled,
++                        "change_events": True,
++                    },
+                 },
+             }
+         )
+diff --git a/ui-tui/src/__tests__/createGatewayEventHandler.test.ts b/ui-tui/src/__tests__/createGatewayEventHandler.test.ts
+index d36dbfa224a1..a82276cc6c9c 100644
+--- a/ui-tui/src/__tests__/createGatewayEventHandler.test.ts
++++ b/ui-tui/src/__tests__/createGatewayEventHandler.test.ts
+@@ -1001,6 +1001,19 @@ describe('createGatewayEventHandler', () => {
+     expect(resumeById).not.toHaveBeenCalled()
+   })
+ 
++  it('removes intro chrome when gateway.ready disables banners', () => {
++    const ctx = buildCtx([])
++    const onEvent = createGatewayEventHandler(ctx)
++    const intro = { kind: 'intro' as const, role: 'system' as const, text: '' }
++    const user = { role: 'user' as const, text: 'hello' }
++
++    onEvent({ payload: { banner_enabled: false }, type: 'gateway.ready' } as any)
++
++    expect(getUiState().bannerEnabled).toBe(false)
++    const update = ctx.transcript.setHistoryItems.mock.calls[0][0]
++    expect(update([intro, user])).toEqual([user])
++  })
++
+   it('on gateway.ready after a crash, resumes the recovered session once and skips forge', async () => {
+     const appended: Msg[] = []
+     const newSession = vi.fn()
+diff --git a/ui-tui/src/__tests__/useSessionLifecycle.test.ts b/ui-tui/src/__tests__/useSessionLifecycle.test.ts
+index f214aa183533..e0c1d6dabe6e 100644
+--- a/ui-tui/src/__tests__/useSessionLifecycle.test.ts
++++ b/ui-tui/src/__tests__/useSessionLifecycle.test.ts
+@@ -14,6 +14,30 @@ import {
+   signalFreshSessionBoundary,
+   writeActiveSessionFile
+ } from '../app/useSessionLifecycle.js'
++import { withSessionIntro } from '../domain/messages.js'
++
++describe('session intro visibility', () => {
++  const info = { version: 'test' } as any
++  const messages = [{ role: 'user' as const, text: 'hello' }]
++
++  it('prepends the intro when banners are enabled', () => {
++    expect(withSessionIntro(info, messages, true).map(message => message.kind ?? message.role)).toEqual([
++      'intro',
++      'user'
++    ])
++  })
++
++  it('keeps a placeholder intro while session info is loading', () => {
++    expect(withSessionIntro(null, messages, true).map(message => message.kind ?? message.role)).toEqual([
++      'intro',
++      'user'
++    ])
++  })
++
++  it('preserves the transcript without an intro when banners are disabled', () => {
++    expect(withSessionIntro(info, messages, false)).toBe(messages)
++  })
++})
+ 
+ describe('fresh session boundary', () => {
+   it('signals only when a live session is replaced by a different session', () => {
+diff --git a/ui-tui/src/app/createGatewayEventHandler.ts b/ui-tui/src/app/createGatewayEventHandler.ts
+index 78fb1ed5c33f..cdd384b8646e 100644
+--- a/ui-tui/src/app/createGatewayEventHandler.ts
++++ b/ui-tui/src/app/createGatewayEventHandler.ts
+@@ -5,6 +5,7 @@ import { forceRedraw, onTerminalBackground, onTerminalForeground } from '@hermes
+ import { STARTUP_IMAGE, STARTUP_QUERY } from '../config/env.js'
+ import { STREAM_BATCH_MS } from '../config/timing.js'
+ import { buildSetupRequiredSections, SETUP_REQUIRED_TITLE } from '../content/setup.js'
++import { withSessionIntro } from '../domain/messages.js'
+ import type {
+   CommandsCatalogResponse,
+   ConfigFullResponse,
+@@ -759,6 +760,16 @@ export function createGatewayEventHandler(ctx: GatewayEventHandlerContext): (ev:
+ 
+     switch (ev.type) {
+       case 'gateway.ready':
++        patchUiState({ bannerEnabled: ev.payload?.banner_enabled !== false })
++        setHistoryItems(previous => {
++          const withoutIntro = previous.filter(message => message.kind !== 'intro')
++
++          if (ev.payload?.banner_enabled === false) {
++            return withoutIntro
++          }
++
++          return withSessionIntro(getUiState().info, withoutIntro, true)
++        })
+         handleReady(ev.payload?.skin)
+ 
+         return
+diff --git a/ui-tui/src/app/interfaces.ts b/ui-tui/src/app/interfaces.ts
+index 1a4cfbc5657c..8413fa544ea4 100644
+--- a/ui-tui/src/app/interfaces.ts
++++ b/ui-tui/src/app/interfaces.ts
+@@ -316,6 +316,7 @@ export interface TranscriptRow {
+ }
+ 
+ export interface UiState {
++  bannerEnabled: boolean
+   battery: boolean
+   batteryStatus: BatteryInfo | null
+   bgTasks: Set<string>
+diff --git a/ui-tui/src/app/slash/commands/session.ts b/ui-tui/src/app/slash/commands/session.ts
+index bc072ec3802e..4f89692a12f6 100644
+--- a/ui-tui/src/app/slash/commands/session.ts
++++ b/ui-tui/src/app/slash/commands/session.ts
+@@ -1,5 +1,5 @@
+ import { usageBarsText } from '../../../components/overlayPrimitives.js'
+-import { introMsg, toTranscriptMessages } from '../../../domain/messages.js'
++import { toTranscriptMessages, withSessionIntro } from '../../../domain/messages.js'
+ import { sessionScopedModelArg, TUI_SESSION_MODEL_FLAG } from '../../../domain/slash.js'
+ import type {
+   BackgroundStartResponse,
+@@ -17,7 +17,7 @@ import type { PanelSection } from '../../../types.js'
+ import { applyConfiguredTuiTheme } from '../../createGatewayEventHandler.js'
+ import { DEFAULT_INDICATOR_STYLE, INDICATOR_STYLES, type IndicatorStyle } from '../../interfaces.js'
+ import { patchOverlayState } from '../../overlayStore.js'
+-import { patchUiState } from '../../uiStore.js'
++import { getUiState, patchUiState } from '../../uiStore.js'
+ import type { SlashCommand } from '../types.js'
+ 
+ const USAGE_CTA = 'Run /subscription to change plan · /topup to add to your balance'
+@@ -229,7 +229,7 @@ export const sessionCommands: SlashCommand[] = [
+             if (Array.isArray(r.messages)) {
+               const rows = toTranscriptMessages(r.messages)
+ 
+-              ctx.transcript.setHistoryItems(r.info ? [introMsg(r.info), ...rows] : rows)
++              ctx.transcript.setHistoryItems(withSessionIntro(r.info ?? null, rows, getUiState().bannerEnabled))
+             }
+ 
+             if (r.info) {
+diff --git a/ui-tui/src/app/uiStore.ts b/ui-tui/src/app/uiStore.ts
+index 581d576a48db..7f4a6255196d 100644
+--- a/ui-tui/src/app/uiStore.ts
++++ b/ui-tui/src/app/uiStore.ts
+@@ -8,6 +8,7 @@ import { DEFAULT_THEME } from '../theme.js'
+ import { DEFAULT_INDICATOR_STYLE, type UiState } from './interfaces.js'
+ 
+ const buildUiState = (): UiState => ({
++  bannerEnabled: true,
+   battery: false,
+   batteryStatus: null,
+   bgTasks: new Set(),
+diff --git a/ui-tui/src/app/useMainApp.ts b/ui-tui/src/app/useMainApp.ts
+index 00eeab2ec198..0c43c71cefb8 100644
+--- a/ui-tui/src/app/useMainApp.ts
++++ b/ui-tui/src/app/useMainApp.ts
+@@ -181,7 +181,7 @@ export function useMainApp(gw: GatewayClient) {
+     }
+   }, [stdout])
+ 
+-  const [historyItems, setHistoryItemsState] = useState<Msg[]>(() => [{ kind: 'intro', role: 'system', text: '' }])
++  const [historyItems, setHistoryItemsState] = useState<Msg[]>([])
+   const [historyGeneration, setHistoryGeneration] = useState(0)
+ 
+   const setHistoryItems = useCallback<StateSetter<Msg[]>>(value => {
+diff --git a/ui-tui/src/app/useSessionLifecycle.ts b/ui-tui/src/app/useSessionLifecycle.ts
+index cc6d29d162ab..0bf28c6c3cd7 100644
+--- a/ui-tui/src/app/useSessionLifecycle.ts
++++ b/ui-tui/src/app/useSessionLifecycle.ts
+@@ -5,7 +5,7 @@ import { evictInkCaches } from '@hermes/ink'
+ import { type RefObject, useCallback, useEffect, useMemo, useRef } from 'react'
+ 
+ import { buildSetupRequiredSections, SETUP_REQUIRED_TITLE } from '../content/setup.js'
+-import { introMsg, toTranscriptMessages } from '../domain/messages.js'
++import { toTranscriptMessages, withSessionIntro } from '../domain/messages.js'
+ import { ZERO } from '../domain/usage.js'
+ import { type GatewayClient } from '../gatewayClient.js'
+ import type {
+@@ -173,7 +173,7 @@ export function useSessionLifecycle(opts: UseSessionLifecycleOptions) {
+       turnController.turnTools = []
+       turnController.persistedToolLabels.clear()
+ 
+-      setHistoryItems(info ? [introMsg(info)] : [])
++      setHistoryItems(withSessionIntro(info, [], getUiState().bannerEnabled))
+       setStickyPrompt('')
+       setLastUserMsg('')
+       composerActions.setComposerTokens([])
+@@ -222,9 +222,7 @@ export function useSessionLifecycle(opts: UseSessionLifecycleOptions) {
+         usage: usageFrom(info)
+       })
+ 
+-      if (info) {
+-        setHistoryItems([introMsg(info)])
+-      }
++      setHistoryItems(withSessionIntro(info, [], getUiState().bannerEnabled))
+ 
+       if (info?.credential_warning) {
+         sys(`warning: ${info.credential_warning}`)
+@@ -305,7 +303,7 @@ export function useSessionLifecycle(opts: UseSessionLifecycleOptions) {
+           resetSession()
+           setSessionStartedAt(r.started_at ? r.started_at * 1000 : Date.now())
+           const transcript = [...toTranscriptMessages(r.messages), ...liveSessionInflightMessages(r.inflight)]
+-          setHistoryItems(info ? [introMsg(info), ...transcript] : transcript)
++          setHistoryItems(withSessionIntro(info, transcript, getUiState().bannerEnabled))
+           writeActiveSessionFile(r.session_key ?? r.session_id)
+           patchUiState({
+             busy: running,
+@@ -359,7 +357,7 @@ export function useSessionLifecycle(opts: UseSessionLifecycleOptions) {
+ 
+             const resumed = [...toTranscriptMessages(r.messages), ...liveSessionInflightMessages(r.inflight)]
+ 
+-            setHistoryItems(info ? [introMsg(info), ...resumed] : resumed)
++            setHistoryItems(withSessionIntro(info, resumed, getUiState().bannerEnabled))
+             writeActiveSessionFile(r.resumed ?? r.session_id)
+             patchUiState({
+               busy: running,
+diff --git a/ui-tui/src/domain/messages.ts b/ui-tui/src/domain/messages.ts
+index 86d2b292232c..124ef5092fde 100644
+--- a/ui-tui/src/domain/messages.ts
++++ b/ui-tui/src/domain/messages.ts
+@@ -4,6 +4,16 @@ import type { Msg, SessionInfo } from '../types.js'
+ 
+ export const introMsg = (info: SessionInfo): Msg => ({ info, kind: 'intro', role: 'system', text: '' })
+ 
++export const withSessionIntro = (info: null | SessionInfo, messages: Msg[], bannerEnabled: boolean): Msg[] => {
++  if (!bannerEnabled) {
++    return messages
++  }
++
++  const intro: Msg = info ? introMsg(info) : { kind: 'intro', role: 'system', text: '' }
++
++  return [intro, ...messages]
++}
++
+ export const userDisplay = (text: string) => {
+   if (text.length <= LONG_MSG) {
+     return text
+diff --git a/ui-tui/src/gatewayTypes.ts b/ui-tui/src/gatewayTypes.ts
+index 427af8badece..e43aec7cf64f 100644
+--- a/ui-tui/src/gatewayTypes.ts
++++ b/ui-tui/src/gatewayTypes.ts
+@@ -611,7 +611,11 @@ export interface SpawnTreeLoadResponse {
+ }
+ 
+ export type GatewayEvent =
+-  | { payload?: { skin?: GatewaySkin }; session_id?: string; type: 'gateway.ready' }
++  | {
++      payload?: { banner_enabled?: boolean; skin?: GatewaySkin }
++      session_id?: string
++      type: 'gateway.ready'
++    }
+   | { payload?: GatewaySkin; session_id?: string; type: 'skin.changed' }
+   | { payload: SessionInfo; session_id?: string; type: 'session.info' }
+   | { payload?: { text?: string }; session_id?: string; type: 'thinking.delta' }

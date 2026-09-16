@@ -1,0 +1,11 @@
+> AI code review - automated review for reference; please use your judgment.
+
+Reviewed the diff. Well-designed feature with an unusually careful consent story: the agent can only *suggest* the flow through an escalation hint ("Ask the USER to run hermes browser attach"), the relaunch confirmation is the human consent moment with an explicit exposure warning, and every sharp edge I went looking for had already been thought about - Electron main-vs-child detection, dual-stack loopback probing, the single-instance-lock quit-before-relaunch, AppleEvent graceful quit on macOS before SIGTERM, Target.createTarget rejection worked around via default-daemon + per-session BH_HOME isolation, and the escalation enrichment staying purely additive with the typed-page branch winning for real browsers that share Chromium window classes. Tests cover detection grammar (including a cross-check against browser_exec's own _SESSION_RE so a registered slug can never be unreachable dead state), registry round-trips, backend-resolution precedence, and every escalation branch.
+
+- **The relaunched debug port is open to every local process, not just Hermes.** CDP has no authentication, so between the y/N confirmation and the next manual app restart, any local process can drive the app (read DMs, vault, tokens). The warning says this - good - but the flow never reminds the user afterwards that the port stays exposed, and `hermes browser detach` removes the registry entry without closing anything. Suggest: after a successful attach, print a one-liner ("the debug port stays open until you restart <app> without the flag"), and consider having `detach` offer to do that restart.
+
+- **hermes_cli/subcommands/browser.py:_cmd_attach calls scan_electron_apps() without guarding the psutil import** - on a box where the dep is missing (it is lazily imported), the command dies with a raw ImportError traceback instead of the friendly install hint other subcommands use.
+
+- Nit: save_session_endpoint silently overwrites an existing session name ("My App" and "My-App" slug-collide); printing "(overwrote existing session X)" would prevent surprise re-pointing.
+
+No blocking issues found.

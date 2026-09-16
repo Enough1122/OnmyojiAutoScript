@@ -1,0 +1,5 @@
+> AI code review — automated review for reference; please use your judgment.
+
+1. plugins/platforms/discord/adapter.py:`_approval_mention_content_scoped` — Positive: the participants scope never leaves an approval prompt silent — unknown/non-thread targets fall back to the all-approver ping — and the deliberate choice to use *authored messages* rather than thread membership is well-reasoned (the gateway only syncs its own membership without the privileged intent, so membership-based narrowing would permanently widen after one all-approver ping). The starter-message fallback covers fresh auto-threads where the requester's message lives in the parent channel, which is exactly when the new flow would otherwise ping nobody.
+
+2. Overall — config default `all` preserves existing behavior; env + YAML bridging tested; the test suite covers participant narrowing, all-fallback, starter-author identification, non-thread fallback, and YAML normalization ("Participants" → participants). No change requested.

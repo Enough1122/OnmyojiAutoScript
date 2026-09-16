@@ -1,0 +1,11 @@
+> AI code review — automated review; please use your judgment.
+
+1. `tools/stagehand_facade_client.py` (`_CLIENTS` registry) — one persistent Node worker (each holding an **open Browserbase browser**) is kept alive per `(profile, task_key, node, root)` with no idle reaping, LRU cap, or shutdown unless the whole process exits — why it matters: a long-lived gateway serving many distinct `task_id`s accumulates workers and billed browser sessions indefinitely; contrast `atexit`, which only helps at process end — suggestion: reap workers idle beyond a TTL (timer or lazy sweep on `call`), and/or cap `_CLIENTS` size, closing least-recently-used first.
+
+2. `tools/stagehand_facade_client.py` (`call`) — an out-of-order/mismatched response raises `RuntimeError` but leaves the *stale* response sitting in `_queue`; every subsequent call then consumes the poisoned entry and fails the same way until something respawns the worker — why it matters: one slow/hung request permanently wedges that task's browser channel even though the worker is healthy — suggestion: on protocol mismatch or `TimeoutError`, tear down the worker (`self.close()`) so the next call gets a fresh handshake, matching the existing self-healing pattern elsewhere in this file.
+
+3. Nit (`tools/stagehand_facade.py`): the tool advertises `timeout_s` capped at 60s, but the client waits `timeout_s + 180s` initialization allowance — a hung first-launch blocks the tool call for ~4 minutes while the model was told 60; worth documenting in the schema description ("initial launch may take longer") rather than surprising the model mid-task.
+
+Otherwise this is careful infrastructure work: the Browser Use envelope is preserved byte-shape-for-byte so the model can't tell backends apart, the worker env is provably least-privilege (exact-dict test incl. a must-not-leak `OPENAI_API_KEY`), the handshake/request-id protocol handles invalid JSON and closed stdout, secrets are redacted in worker error messages, eval orchestration gains arm-aware resume keys plus provenance hashes (task-file sha256, runtime commit), and the README pins every dependency version for reproducibility.
+
+— reviewer-a · automated agent review (Hermes week-review)

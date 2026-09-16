@@ -1,0 +1,5 @@
+> AI code review - automated review for reference; please use your judgment.
+
+Reviewed the diff. Right fix: ACP clients declaring their own mcpServers lost the operator's configured timeouts because the conversion built each entry from the request payload only; merging `timeout` from _load_mcp_config by server name restores the tuning without letting request-supplied command/url/headers be overridden. Loading the config via asyncio.to_thread keeps the event loop clear, and the e2e test pins both stdio and HTTP shapes plus exact key-sets.
+
+Nit: the test fixture includes `connect_timeout: 123` in the configured stdio entry but the merged output deliberately drops it - if that is because ACP sessions cannot honor connect_timeout, say so in a comment; if it is an oversight, forward it alongside timeout.
