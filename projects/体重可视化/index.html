@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>📉</text></svg>">
+<title>减重时间线</title>
+<link rel="stylesheet" href="style.css">
+<script src="vendor/chart.umd.js"></script>
+<script src="vendor/chartjs-adapter-date-fns.bundle.min.js"></script>
+</head>
+<body>
+<div class="aurora" aria-hidden="true"></div>
+<div id="scroll-progress" aria-hidden="true"></div>
+<header>
+  <div>
+    <h1>减重时间线</h1>
+    <span class="subtitle" id="header-sub">Hermes Agent · 加载中…</span>
+  </div>
+  <div style="display:flex;gap:8px">
+    <button class="expand-all" id="refreshBtn" title="重新拉取 weight_data.js,cron 同步后可见最新数据"><span class="refresh-ico">⟳</span> 刷新数据</button>
+    <button class="expand-all" id="expandAll">展开全部</button>
+  </div>
+</header>
+<!-- === 每日激励 · 动态文案 === -->
+<div class="daily-boost" id="daily-boost" style="display:none">
+  <span class="boost-icon" id="boost-icon">💪</span>
+  <div class="boost-text">
+    <div class="boost-main" id="boost-main">加载中…</div>
+    <div class="boost-sub" id="boost-sub">—</div>
+  </div>
+  <span class="boost-flame" id="boost-flame" aria-hidden="true"></span>
+  <button class="boost-close" id="boost-close" aria-label="关闭今日激励">×</button>
+  <span class="boost-ttl" aria-hidden="true"></span>
+</div>
+
+<!-- === 英雄庆祝 · 破关时刻 === -->
+<div class="hero-milestone" id="hero-milestone" style="display:none">
+  <canvas id="hero-confetti" class="hero-confetti" aria-hidden="true"></canvas>
+  <div class="hero-glow" aria-hidden="true"></div>
+  <div class="hero-content">
+    <div class="hero-badge" id="hero-badge">🎉 破 200 大关</div>
+    <div class="hero-title" id="hero-title">— <span class="unit">斤</span></div>
+    <div class="hero-sub" id="hero-sub">—</div>
+    <div class="hero-stats" id="hero-stats"></div>
+    <div class="hero-progress">
+      <div class="hero-progress-track"><div class="hero-progress-fill" id="hero-progress-fill"></div></div>
+      <div class="hero-progress-label" id="hero-progress-label">—</div>
+    </div>
+  </div>
+  <button class="hero-close" id="hero-close" aria-label="关闭横幅">×</button>
+</div>
+
+
+<main>
+<!-- === 统计卡片 === -->
+<div class="summary-toolbar">
+  <span>拖动卡片可调整顺序 · 自动保存</span>
+  <button class="reset-order-btn" id="resetOrderBtn">恢复默认</button>
+</div>
+<div class="summary" id="stat-cards-grid">
+  <!-- 第一梯队:每天必看 -->
+  <div class="card" data-card-id="stat-current">
+    <div class="label">当前体重</div>
+    <div class="value" id="stat-current">—</div>
+    <div class="delta" id="stat-current-delta">—</div>
+  </div>
+  <div class="card blue" data-card-id="stat-week">
+    <div class="label">本周 (W<span id="stat-week-num">—</span>)</div>
+    <div class="value" id="stat-week">—</div>
+    <div class="delta" id="stat-week-meta">—</div>
+  </div>
+  <div class="card blue" id="stat-week-target-card" data-card-id="stat-week-target" style="display:none">
+    <div class="label">距本周目标</div>
+    <div class="value" id="stat-week-target">—</div>
+    <div class="delta" id="stat-week-target-meta">—</div>
+  </div>
+  <div class="card" data-card-id="stat-streak">
+    <div class="label">连续 ↓ 天数</div>
+    <div class="value" id="stat-streak">—</div>
+    <div class="delta" id="stat-streak-meta">—</div>
+  </div>
+  <div class="card blue" data-card-id="stat-drop14">
+    <div class="label">近 14 天日均减重</div>
+    <div class="value" id="stat-drop14">—</div>
+    <div class="delta muted" id="stat-drop14-meta">—</div>
+  </div>
+  <div class="card blue" data-card-id="stat-ma7">
+    <div class="label">MA7 (7 日均)</div>
+    <div class="value" id="stat-ma7">—</div>
+    <div class="delta muted" id="stat-ma7-meta">—</div>
+  </div>
+  <!-- 注射追踪 (替尔泊肽) -->
+  <div class="card" data-card-id="stat-next-injection">
+    <div class="label">距下次注射</div>
+    <div class="value" id="stat-next-injection">—</div>
+    <div class="delta muted" id="stat-next-injection-meta">—</div>
+  </div>
+  <div class="card" data-card-id="stat-inj-rebound">
+    <div class="label">针后反弹高发段</div>
+    <div class="value" id="stat-inj-rebound">—</div>
+    <div class="delta muted" id="stat-inj-rebound-meta">—</div>
+  </div>
+  <!-- 阶段进度 -->
+  <div class="card blue" data-card-id="stat-monthly">
+    <div class="label">本月减重</div>
+    <div class="value" id="stat-monthly">—</div>
+    <div class="delta muted" id="stat-monthly-meta">—</div>
+  </div>
+  <div class="card" data-card-id="stat-progress">
+    <div class="label">总进度</div>
+    <div class="value" id="stat-progress">—</div>
+    <div class="delta muted" id="stat-progress-meta">—</div>
+  </div>
+  <div class="card warn" data-card-id="stat-160">
+    <div class="label">距 160</div>
+    <div class="value" id="stat-160">—</div>
+    <div class="delta muted">过渡目标</div>
+  </div>
+  <div class="card purple" data-card-id="stat-145">
+    <div class="label">距 145</div>
+    <div class="value" id="stat-145">—</div>
+    <div class="delta muted">终极目标</div>
+  </div>
+  <!-- 健康指标 -->
+  <div class="card blue" data-card-id="stat-bmi">
+    <div class="label">BMI</div>
+    <div class="value" id="stat-bmi">—</div>
+    <div class="delta muted" id="stat-bmi-category">—</div>
+  </div>
+  <!-- 历史纪录 (放底部) -->
+  <div class="card" data-card-id="stat-best-week">
+    <div class="label">最佳单周</div>
+    <div class="value" id="stat-best-week">—</div>
+    <div class="delta muted" id="stat-best-week-meta">—</div>
+  </div>
+  <div class="card" data-card-id="stat-recovery">
+    <div class="label">反弹恢复力</div>
+    <div class="value" id="stat-recovery">—</div>
+    <div class="delta muted" id="stat-recovery-meta">—</div>
+  </div>
+  <div class="card" data-card-id="stat-total">
+    <div class="label">累计减重</div>
+    <div class="value" style="color:var(--accent)" id="stat-total">—</div>
+    <div class="delta" id="stat-total-meta">—</div>
+  </div>
+</div>
+
+<!-- === 分区标签 === -->
+<div class="zone-label" style="--zc:#4ade80"><span>📍 近期关注</span></div>
+
+<!-- === 下一关焦点 · 距 195 倒计时 === -->
+<section data-section-id="next-focus">
+  <div class="section-header" role="button" tabindex="0" aria-expanded="true">
+    <h2>🎯 下一关 · <span id="next-focus-title">距 195 还有 —</span></h2>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="section-body">
+    <div class="next-focus-card" id="next-focus-card">
+      <div class="next-focus-left">
+        <div class="next-focus-big" id="next-focus-big">—</div>
+        <div class="next-focus-meta" id="next-focus-meta">—</div>
+        <div class="next-focus-bar"><div class="next-focus-fill" id="next-focus-fill"></div></div>
+        <div class="next-focus-est" id="next-focus-est">—</div>
+      </div>
+      <div class="next-focus-right">
+        <div class="next-focus-mini-label" id="next-focus-rate">按 — 斤/天 · 预计达成</div>
+        <div class="next-focus-date" id="next-focus-date">—</div>
+        <div class="next-focus-motiv" id="next-focus-motiv">—</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- === 平台期雷达 (历史平台期统计 + 当前停滞状态) === -->
+<section data-section-id="plateau">
+  <div class="section-header" role="button" tabindex="0" aria-expanded="true">
+    <h2>🔭 平台期雷达 · <span id="plateau-status">分析中…</span></h2>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="section-body">
+    <div class="plateau-now" id="plateau-now"></div>
+    <div class="plateau-attr" id="plateau-attr"></div>
+    <div class="plateau-stats" id="plateau-stats"></div>
+    <div class="plateau-list" id="plateau-list"></div>
+    <div class="badges-legend">平台期扫描口径:实测晨重（已剔除 [噪音]/[插值]/[起点]）· MA7 与水债口径：全部实测晨重（含 [噪音]，与 MA7 卡/时间线同源）· 平台期 = 连续 ≥4 天未刷新历史新低 或 MA7 近5天漂移&lt;0.2 · 突破后跌幅 = 突破日起 7 天内最低点较平台期低点的降幅</div>
+  </div>
+</section>
+
+<!-- === 等效成就 · 已减掉的重量具象化 (趣味存档信息,放近期关注区尾部) === -->
+<div class="equivalents-strip" id="equivalents-strip" aria-label="等效成就">
+  <div class="eq-track" id="eq-track">
+    <!-- JS 动态生成 7 项 -->
+  </div>
+</div>
+
+<!-- === 近 14 天 === -->
+<section data-section-id="last14">
+  <div class="section-header" role="button" tabindex="0" aria-expanded="true">
+    <h2>近 14 天体重曲线</h2>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="section-body">
+    <div class="chart-wrap">
+      <div class="chart-h"><canvas id="last14" role="img" aria-label="近 14 天体重曲线图"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<!-- === 分区标签 === -->
+<div class="zone-label" style="--zc:#60a5fa"><span>🧭 趋势与规划</span></div>
+
+<!-- === 节奏模拟器 (拖动滑块推算各目标达成日) === -->
+<section data-section-id="simulator">
+  <div class="section-header" role="button" tabindex="0" aria-expanded="true">
+    <h2>🎚️ 节奏模拟器 · 保持 <span id="sim-rate-label">—</span> 斤/天</h2>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="section-body">
+    <div class="sim-panel">
+      <div class="sim-presets" id="sim-presets"></div>
+      <input type="range" id="sim-slider" class="sim-slider" min="0.02" max="0.7" step="0.001" value="0.08" aria-label="每日减重节奏">
+      <div class="sim-scale"><span>0.02</span><span>0.20</span><span>0.35</span><span>0.50</span><span>0.70 斤/天</span></div>
+      <div class="sim-grid" id="sim-grid"></div>
+      <div class="sim-note" id="sim-note"></div>
+    </div>
+  </div>
+</section>
+
+<!-- === 预测卡片 (近 14 天日均减重推算) === -->
+<section data-section-id="predict">
+  <div class="section-header" role="button" tabindex="0" aria-expanded="true">
+    <h2>📈 预测 · 按近 14 天日均减重实时推算</h2>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="section-body">
+    <div class="prediction-grid" id="pred-cards-grid">
+      <div class="card warn" data-card-id="pred-sprint">
+        <div class="label" id="pred-sprint-label">9/27 冲刺 160</div>
+        <div class="value" id="pred-sprint">—</div>
+        <div class="delta muted" id="pred-sprint-meta">—</div>
+      </div>
+      <div class="card" data-card-id="pred-1122">
+        <div class="label">预测 11/22</div>
+        <div class="value" id="pred-1122">—</div>
+        <div class="delta" id="pred-1122-meta">—</div>
+      </div>
+      <div class="card warn" data-card-id="pred-160-date">
+        <div class="label">预测 160 达成</div>
+        <div class="value" id="pred-160-date">—</div>
+        <div class="delta muted" id="pred-160-meta">—</div>
+      </div>
+      <div class="card purple" data-card-id="pred-145-date">
+        <div class="label">预测 145 达成</div>
+        <div class="value" id="pred-145-date">—</div>
+        <div class="delta muted" id="pred-145-meta">—</div>
+      </div>
+      <div class="card" id="strict-exec-card" data-card-id="pred-strict">
+        <div class="label">执行率 (<span id="strict-exec-week">—</span>)</div>
+        <div class="value" id="pred-strict-1122">—</div>
+        <div class="delta" id="pred-strict-meta">—</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- === 成就墙 · 徽章收集 === -->
+<section data-section-id="badges">
+  <div class="section-header" role="button" tabindex="0" aria-expanded="true">
+    <h2>🏆 成就墙 · <span id="badges-count">—</span></h2>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="section-body">
+    <div class="badges-grid" id="badges-grid">
+      <!-- JS 动态生成 8 枚徽章 -->
+    </div>
+    <div class="badges-legend">灰=待解锁 · 金=已破 · 脉冲=下一关 · 点击徽章查看详情</div>
+  </div>
+</section>
+
+<!-- === 分区标签 === -->
+<div class="zone-label" style="--zc:#a78bfa"><span>📚 长期数据</span></div>
+
+<!-- === 主图：完整时间线 === -->
+<section data-section-id="timeline">
+  <div class="section-header" role="button" tabindex="0" aria-expanded="true">
+    <h2>完整时间线 · 晨重 + 晚重 + MA7 + 里程碑 + 注射</h2>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="section-body">
+    <div class="chart-wrap">
+      <div class="chart-h tall"><canvas id="timeline" role="img" aria-label="完整时间线体重曲线图"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<!-- === 累计减重曲线已移除 (信息由完整时间线覆盖) === -->
+<!-- === 进度环 === -->
+<section data-section-id="rings">
+  <div class="section-header" role="button" tabindex="0" aria-expanded="true">
+    <h2>目标进度 · 5 个里程碑追踪</h2>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="section-body">
+    <div class="ring-row">
+      <div class="ring-card">
+        <svg width="120" height="120" viewBox="0 0 120 120" role="img" aria-label="历史最低进度">
+          <defs>
+            <linearGradient id="grad-ring-188" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#38bdf8"/><stop offset="100%" stop-color="#0284c7"/>
+            </linearGradient>
+          </defs>
+          <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="8"/>
+          <circle id="ring-188" cx="60" cy="60" r="50" fill="none" stroke="url(#grad-ring-188)" stroke-width="8"
+            stroke-dasharray="314" stroke-dashoffset="314" stroke-linecap="round"
+            transform="rotate(-90 60 60)" style="transition:stroke-dashoffset 0.6s ease 0.15s"/>
+        </svg>
+        <div class="ring-label">188 · 历史最低</div>
+        <div class="ring-value" id="ring-188-val">—</div>
+        <div class="ring-detail" id="ring-188-detail">—</div>
+      </div>
+      <div class="ring-card">
+        <svg width="120" height="120" viewBox="0 0 120 120" role="img" aria-label="破 175 中段关口进度">
+          <defs>
+            <linearGradient id="grad-ring-175" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#34d399"/><stop offset="100%" stop-color="#059669"/>
+            </linearGradient>
+          </defs>
+          <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="8"/>
+          <circle id="ring-175" cx="60" cy="60" r="50" fill="none" stroke="url(#grad-ring-175)" stroke-width="8"
+            stroke-dasharray="314" stroke-dashoffset="314" stroke-linecap="round"
+            transform="rotate(-90 60 60)" style="transition:stroke-dashoffset 0.6s ease 0.25s"/>
+        </svg>
+        <div class="ring-label">破 175 · 中段关口</div>
+        <div class="ring-value" id="ring-175-val">—</div>
+        <div class="ring-detail" id="ring-175-detail">—</div>
+      </div>
+      <div class="ring-card">
+        <svg width="120" height="120" viewBox="0 0 120 120" role="img" aria-label="破 160 过渡目标进度">
+          <defs>
+            <linearGradient id="grad-ring-160" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#fbbf24"/><stop offset="100%" stop-color="#d97706"/>
+            </linearGradient>
+          </defs>
+          <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="8"/>
+          <circle id="ring-160" cx="60" cy="60" r="50" fill="none" stroke="url(#grad-ring-160)" stroke-width="8"
+            stroke-dasharray="314" stroke-dashoffset="314" stroke-linecap="round"
+            transform="rotate(-90 60 60)" style="transition:stroke-dashoffset 0.6s ease 0.35s"/>
+        </svg>
+        <div class="ring-label">破 160 · 过渡目标</div>
+        <div class="ring-value" id="ring-160-val">—</div>
+        <div class="ring-detail" id="ring-160-detail">—</div>
+      </div>
+      <div class="ring-card">
+        <svg width="120" height="120" viewBox="0 0 120 120" role="img" aria-label="破 150 准正常线进度">
+          <defs>
+            <linearGradient id="grad-ring-150" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#f472b6"/><stop offset="100%" stop-color="#db2777"/>
+            </linearGradient>
+          </defs>
+          <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="8"/>
+          <circle id="ring-150" cx="60" cy="60" r="50" fill="none" stroke="url(#grad-ring-150)" stroke-width="8"
+            stroke-dasharray="314" stroke-dashoffset="314" stroke-linecap="round"
+            transform="rotate(-90 60 60)" style="transition:stroke-dashoffset 0.6s ease 0.45s"/>
+        </svg>
+        <div class="ring-label">破 150 · 准正常线</div>
+        <div class="ring-value" id="ring-150-val">—</div>
+        <div class="ring-detail" id="ring-150-detail">—</div>
+      </div>
+      <div class="ring-card">
+        <svg width="120" height="120" viewBox="0 0 120 120" role="img" aria-label="破 145 终极目标进度">
+          <defs>
+            <linearGradient id="grad-ring-145" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#a78bfa"/><stop offset="100%" stop-color="#7c3aed"/>
+            </linearGradient>
+          </defs>
+          <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="8"/>
+          <circle id="ring-145" cx="60" cy="60" r="50" fill="none" stroke="url(#grad-ring-145)" stroke-width="8"
+            stroke-dasharray="314" stroke-dashoffset="314" stroke-linecap="round"
+            transform="rotate(-90 60 60)" style="transition:stroke-dashoffset 0.6s ease 0.55s"/>
+        </svg>
+        <div class="ring-label">破 145 · 终极目标</div>
+        <div class="ring-value" id="ring-145-val">—</div>
+        <div class="ring-detail" id="ring-145-detail">—</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- === 里程碑 === -->
+<section data-section-id="milestones">
+  <div class="section-header" role="button" tabindex="0" aria-expanded="true">
+    <h2>里程碑进度 · <span id="mile-progress-count">—</span> 完成</h2>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="section-body">
+    <div class="milestones">
+      <!-- 旅程刻度尺:244 → 145,当前位置发光脉冲 -->
+      <div class="mile-ruler" id="mile-ruler">
+        <div class="mile-ruler-title">旅程刻度 · 244 → 145 · <span style="color:var(--accent)">已走 <span id="ruler-pct">—</span></span></div>
+        <div class="mile-ruler-track">
+          <div class="mile-ruler-fill" id="ruler-fill"></div>
+          <div class="mile-ruler-marker" id="ruler-marker"><span class="mile-ruler-flag" id="ruler-flag"></span></div>
+          <div class="mile-ruler-ticks" id="ruler-ticks"></div>
+          <div class="mile-ruler-labels" id="ruler-labels"></div>
+        </div>
+      </div>
+      <div class="milestone" data-goal="226.1">
+        <div class="dot done"></div>
+        <div class="text">
+          <div class="weight">226.1 斤 · 超越 2025 最高</div>
+          <div class="desc" id="mile-226-detail">—</div>
+        </div>
+        <div class="bar"><div class="bar-fill" style="width:100%;background:#4ade80"></div></div>
+        <div class="status">DONE</div>
+      </div>
+      <div class="milestone" data-goal="212.5">
+        <div class="dot done"></div>
+        <div class="text">
+          <div class="weight">212.5 斤 · 超越 2024-11-28</div>
+          <div class="desc" id="mile-212-detail">—</div>
+        </div>
+        <div class="bar"><div class="bar-fill" style="width:100%;background:#4ade80"></div></div>
+        <div class="status">DONE</div>
+      </div>
+      <div class="milestone" data-goal="210">
+        <div class="dot done"></div>
+        <div class="text">
+          <div class="weight">210.0 斤 · 破 210 大关</div>
+          <div class="desc" id="mile-210-detail">—</div>
+        </div>
+        <div class="bar"><div class="bar-fill" style="width:100%;background:#4ade80"></div></div>
+        <div class="status">DONE</div>
+      </div>
+      <div class="milestone" data-goal="200.2" data-pending="NEXT">
+        <div class="dot next"></div>
+        <div class="text">
+          <div class="weight">200.2 斤 · 超越 2022-10-20</div>
+          <div class="desc" id="mile-200-detail">—</div>
+        </div>
+        <div class="bar"><div class="bar-fill" id="mile-200-bar" style="width:0%;background:#fbbf24"></div></div>
+        <div class="status">NEXT</div>
+      </div>
+      <div class="milestone" data-goal="188" data-pending="LATER">
+        <div class="dot next"></div>
+        <div class="text">
+          <div class="weight">188.0 斤 · 历史最低</div>
+          <div class="desc" id="mile-188-detail">—</div>
+        </div>
+        <div class="bar"><div class="bar-fill" id="mile-188-bar" style="width:0%;background:#fbbf24"></div></div>
+        <div class="status">LATER</div>
+      </div>
+      <div class="milestone" data-goal="175" data-pending="LATER">
+        <div class="dot next"></div>
+        <div class="text">
+          <div class="weight">175.0 斤 · 中段关口</div>
+          <div class="desc" id="mile-175-detail">—</div>
+        </div>
+        <div class="bar"><div class="bar-fill" id="mile-175-bar" style="width:0%;background:#34d399"></div></div>
+        <div class="status">LATER</div>
+      </div>
+      <div class="milestone" data-goal="160" data-pending="TRANSITION">
+        <div class="dot next"></div>
+        <div class="text">
+          <div class="weight">160.0 斤 · 过渡目标 (9/27 冲刺)</div>
+          <div class="desc" id="mile-160-detail">—</div>
+        </div>
+        <div class="bar"><div class="bar-fill" id="mile-160-bar" style="width:0%;background:#60a5fa"></div></div>
+        <div class="status">TRANSITION</div>
+      </div>
+      <div class="milestone" data-goal="150" data-pending="PRE-FINAL">
+        <div class="dot next"></div>
+        <div class="text">
+          <div class="weight">150.0 斤 · 准正常线 (BMI≈24.8)</div>
+          <div class="desc" id="mile-150-detail">—</div>
+        </div>
+        <div class="bar"><div class="bar-fill" id="mile-150-bar" style="width:0%;background:#f472b6"></div></div>
+        <div class="status">PRE-FINAL</div>
+      </div>
+      <div class="milestone" data-goal="145" data-pending="FINAL">
+        <div class="dot next"></div>
+        <div class="text">
+          <div class="weight">145.0 斤 · 终极目标</div>
+          <div class="desc" id="mile-145-detail">—</div>
+        </div>
+        <div class="bar"><div class="bar-fill" id="mile-145-bar" style="width:0%;background:#a78bfa"></div></div>
+        <div class="status">FINAL</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- === 完整数据表 === -->
+<section class="collapsed" data-section-id="table">
+  <div class="section-header" role="button" tabindex="0" aria-expanded="false">
+    <h2>完整数据 · <span id="record-count">—</span> 条记录</h2>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="section-body">
+    <div class="chart-wrap">
+      <table id="recent">
+        <thead>
+          <tr><th>日期</th><th>星期</th><th>晨重</th><th>晚重</th><th>较前值</th><th>累计 (vs 244)</th><th>备注</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <button class="show-more-btn" id="showAllBtn">加载全部 <span id="total-records">0</span> 条</button>
+    </div>
+  </div>
+</section>
+
+
+</main>
+
+<!-- === 破关庆祝 overlay (最近破里程碑时播放一次) === -->
+<div class="celebration" id="celebration" aria-hidden="true">
+  <div class="celebration-ring"></div>
+  <div class="celebration-text" id="celebration-text">🎉</div>
+  <div class="celebration-particles" id="celebration-particles"></div>
+</div>
+
+<script>
+  // 动态加载数据文件 + cache busting (不用 document.write:file:// 下不可靠,8/17 实测)
+  // 用 createElement+appendChild 确保一定能加载,并带 ?v= 绕缓存
+  (function loadScripts() {
+    var files = [
+      {src: 'weight_data.js', cb: 'window.__SDATA__'},
+      {src: 'app.js', cb: 'window.__SDATA__'}
+    ];
+    // 依次加载:数据文件在前,app.js 在后(app.js 依赖 weight_data.js 的 RAW/META)
+    function load(i) {
+      if (i >= files.length) return;
+      var s = document.createElement('script');
+      s.src = files[i].src + '?v=' + Date.now();
+      var done = false;
+      s.onload = s.onreadystatechange = function() { if (!done && (!this.readyState || this.readyState === 'complete' || this.readyState === 'loaded')) { done = true; load(i + 1); } };
+      s.onerror = function() { console.error('加载失败: ' + files[i].src); load(i + 1); };
+      document.head.appendChild(s);
+    }
+    load(0);
+  })();
+</script>
+</body>
+</html>

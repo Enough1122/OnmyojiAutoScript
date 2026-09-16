@@ -1,80 +1,40 @@
 # -*- coding: utf-8 -*-
-"""生活数据异地备份:健康 / 日记 / 记录 -> 私有 GitHub 仓库
+"""工作空间异地备份:D:/Hermes 整仓 -> 私有仓库 hermes-workspace
 
 用法:  python D:/Hermes/scripts/backup_life.py
 
-流程: 镜像复制(先清后拷) -> git add -A -> 有变化才 commit -> push
+流程:  git add -A -> 有变化才 commit -> push
+真源即工作目录,无副本、无镜像 —— 版本控制直接作用于工作空间本身。
 
 安全约定:
-  * 永远只读 D:/Hermes/ 下的真源,只写 D:/Hermes/projects/life-backup/
-  * 本脚本不会删除真源里的任何文件
+  * 只操作 D:/Hermes 自己的 git;子目录里的独立仓(hermes-agent-fix /
+    lark-coding-agent-bridge / ai-berkshire / OAS)已被 .gitignore 排除,不触碰
   * 仓库必须保持 private —— 历史里有完整体重与健康记录
 """
-import shutil
 import subprocess
-import sys
 from pathlib import Path
 
-SRC = Path("D:/Hermes")
-SPACE = Path("D:/Hermes")          # 大仓真源=工作空间本身(直接版本控制,不复制)
-REPO = Path("D:/Hermes/projects/life-backup")
-MAP = [("健康", "health"), ("diary", "diary"), ("记录", "records")]
+SPACE = Path("D:/Hermes")
+LABEL = "工作空间"
 
 
-def run(args):
-    return subprocess.run(args, cwd=REPO, capture_output=True, text=True)
-
-
-def git(workdir, args):
-    return subprocess.run(["git"] + args, cwd=workdir, capture_output=True, text=True)
-
-
-def sync_repo(workdir, label):
-    """对"真源即工作目录"的仓库执行 add/commit/push,返回一行摘要。"""
-    git(workdir, ["add", "-A"])
-    status = git(workdir, ["status", "--porcelain"]).stdout.strip()
-    if not status:
-        return f"{label}: 无变化"
-    n = len(status.splitlines())
-    git(workdir, ["commit", "-m", f"自动备份:{n} 处变更"])
-    pushed = git(workdir, ["push"])
-    if pushed.returncode == 0:
-        return f"{label}: 已推送 {n} 处变更"
-    return f"{label}: push 失败 {pushed.stderr[:200]}"
+def git(args):
+    return subprocess.run(["git"] + args, cwd=SPACE, capture_output=True, text=True)
 
 
 def main():
-    # 1) 大仓:D:/Hermes 本身就是 git 仓库(真源直接版本控制,无需复制)
-    print(sync_repo(SPACE, "工作空间(hermes-workspace)"))
-
-    # 2) 生活数据专用镜像仓 —— 冗余备份,分类清晰
-    if not REPO.exists():
-        sys.exit(f"仓库目录不存在: {REPO}")
-    if not (REPO / ".git").exists():
-        sys.exit(f"不是 git 仓库: {REPO}")
-
-    for src_name, dst_name in MAP:
-        src, dst = SRC / src_name, REPO / dst_name
-        if not src.exists():
-            print(f"跳过(真源不存在): {src}")
-            continue
-        if dst.exists():
-            shutil.rmtree(dst)          # 先清后拷 -> 删除操作也能同步
-        shutil.copytree(src, dst)
-        print(f"镜像: {src_name}/ -> {dst_name}/  ({len(list(dst.rglob('*')))} 项)")
-
-    run(["git", "add", "-A"])
-    status = run(["git", "status", "--porcelain"]).stdout.strip()
+    git(["add", "-A"])
+    status = git(["status", "--porcelain"]).stdout.strip()
     if not status:
-        print("无变化,无需提交")
+        print(f"{LABEL}: 无变化")
         return
     n = len(status.splitlines())
-    run(["git", "commit", "-m", f"自动备份:{n} 处变更"])
-    pushed = run(["git", "push"])
+    git(["commit", "-m", f"自动备份:{n} 处变更"])
+    pushed = git(["push"])
     if pushed.returncode == 0:
-        print(f"已推送 {n} 处变更")
+        print(f"{LABEL}: 已推送 {n} 处变更")
     else:
-        print(f"push 失败:{pushed.stderr[:300]}")
+        print(f"{LABEL}: push 失败 {pushed.stderr[:200]}")
 
 
 if __name__ == "__main__":
