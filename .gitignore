@@ -40,6 +40,7 @@ desktop.ini
 # 大仓自动 push 到 GitHub,真源里出现任何密钥都会在 23:00 被带走
 .env
 .env.*
+*.env
 *.key
 *.pem
 auth.json
