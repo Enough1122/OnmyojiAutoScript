@@ -35,3 +35,13 @@ node_modules/
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# ---- 4. 凭证/密钥类(防 git add -A 误吞外泄;2026-09-16 加) ----
+# 大仓自动 push 到 GitHub,真源里出现任何密钥都会在 23:00 被带走
+.env
+.env.*
+*.key
+*.pem
+auth.json
+credentials*
+*token*.json
