@@ -17,6 +17,8 @@ import sys
 import time
 from datetime import datetime, timedelta
 
+from stock_data import _http_get as http_get   # 带重试/UA 的 GET(与行情同源工具)
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 CACHE = os.path.join(HERE, "data", "news_cache.json")
 MX_SEARCH = os.path.join(
@@ -24,6 +26,11 @@ MX_SEARCH = os.path.join(
 
 TTL_SEC = 1800          # 缓存 30 分钟
 TIMEOUT = 90            # 单次调用上限
+
+SECID = "002602"        # 世纪华通(深市)
+EM_ANN_API = ("https://np-anotice-stock.eastmoney.com/api/security/ann"
+              "?sr=-1&page_size=20&page_index=1&ann_type=A&client_source=web&stock_list=")
+EM_REFERER = "https://data.eastmoney.com/"
 
 
 def _read_cache():
@@ -43,6 +50,8 @@ def _write_cache(items):
 
 
 _NOISE = ("雪球", "股吧", "荐股", "教育基地", "$世纪华通(SZ")
+# 程序性附件:是真是文件,但没有信息量,占用条目位不如留给正文
+_LOW_VALUE = ("法律意见书", "保荐", "会计师事务所", "独立财务顾问")
 _EVENT_KEYS = ("公告", "持股计划", "股东会", "业绩", "财报", "年报", "中报", "季报",
                "增持", "减持", "回购", "分红", "中标", "签约", "合同", "订单",
                "停牌", "复牌", "重组", "收购", "诉讼", "问询", "监管", "限售", "解禁")
@@ -55,6 +64,29 @@ def _clean_title(t):
 
 def is_noise(title):
     return any(k in title for k in _NOISE)
+
+
+def is_low_value(title):
+    return any(k in title for k in _LOW_VALUE)
+
+
+def _fetch_announcements():
+    """东财公告接口 -> [{title, date, source}] —— 事件面主源(免费,无 key)
+
+    公司公告是"公司自己说的话",权威性和可交易性都高于媒体解读,所以放在主源。
+    2026-09-17 起启用:此前的 mx-search 从未装到本机,news.py 一直在调一个不存在的
+    脚本 —— subprocess 返回码 2、stdout 为空,被 parse() 解析成 [] 后照常写缓存,
+    于是事件面从未渲染过,且失败完全静默。
+    """
+    raw = http_get(EM_ANN_API + SECID, referer=EM_REFERER, timeout=15)
+    data = json.loads(raw.decode("utf-8", errors="ignore"))
+    out = []
+    for it in data.get("data", {}).get("list", []):
+        title = re.sub(r"^世纪华通[:：]\s*", "", (it.get("title") or "").strip())
+        date = (it.get("notice_date") or "")[:10]
+        if title and date:
+            out.append({"title": title, "date": date, "source": "公告"})
+    return out
 
 
 def is_event(title):
@@ -86,19 +118,35 @@ def _fetch(query):
 
 
 def recent(days=3, max_items=3, query="世纪华通", force=False):
-    """最近 days 天内的资讯(按日期倒序,最多 max_items 条);失败返回 []"""
+    """最近 days 天内的公告/资讯(事件类优先,其次日期倒序,最多 max_items 条);失败返回 []"""
     cache = _read_cache()
     if force or not cache or time.time() - cache.get("ts", 0) >= TTL_SEC:
+        items = []
         try:
-            cache = {"ts": time.time(), "items": _fetch(query)}
-            _write_cache(cache["items"])
+            items.extend(_fetch_announcements())        # 主源: 公司公告
         except Exception:
-            if not cache:                       # 无缓存且抓取失败 -> 静默降级
-                return []
+            pass
+        if os.path.exists(MX_SEARCH):                   # 备源: 妙想资讯(装了就一起用)
+            try:
+                items.extend(_fetch(query))
+            except Exception:
+                pass
+        if items:                                       # 抓不到就保留旧缓存,绝不写空
+            cache = {"ts": time.time(), "items": items}
+            _write_cache(items)
+        elif not cache:                                 # 无缓存且全失败 -> 静默降级
+            return []
     items = cache.get("items", [])
     cut = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
-    fresh = [i for i in items
-             if i.get("date") and i["date"] >= cut and not is_noise(i["title"])]
+    fresh, seen = [], set()
+    for i in items:
+        title = i.get("title") or ""
+        if not i.get("date") or i["date"] < cut:
+            continue
+        if is_noise(title) or is_low_value(title) or title in seen:
+            continue
+        seen.add(title)
+        fresh.append(i)
     # 公司事件优先,其次按日期倒序
     fresh.sort(key=lambda x: (is_event(x["title"]), x["date"]), reverse=True)
     return fresh[:max_items]

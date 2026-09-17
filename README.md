@@ -10,7 +10,7 @@
 | `健康/` | `体重记录.csv`（体重数据唯一真源）+ 可视化资产 | ✅ |
 | `diary/` | 每日日记 `YYYY-MM-DD.md` | ✅ |
 | `scripts/` | 入口脚本（`report_weight.py` / `sync_all.py` / `backup_life.py` / OAS 工具…） | ✅ |
-| `projects/` | 自己的项目：`github-tools/`（PR 工具）、`华通/`（股票）、`体重可视化/`、`pelican-bike/` | ✅ |
+| `projects/` | 自己的项目：`github-tools/`（PR 工具）、`华通/`（股票）、`体重可视化/`、`pelican-bike/`（已归档） | ✅ |
 | `reviews/` | PR 批量评审归档（按批次） | ✅ |
 | `patches/` | 对克隆仓的本地改动存档（如 OAS 补丁与恢复说明） | ✅ |
 | `skills/` | 从团队 hub 下载的技能包暂存（`baidu-search`） | ✅ |

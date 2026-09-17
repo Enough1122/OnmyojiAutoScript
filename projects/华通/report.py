@@ -6,7 +6,7 @@
 设计:
   技术面 = 实时行情 + 技术指标(腾讯主源,新浪交叉校验)
   基本面 = 缓存财务 + 现价本地算估值(零 API 调用,见 fundamentals.py)
-  事件面 = 妙想权威资讯(30 分钟缓存 + 噪音过滤,见 news.py)
+  事件面 = 东财公司公告(30 分钟缓存 + 噪音过滤,见 news.py)
   三段任一失败都静默降级,不阻断报告 —— 宁可少一段,不可整份消失。
 """
 import datetime
@@ -106,7 +106,7 @@ def build_report():
     except Exception:
         pass
 
-    # ③ 事件面(妙想权威资讯,30 分钟缓存;失败静默降级)
+    # ③ 事件面(东财公司公告,30 分钟缓存;失败静默降级)
     try:
         nl = news_line(days=3, max_items=2)
         if nl:

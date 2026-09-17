@@ -14,8 +14,8 @@ env/
 .hermes/
 .local/
 .firecrawl/
-data/vectordb/
-data/_system/
+# 2026-09-17:data/ 整夹出库(mx_data 外拉快照 + vectordb + _system,均可再生成;/ 锚定顶层,不吞深层同名目录)
+/data/
 projects/github-tools/drafts/
 
 # ---- 3. 缓存、临时与运行时产物 ----
@@ -27,6 +27,8 @@ __pycache__/
 *.pyo
 node_modules/
 *.log
+*.bak
+projects/华通/data/*cache*.json
 Thumbs.db
 desktop.ini
 .DS_Store
