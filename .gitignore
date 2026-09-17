@@ -28,6 +28,7 @@ __pycache__/
 node_modules/
 *.log
 *.bak
+*.bak-*
 projects/华通/data/*cache*.json
 Thumbs.db
 desktop.ini
