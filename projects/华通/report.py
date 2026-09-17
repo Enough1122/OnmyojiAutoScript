@@ -16,14 +16,26 @@ from fundamentals import snapshot as fund_snapshot
 from news import line as news_line
 
 
-def is_trading_now(rt):
-    """判断当前是否 A 股交易时段(含集合竞价与收盘),非交易日返回 False"""
+# A 股时段(分钟): 集合竞价 9:15 起, 午休 11:30–13:00, 尾盘 15:00 收
+_AM = (9 * 60 + 15, 11 * 60 + 30)
+_PM = (13 * 60, 15 * 60)
+
+
+def session_state():
+    """当前时段 -> 'open'(可成交) / 'break'(午间休市) / 'closed'(盘前盘后·周末)
+
+    午休必须单列: 11:30–13:00 行情是冻结的早盘收盘价,继续标"盘中速报"会让人
+    以为价格还在动(2026-09-17 12:00 那班就是这样,14.49 其实是 11:30 的价)。
+    """
     now = datetime.datetime.now()
     if now.weekday() >= 5:
-        return False
-    hh, mm = now.hour, now.minute
-    t = hh * 60 + mm
-    return (9 * 60 + 15) <= t <= (15 * 60 + 0)
+        return "closed"
+    t = now.hour * 60 + now.minute
+    if _AM[0] <= t <= _AM[1] or _PM[0] <= t < _PM[1]:
+        return "open"
+    if _AM[1] < t < _PM[0]:
+        return "break"
+    return "closed"
 
 
 def build_advice(d, price, m, inv):
@@ -69,15 +81,17 @@ def build_report():
     ks = get_daily_kline(120)
     sig = generate_signal(ks)
     m = sig["metrics"]
-    trading = is_trading_now(rt)
+    state = session_state()
 
     price = rt["price"]
     pct = rt["change_pct"]
-    session = "盘中速报" if trading else "收盘复盘"
+    session = {"open": "盘中速报", "break": "午间休市速览", "closed": "收盘复盘"}[state]
 
     lines = []
     lines.append(f"📈 {NAME}({rt['code']}) {session}")
     lines.append(f"现价 **{price:.2f}** ({pct:+.2f}%) | 开 {rt['open']:.2f} 高 {rt['high']:.2f} 低 {rt['low']:.2f}")
+    if state == "break":
+        lines.append("⏸ 午间休市: 以上为 11:30 早盘收盘价,13:00 恢复交易")
 
     # 双源交叉校验:正常静默,只有分歧/降级才显形(报告不因校验变长)
     cok, clines = cross_check(rt)
