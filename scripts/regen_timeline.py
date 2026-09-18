@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
+r"""
 regen_timeline.py
 从 D:\Hermes\健康\体重记录.csv (真源) 自动重生成 D:\Hermes\健康\完整体重时间线.md
 - 用户改完 CSV 跑一次即可
@@ -153,7 +153,8 @@ def render_summary(rows):
             end_label = f"{latest['date']}(当前)"
         delta = round(r["w"] - end_w, 1)
         days = (latest["d"] - r["d"]).days if i + 1 >= len(wn_list) else 7
-        s.append(f"- **W{wn}**: {r['date']} {r['w']} → {end_label} {end_w} = -({delta}) 斤")
+        delta_txt = f"-({delta})" if delta >= 0 else f"+{-delta}"
+        s.append(f"- **W{wn}**: {r['date']} {r['w']} → {end_label} {end_w} = {delta_txt} 斤")
     s.append("")
     s.append("## 已排除的噪音(CSV 已标记)")
     s.append("")

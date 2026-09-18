@@ -41,7 +41,7 @@ def parse_args():
     p.add_argument("--csv", default="D:/Hermes/健康/体重记录.csv")
     p.add_argument("--out", default="D:/Hermes/projects/体重可视化/weight_data.js")
     p.add_argument("--start-week", default="2026-06-29",
-                   help="W10 周一(整段可视化的起点,2026-06-29 = 218.4 斤)")
+                   help="W11 周一(整段可视化的起点,2026-06-29 = 218.4 斤)")
     return p.parse_args()
 
 

@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<script type="application/json" id="cowork-artifact-meta">
+{
+  "name": "Today Focus",
+  "schemaVersion": 1,
+  "description": "每天需要关注的事项汇总页:显示今天的中文日期与一句实时状态,列出定时任务(打开时自动读取最新数据),并预留邮箱、日历、Slack 等工具接入后汇总待办事项的位置。数据在每次打开页面时自动刷新。",
+  "mcpTools": [
+    "mcp__scheduled-tasks__list_scheduled_tasks"
+  ],
+  "mcpServerNames": [
+    "scheduled-tasks"
+  ]
+}
+</script>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>今日关注</title>
+<style>
+  :root {
+    color-scheme: light;
+    --mist: #F4F6F3;
+    --ink: #22302B;
+    --vermilion: #A93B2B;
+    --ochre: #9A6C1C;
+    --teal: #37655A;
+    --muted: #75807B;
+    --serif: "Songti SC", "STSong", "Source Han Serif SC", "Noto Serif CJK SC", "SimSun", serif;
+    --sans: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--mist);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page {
+    max-width: 660px;
+    margin: 0 auto;
+    padding: 56px 28px 48px;
+  }
+
+  /* ---- 主视觉:日期 ---- */
+  .year {
+    font-size: 13px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    margin: 0 0 2px;
+  }
+  .date-line {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  h1.date {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: clamp(42px, 8vw, 60px);
+    line-height: 1.15;
+    margin: 0;
+    letter-spacing: 0.02em;
+  }
+  h1.date .weekday {
+    font-size: 0.52em;
+    font-weight: 400;
+    color: var(--muted);
+    margin-left: 6px;
+  }
+  .seal {
+    flex: none;
+    align-self: center;
+    width: 36px;
+    height: 36px;
+    background: var(--vermilion);
+    color: #FBF6F0;
+    font-family: var(--serif);
+    font-size: 13px;
+    line-height: 1.1;
+    display: grid;
+    place-items: center;
+    border-radius: 5px;
+    writing-mode: vertical-rl;
+    letter-spacing: 2px;
+    user-select: none;
+  }
+  .summary {
+    margin: 14px 0 0;
+    color: var(--ink);
+  }
+
+  /* ---- 区块 ---- */
+  section { margin-top: 44px; }
+  .sec-title {
+    font-size: 13px;
+    color: var(--muted);
+    margin: 0 0 14px;
+  }
+  .sec-title .count { color: var(--ink); font-family: var(--serif); }
+
+  .row {
+    display: grid;
+    grid-template-columns: 96px 1fr auto;
+    gap: 14px;
+    align-items: baseline;
+    padding: 9px 0;
+  }
+  .row .time {
+    font-family: var(--serif);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .row .title { min-width: 0; overflow-wrap: anywhere; }
+  .row .sched {
+    color: var(--muted);
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .empty { padding: 4px 0 2px; }
+  .empty .et { margin: 0; color: var(--muted); }
+  .empty .eh {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: var(--muted);
+    max-width: 46em;
+  }
+  .note {
+    margin: 14px 0 0;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .placeholder p { margin: 0; color: var(--muted); max-width: 46em; }
+  .placeholder .ph-main { color: var(--ink); }
+
+  .error {
+    padding: 14px 16px;
+    border-radius: 8px;
+    background: #EFE9E4;
+    color: var(--ink);
+  }
+  .error p { margin: 0 0 8px; }
+  .error:last-child p { margin-bottom: 0; }
+  button.retry {
+    font: inherit;
+    font-size: 13px;
+    color: var(--teal);
+    background: none;
+    border: none;
+    padding: 2px 0;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  button.retry:focus-visible {
+    outline: 2px solid var(--teal);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  footer {
+    margin-top: 56px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .reveal { animation: fadeUp 0.5s ease both; }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+  @media (max-width: 560px) {
+    .page { padding: 40px 20px 36px; }
+    .row { grid-template-columns: 88px 1fr; }
+    .row .sched {
+      grid-column: 2;
+      justify-self: start;
+      white-space: normal;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="reveal">
+    <p class="year" id="year"></p>
+    <div class="date-line">
+      <h1 class="date"><span id="dateBig"></span><span class="weekday" id="weekday"></span></h1>
+      <span class="seal" aria-hidden="true">今日</span>
+    </div>
+    <p class="summary" id="summary">正在读取…</p>
+  </header>
+
+  <section>
+    <p class="sec-title">需要你处理</p>
+    <div class="placeholder">
+      <p class="ph-main">还没有接入数据来源。</p>
+      <p>在 Claude 的设置里连接邮箱、日历、Slack 或任务工具之后,需要你处理的事项会自动汇总到这里,并按紧急程度排好序。</p>
+    </div>
+  </section>
+
+  <section>
+    <p class="sec-title">定时任务 <span class="count" id="taskCount"></span></p>
+    <div id="tasksBody"><p class="note">正在读取…</p></div>
+  </section>
+
+  <footer><span id="refreshedAt"></span>,打开此页时会自动读取最新数据。</footer>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var $ = function (s) { return document.querySelector(s); };
+  var pad = function (n) { return String(n).padStart(2, '0'); };
+  var CN = '一二三四五六七八九';
+
+  /* ---------- 中文日期 ---------- */
+  function cnNum(n) {
+    if (n <= 0) return String(n);
+    if (n < 10) return CN[n - 1];
+    if (n === 10) return '十';
+    if (n < 20) return '十' + CN[n - 11];
+    var t = Math.floor(n / 10), r = n % 10;
+    return CN[t - 1] + '十' + (r ? CN[r - 1] : '');
+  }
+  function renderHeroDate() {
+    var now = new Date();
+    $('#year').textContent = now.getFullYear() + '年';
+    $('#dateBig').textContent = cnNum(now.getMonth() + 1) + '月' + cnNum(now.getDate()) + '日';
+    try {
+      $('#weekday').textContent = new Intl.DateTimeFormat('zh-CN', { weekday: 'long' }).format(now);
+    } catch (e) {
+      $('#weekday').textContent = '星期' + '日一二三四五六'.charAt(now.getDay());
+    }
+  }
+
+  /* ---------- 时间 ---------- */
+  function hhmm(d) { return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+  function timeNow() { return hhmm(new Date()); }
+  function midnight(d) { d = new Date(d); d.setHours(0, 0, 0, 0); return d; }
+  function dayDiff(from, to) {
+    return Math.round((midnight(to) - midnight(from)) / 86400000);
+  }
+  function sameDay(a, b) { return midnight(a).getTime() === midnight(b).getTime(); }
+
+  function nextShort(iso) {
+    var d = new Date(iso);
+    if (isNaN(d)) return '';
+    var dd = dayDiff(new Date(), d);
+    if (dd === 0) return hhmm(d);
+    if (dd === 1) return '明天 ' + hhmm(d);
+    return (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + hhmm(d);
+  }
+  function nextLong(iso) {
+    var d = new Date(iso);
+    if (isNaN(d)) return '';
+    var dd = dayDiff(new Date(), d);
+    var prefix = dd === 0 ? '今天 ' : dd === 1 ? '明天 ' : (d.getMonth() + 1) + '月' + d.getDate() + '日 ';
+    return prefix + hhmm(d);
+  }
+
+  /* ---------- cron 描述 ---------- */
+  function cronLabel(c) {
+    if (!c) return '';
+    var p = c.trim().split(/\s+/);
+    if (p.length !== 5) return '';
+    if (!/^\d+$/.test(p[1]) || !/^\d+$/.test(p[0])) return '';
+    if (p[2] === '*' && p[3] === '*') {
+      if (p[4] === '*') return '每天';
+      if (p[4] === '1-5') return '工作日';
+      if (/^\d$/.test(p[4])) return '每周' + '日一二三四五六'.charAt(+p[4]);
+    }
+    return '';
+  }
+
+  /* ---------- 解析任务数据 ---------- */
+  function parseTasks(raw) {
+    if (raw == null) return [];
+    if (typeof raw === 'string') return parseTasksText(raw);
+    if (Array.isArray(raw)) {
+      if (raw.length && raw[0] && typeof raw[0] === 'object' && 'type' in raw[0]) {
+        var txt = raw.filter(function (b) { return b && b.type === 'text'; })
+                     .map(function (b) { return b.text || ''; }).join('\n');
+        return parseTasksText(txt);
+      }
+      return raw.filter(function (t) { return t && typeof t === 'object'; });
+    }
+    if (Array.isArray(raw.tasks)) return parseTasks(raw.tasks);
+    if (Array.isArray(raw.results)) return parseTasks(raw.results);
+    if (raw.content) return parseTasks(raw.content);
+    return [];
+  }
+  function parseTasksText(txt) {
+    if (!txt) return [];
+    try {
+      return parseTasks(JSON.parse(txt));
+    } catch (e) {
+      if (/no scheduled tasks|没有|none|empty/i.test(txt)) return [];
+      throw new Error('返回的数据格式无法识别');
+    }
+  }
+  function normalize(list) {
+    return list.map(function (t) {
+      return {
+        id: t.taskId || t.id || '',
+        title: t.title || t.taskId || t.id || '未命名任务',
+        enabled: t.enabled !== false,
+        next: t.nextRunAt || t.next || null,
+        cron: t.cronExpression || t.cron || null,
+        fire: t.fireAt || t.fire || null
+      };
+    });
+  }
+
+  /* ---------- 渲染 ---------- */
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+  function emptyState(main, hint) {
+    var d = el('div', 'empty');
+    d.appendChild(el('p', 'et', main));
+    if (hint) d.appendChild(el('p', 'eh', hint));
+    return d;
+  }
+  function taskRow(t) {
+    var r = el('div', 'row');
+    r.appendChild(el('span', 'time', t.next ? nextShort(t.next) : '手动'));
+    r.appendChild(el('span', 'title', t.title));
+    var label = t.cron ? (cronLabel(t.cron) || '按计划') : (t.fire ? '一次' : '手动');
+    r.appendChild(el('span', 'sched', label));
+    return r;
+  }
+  function byNext(a, b) {
+    if (a.next && b.next) return new Date(a.next) - new Date(b.next);
+    if (a.next) return -1;
+    if (b.next) return 1;
+    return 0;
+  }
+
+  function renderTasks(list) {
+    var box = $('#tasksBody');
+    box.textContent = '';
+    var enabled = list.filter(function (t) { return t.enabled; }).sort(byNext);
+    var disabled = list.length - enabled.length;
+
+    $('#taskCount').textContent = enabled.length ? '(' + enabled.length + ')' : '';
+
+    if (!list.length) {
+      box.appendChild(emptyState('还没有定时任务。',
+        '可以让我每天早上自动生成一份简报,或在指定时间提醒你做某件事;建好之后,它们会显示在这里。'));
+      return;
+    }
+    enabled.forEach(function (t) { box.appendChild(taskRow(t)); });
+    if (disabled > 0) {
+      box.appendChild(el('p', 'note', '另有 ' + disabled + ' 个已停用的任务,未显示。'));
+    }
+  }
+
+  function summarySentence(list) {
+    var en = list.filter(function (t) { return t.enabled; });
+    if (!en.length) return '今天没有会自动运行的定时任务。';
+    var todayN = en.filter(function (t) {
+      return t.next && sameDay(new Date(t.next), new Date());
+    }).length;
+    var s = todayN > 0
+      ? '今天有 ' + todayN + ' 个定时任务会自动运行'
+      : '今天没有定时任务要运行';
+    var first = null;
+    for (var i = 0; i < en.length; i++) { if (en[i].next) { first = en[i]; break; } }
+    if (first) s += ',下一次在' + nextLong(first.next);
+    return s + '。';
+  }
+
+  function renderError(box, msg) {
+    box.textContent = '';
+    var d = el('div', 'error');
+    d.appendChild(el('p', null, '数据暂时读不出来,' + msg));
+    var b = el('button', 'retry', '重试');
+    b.type = 'button';
+    b.addEventListener('click', loadTasks);
+    d.appendChild(b);
+    box.appendChild(d);
+  }
+
+  function errText(r) {
+    try {
+      var c = r && (r.error || r.content);
+      if (Array.isArray(c)) {
+        var s = c.map(function (b) { return (b && b.text) || ''; }).join(' ').trim();
+        if (s) return s;
+      } else if (typeof c === 'string' && c) {
+        return c;
+      }
+    } catch (e) {}
+    return '请稍后重试。';
+  }
+
+  /* ---------- 加载 ---------- */
+  function parseResponse(r) {
+    if (!r || typeof r !== 'object') return r;
+    if (r.isError) throw new Error(errText(r));
+    if (r.structuredContent != null) return r.structuredContent;
+    if (r.content != null) return r.content;
+    return r;
+  }
+
+  function loadTasks() {
+    var box = $('#tasksBody');
+    box.textContent = '';
+    box.appendChild(el('p', 'note', '正在读取…'));
+    if (!window.cowork || typeof window.cowork.callMcpTool !== 'function') {
+      renderError(box, '此页面需要在 Claude 桌面端中打开才能读取数据。');
+      return;
+    }
+    window.cowork.callMcpTool('mcp__scheduled-tasks__list_scheduled_tasks', {})
+      .then(function (r) {
+        var list = normalize(parseTasks(parseResponse(r)));
+        renderTasks(list);
+        $('#summary').textContent = summarySentence(list);
+        $('#refreshedAt').textContent = '上次刷新 ' + timeNow();
+      })
+      .catch(function (e) {
+        var msg = (e && e.message) ? e.message : '请稍后重试。';
+        renderError(box, msg);
+        $('#summary').textContent = '数据暂时读不出来,点下方「重试」或右上角「重新加载」可以再试一次。';
+      });
+  }
+
+  /* ---------- 启动 ---------- */
+  renderHeroDate();
+  $('#refreshedAt').textContent = '上次刷新 ' + timeNow();
+  loadTasks();
+})();
+</script>
+</body>
+</html>
