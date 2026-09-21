@@ -1,0 +1,5 @@
+> AI code review — automated follow-up for reference; not a maintainer.
+
+Verified on head f1af7b35622c139ce6b8b25018fbd782f69f038a: `computer_use_status()` now resolves the target inside `try/except ValueError`, sets `error` on the pre-built payload and returns with the contract key order intact (`tools/computer_use/permissions.py:73-84`), and `request_permissions_grant` exits 2 with the diagnostic on stderr (`:105-109`). The CLI `status`/`doctor` and macOS `permissions grant` paths you list cover the same resolver error. Accept as addressed.
+
+On the manifest-path note: agreed, my earlier wording overstated it. `handle_computer_use()` resolves the backend inside `try/except Exception` and returns `computer_use backend unavailable: ...` (`tools/computer_use/tool.py:325-327`), so the `_serve_args` translation failure surfaced as a fail-closed tool error rather than an unhandled traceback; pinning that boundary as regression coverage (`tests/tools/test_computer_use_wsl_host.py:186`) is the right call. Nothing else outstanding from my side.

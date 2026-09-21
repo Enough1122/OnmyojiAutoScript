@@ -29,6 +29,31 @@ from concurrent.futures import ThreadPoolExecutor
 
 REPO = 'NousResearch/hermes-agent'
 CLONE = r'D:\Hermes\repos\hermes-agent-fix'
+
+
+def _base_ref():
+    """取最新可用的 main 引用做 pre-image 源（工作树可能停在 PR 分支上，不可信）。"""
+    for ref in ('upstream/main', 'origin/main', 'main'):
+        r = subprocess.run(['git', 'rev-parse', '--verify', '--quiet', ref],
+                           cwd=CLONE, capture_output=True, text=True)
+        if r.returncode == 0:
+            sha = subprocess.run(['git', 'rev-parse', '--short', ref],
+                                 cwd=CLONE, capture_output=True, text=True).stdout.strip()
+            return ref, sha
+    return 'main', '?'
+
+
+BASE_REF, BASE_SHA = _base_ref()
+
+
+def _blob(ref, path):
+    """git show <ref>:<path> 的字节内容；失败返回 None。"""
+    try:
+        r = subprocess.run(['git', 'show', '%s:%s' % (ref, path)],
+                           cwd=CLONE, capture_output=True, timeout=120)
+        return r.stdout if r.returncode == 0 else None
+    except Exception:
+        return None
 DIFF_DIR = r'D:\Hermes\projects\github-tools\drafts\_campaign'
 DRAFTS = r'D:\Hermes\projects\github-tools\drafts'
 
@@ -66,7 +91,11 @@ def apply_check(n, files):
             full = os.path.join(tmp, target)
             os.makedirs(os.path.dirname(full), exist_ok=True)
             csrc = os.path.join(CLONE, old if old != '/dev/null' else new)
-            if os.path.exists(csrc) and os.path.isfile(csrc):
+            data = _blob(BASE_REF, old if old != '/dev/null' else new)
+            if data is not None:
+                with open(full, 'wb') as fh:
+                    fh.write(data)
+            elif os.path.exists(csrc) and os.path.isfile(csrc):
                 shutil.copyfile(csrc, full)
         r = subprocess.run(
             ['git', 'apply', '--check',
@@ -103,7 +132,7 @@ def main():
     tag = sys.argv[1]
     do_merg = '--no-mergeable' not in sys.argv
     nums = json.load(open(os.path.join(DRAFTS, '_%s_list.json' % tag), encoding='utf-8'))
-    print('preflight %s: %d PRs' % (tag, len(nums)), flush=True)
+    print('preflight %s: %d PRs (base=%s @%s)' % (tag, len(nums), BASE_REF, BASE_SHA), flush=True)
 
     filemap = {n: diff_files(n) for n in nums}
     try:

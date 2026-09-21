@@ -97,7 +97,7 @@ def main():
                 problems.append('#%d draft missing header' % n)
             # 错配粗筛：草稿里形如 path/to/file.py:123 的引用，
             # 至少一个 basename 要出现在 diff 头里
-            refs = {os.path.basename(x) for x in
+            refs = {os.path.basename(x.split(':')[0]) for x in
                     re.findall(r'[a-zA-Z0-9_./-]+\.(?:py|ts|tsx|js|go|rs|yaml|yml|toml|md):\d+', open(mp, encoding='utf-8').read())}
             df = diff_files(n)
             if refs and df and not (refs & df):

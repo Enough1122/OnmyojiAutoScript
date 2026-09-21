@@ -291,3 +291,182 @@ frontier **117089** · posted 累计 **3782** · reviewed_clean **2247** · prog
 
 ### 数字
 frontier **117278** · posted 累计 **3797** · reviewed_clean **2299** · deferred 23（含本批 2）· progress.txt 874 行 · rb/ 391 份。**backlog 清零**：frontier 之上已无符合口径的候选（后续新增 PR 会重新出现）。
+
+
+## 收件箱批次 · 2026-09-20 深夜（46 线程）→ 已清零
+**账号:** Enough1122 · **处理:** 46/46 标 Done · **处理后未读:** 0
+构成: comment 43 + mention 3 · 复审回复 1 · 采纳并关闭(不回) 1 · 静默跳过 44
+
+### 🎯 复审回复
+- **#115033 fix(computer-use): run the Windows host driver from WSL**（Xipong，head `f1af7b35`）— 作者按我方意见修了 status 面异常：实证 `tools/computer_use/permissions.py:73-84` 已 try/except `ValueError` 并把诊断写入 payload 的 `error` 键（键序契约保留），`request_permissions_grant` `:105-109` 退 2 并 stderr 带诊断。我方 minor（`_serve_args` 未捕获 → 未处理异常）被作者驳回且**驳回成立**：`tools/computer_use/tool.py:325-327` 的 `_get_backend` try/except 已兜住，属 fail-closed 工具错误而非 traceback；回评中已承认过度指控，接受其"回归覆盖"定位。
+  回评: https://github.com/NousResearch/hermes-agent/pull/115033#issuecomment-5750803818
+- **#117265 fix(tips): retireable content id**（liuhao1024）— 采纳互斥结论、关闭本 PR 让位 #117264；致谢类，按克制口径不回，仅归档。
+
+### 供你过目（未 @ 我 → 未回，但属实质分歧/反驳）
+- **#116266**（jingchaodev）作者明确：拒绝 JSON 整数 `0/1` 是**有意**的范围界定（legacy 形状为 `{"done": <bool>}`，整数视为 malformed），字符串 token 兼容作为例外保留。与我方"兼容性"非阻塞意见分歧 → 倾向接受其界定。
+- **#112836**（liuhao1024）作者对"用 `replayed` 标签做 guard"给了三条理由（标签覆盖不到 repro 路径等），选择保留 persisted target set → 倾向接受。
+
+### 其余
+- 作者按 review 修改并自证（未 @，未回）: 115206、115278、115282、115283、116052、116108、116204、116854、117038、105271、117114、91428、84869。
+- 上游其他 PR 已落地/收尾: 102368（经 #106752 合入）、100215（keyframes 部分经 #117102）、101180、106037/106038（teknium1 澄清后关）、92326（作者自行撤回）、87983。
+- 其余为致谢/CI 播报/第三方讨论（JPeetz、stepanov1975、kshitijk4poor 等）。
+
+### 处置与待跟进
+标 Done 46/46、失败 0；`gh api -X PUT /notifications` 后 unread=0。无新增阻塞。
+
+## 续战 · 第15批收尾 5 条（frontier 117278 → 117283）
+**结果:** 活检 5 · 发帖 1 · CLEAN 2 · skip 2（117281/117282 已关）。
+- **发帖 #117280 fix(discord) 权限表 blocker**：`_PERMISSION_FLAGS` 末三项错位一位（`SEND_MESSAGES_IN_THREADS: 0x2000000000` 实为 USE_EXTERNAL_STICKERS 等），已对 discord.py 权威表独立核对；另 3 条非阻塞（`_HANDLER_DEFAULTS` 吞掉 `_create_role` 默认值、color 无校验、`_CHANNEL_TYPES` 冗余）。
+  https://github.com/NousResearch/hermes-agent/pull/117280#issuecomment-5750805752
+- 数字: frontier **117283** · posted **3798** · reviewed_clean **2301**。
+
+## 续战 · 第16批 8 条（frontier 117283 → 进行中）
+候选 8（#117286..#117304，当日新增），预检: 2 条 apply-fail（#117286 gateway/run_turn_runner.py:917、#117301 custom-endpoints-settings.tsx:320 → hunk 基于旧 main、草稿走机械 rebase 快审），0 配对冲突。两路代理审阅中。
+
+
+## 续战 · 第16批 8 条（frontier 117283 → 117304）
+**结果:** 活检 8 · **发帖 8** · CLEAN 0 · skip 0（2 路代理；1 条 blocker 候选经主流程核验后按 rebase 口径降级）。
+
+### 发帖明细
+- **117286** fix(gateway) 非编辑平台重复发送：整条链路追通（commentary 记账→final 去重、deltas 对不可编辑适配器关闭）；机械项 = 首个 hunk 上下文已被 `417d0c0f6a` 重构（`_adapter_for_source`→`_delivery_adapter_for`，main:931），GitHub `mergeable: MERGEABLE` → 发 rebase 说明（非硬 blocker）；非阻塞：非编辑平台终答改走 interim 发送，Signal/微信/QQ/BlueBubbles 无回复锚点；Minor：`stream_deltas_enabled` 直接解引用 vs 代码库 getattr 习惯。
+- **117287** fix(cron) 陈旧 holder 让位门：门可静默永久失效——holder 侧 `code_sha` 走 40 位校验（build_info.py:22-23）vs 磁盘指纹 64 位（sha256 仓库）→ 恒不等、恒不让位；测试模块文档仍列旧三条条件；Minor：依赖 60s housekeeping 心跳 vs 120s TTL。
+- **117292** fix(tui) `/save` 参数：生成契约文件已复核与生成器 byte-identical、载荷 round-trip 通；非 compute-host 分支（fmt/basename/redact/render）无测试；`filename` 静默 basename 化（`..`/`dir/` 退化成 errno 5011）；Minor：桌面端不做格式校验、与 TUI 行为不一致。
+- **117293** fix(checkpoints) 索引锁自愈：修复正确、staleness 界成立；重试只捕 `TimeoutExpired`（首试捕全部异常）→ `safe_restore_plan` 路径可逃逸异常；只治 index 锁、`refs/...lock` 同类楔死未覆盖；Minor：docstring 时限说错、探测对 allowed_returncodes 也跑。
+- **117299** fix(discord) 命令同步恢复：三条丢失机制真实且被新测试钉住；但 in-process 重试不吃持久化 backoff（5 次预算可连烧）、backoff 门未按 fingerprint 作用域（改了命令集也要等 1h）、失败的 drift 检查每 15s 重跑（应 1h）；测试断言 `sync.assert_not_awaited(), "..."` 写成元组 → 永真。
+- **117301** fix(desktop) 自定义端点按 profile：**复核结论 = 对当前 main 全部 10 文件可干净 apply**（预检报的 `:320` 冲突只在缺 `SectionHeading page` prop 的旧检出复现 → 本地 clone 偏旧，非 PR 问题）；非阻塞：切换 profile 后旧作用域的 save/delete/activate 响应落到新视图；Minor：`_env_secret` 在 `_EXPLICIT_CONFIG_CHECKS` 里 `best_effort=False` 且 `get_env_value` 可抛 `UnscopedSecretError`。
+- **117302** fix(cron) 注入上一轮答案：修的是真 bug（旧码头截断把答案切掉）；但 `partition("## Response")` 取**首个**匹配（skill 正文含同名标题会提前切分，本仓 `optional-skills/` 有 3 处实例）；`SILENT` 判定为字面量，窄于 lane 自身 matcher（裸 `SILENT` 仍会被当答案注入）；Minor：clip 非预算精确、intro 文案未同步。
+- **117304** test(kanban) 排序见证：改造严格强于原时间断言、`kbc._INITIALIZED_PATHS` 修正正确；但 `assert not release.is_set()` **永真**（`release` 只由本测试 finally 置位，断言先于置位）→ 与它要消灭的"不可失败的断言"同类；Minor：断言顺序使失败消息自相矛盾。
+
+### 数字
+frontier **117304** · posted **3806** · reviewed_clean **2301** · deferred 1（#117327，20 文件）· rb/ 399 份 · progress.txt 882 行。
+
+### 核验与流程备注
+- 主流程核验：#117286 的 hunk 漂移主张（对 main 拉文件核对 `_delivery_adapter_for`/`mute_notification_reply`）✓；抽查 #117304 永真断言 ✓、#117302 partition 语义 ✓。
+- **新坑（已记入 skill）**：preflight 的 `git apply --check` 用本地只读克隆的 main，克隆偏旧会**误报 apply-fail**（#117301 反例）。派单前先 fetch 克隆，apply-fail 只当"待复核"。
+
+## 续战 · 第17批 7 条（frontier 117304 → 进行中）
+候选 7（#117308..#117321），预检 0 apply-fail、0 配对冲突；两路代理（4+3）审阅中。deferred 新增 #117327（20 文件）。
+
+### 第17批中断与重派（00:11 → 00:27）
+首轮 2 路代理（4+3）在模型侧被中断（`waiting for model response`，未落任何草稿/verdict，工作全丢）→ 拆 **3 路**重派（2+2+3），并要求**每完成一个 PR 即时更新 verdict 文件**（读-改-写）防再丢。
+
+**预检脚本修复（本轮）**：`scripts/preflight_batch.py` 原先从 clone 的**工作树**取 pre-image 文件——工作树停在 PR 分支时（当前是 `fix/81101-config-set-security-guard`）会误报 apply-fail。已改为 `git show upstream/main:<path>` 取 blob（工作树兜底），输出增加 `base=<ref>@<sha>`。
+回归验证（重跑 batch16）：**#117301 由 False→True**（旧 base 误报）、#117286 仍 False（真 hunk 漂移，已对 main 核对）、#117287/#117292 不变。
+
+
+## 续战 · 第17批 7 条（frontier 117304 → 117321）
+**结果:** 活检 7 · 发帖 6 · CLEAN 1（117317）· skip 0 · **并发发帖**（post_batch.py workers=6，无 sleep，一次成功 `posted=6 skip=0 err=0`）。
+
+### Blocker(1)
+- **117321** feat(sessions) 跨设备接管：① `allow_session_takeover` 直接放进 `gateway.capabilities` 结果但未在 `GatewayCapabilitiesResult` 声明（契约 `Result` 为 `extra="forbid"`，`rpc_dispatch`→`check_result`→`model_validate` 必报 violation：生产每进程 warn 一次、`HERMES_TEST_ISOLATION` 下 raise；生成物 `gateway-contract.generated.ts`/openrpc 也无该字段 → 客户端读不到，docstring 的前提仍成立）；② 接管分支只替换 registry 条目、不通知也不打断被驱逐 surface（`_ensure_active_session_slot` 对已持 lease 的会话是纯 dict 短路），被驱逐方继续收 turn → 仍是两个写者，与 :592 注释和 configuration.md:2572 宣称的 "one writer" 不符（仓内既有先例 `_take_over_detached_runtime_lease` 是转 lease + 打断败者）。核验：契约模型/校验链/`_report` 严重度逐条对过 head `0ded8729`。附 2 条非阻塞：messaging 网关路径传 `GatewayConfig` dataclass 不认该 key（TUI/桌面认）；新 key 未注册进 `DEFAULT_CONFIG`/known keys（`hermes config set` 会误报"不认识的键"）。
+
+### 非阻塞(5)
+- **117319** cron 中断文案：新文案断言的 "fire-claim ownership lost" 恰是该分支守卫（heartbeat 仍持有 claim）排除的情形；文档把这条消息归因到不会到达它的分支（re-owned claim 走 :2609 另一条）。
+- **117318** Windows 只读树删除：包装器对两种触发形态正确、本机 Windows 实测通过（5/5 + 96 passed）；但 `ignore_errors=True` 语义变了——不再"跳过失败项继续删"（复现：残留 `03_locked, 04_ok` vs stdlib 只留 `03_locked`），`plugins_cmd.py:982` 回滚路径受影响。
+- **117316** turn-lease 陈旧持有者上报：直接执行 post-image 模块，分类/一次性 latch/re-arm/fail-open 全对；但唯一的接线测试手搓 registry，删掉 `gateway/run.py:3544-3547` 的注入全套仍绿。
+- **117312** 标题生成重试：`call_llm` 底层已有 structured-output 恢复阶梯（`_is_structured_output_rejection` → `_without_structured_output_format` → per-route memo，且有既有测试锁定），新 `except` 对 PR 自身复现不可达；新测试 mock 掉的正是已恢复的那一层。
+- **117308** 桌面远程会话水合：overlay 守卫放行 `null`（远程 `profiles.list` 对无 DB 的 profile 发 `null` 而非缺省）→ 一次瞬时远程读失败会把已水合的 Bot Chat 打回草稿；已用 post-image 函数复现。
+- 117317 静默 CLEAN（simplex alpha 展平：RGBA/LA/带透明调色板/全透明 + >128px resize 路径均正确合成白底）。
+
+### 数字
+frontier **117321** · posted **3812** · reviewed_clean **2302** · rb/ 405 份 · progress.txt 889 行。
+
+## 流水线并行化（2026-09-21 用户定"先别考虑限流，提高效率"）
+- **新增 `scripts/post_batch.py`**：线程池并发发帖、无 sleep（`--workers=K`），逐条 `POSTED/SKIP_DUPE/SKIP_STALE/ERR` + 汇总；第17批 6 条一次并发发完、未触发限流。`post_one.py` 的 8s 间隔改为默认关（`POST_SLEEP` 可恢复）。
+- **批次重叠**：batch17 收尾的同时派 batch18（6 条），batch18 在跑时又派 batch19（4 条）——峰值 5 个子代理并行（上限 10）。
+- **配对/跨批预警已进简报**：#117334↔#117335（`test_write_approval.py`）、#117339↔#117340（`gateway/platforms/base.py`）、#117338↔在审的#117318（`plugins_cmd.py`）。
+- 预检脚本 pre-image 改取 `upstream/main` blob 后，batch18/19 预检 0 误报。
+
+
+## 续战 · 第18批 6 条（frontier 117328 → 117336）
+**结果:** 活检 6 · 发帖 6 · CLEAN 0 · 并发发帖一次成功（`posted=6 skip=0 err=0`）。
+
+### 非阻塞(6)
+- **117336** STT JSON 信封解包：解包本身正确（5 个新测试隔离跑全过、ASR 标记行为不变），但 `_transcribe_groq` 仍走 `str(transcription).strip()`、不经过 `_extract_transcript_text`（已核 head：该函数只在 `:179/:203/:345` 被调用）→ 同一代理污染在 Groq 后端存活；Minor：逐字口述 JSON 对象会被改写。
+- **117335** 写审批记录：修复落在唯一的 apply-then-discard 位点、循环重排行为等价；但 `discard_pending` 对"记录不存在"与"unlink 失败"都返回 False → 并发移除会被报成卡住，且宣传的补救 `/reject` 走同一路径。
+- **117334** skills patch+content 带 `file_path`：路由正确（pre/post-image 实测、批量覆盖守卫拒绝）；余项为非阻塞细节。
+- **117332** 桌面 tips 内容寻址 id：链路完整（`Payload` extra=forbid + `check_payload` 校验 + 生成物测试通过 + 27 测试绿）；余项为测试断言细节。
+- **117329** honcho 通知形状：正则放宽对真实发出方全匹配、锚定与 id 放宽正确；但 `gateway/run_notifications.py` 的两处合并标题（`[IMPORTANT: {n} background pro…`）未被覆盖。
+- **117328** iOS 原生回调鉴权：**无 blocker**——allowlist 精确匹配先于 urlparse（近似值全 400）、强制 S256、120s 一次性 code 先弹出再比对（`hmac.compare_digest`）、broker_state 只取自服务端 PKCE cookie、redirect 经 urlencode（无 Location 注入）、审计剔除 code/state/verifier。
+### 数字
+frontier **117336** · posted **3818** · reviewed_clean **2302** · rb/ 411 份。
+
+## 单人快审 · #117342 OrbStack operator skill（判 CLEAN 静默）
+候选只剩 1 条时主流程直审（不派代理，省一轮周转）。核对结论：
+- 命令全部与官方文档一致：`orb top`（headless 页）、`orb create --isolated/--isolate-network`（machines/isolated 页）、`orb export/import/clone`、`orb docker volume clone|export|import`、`orb start|stop|delete k8s`、`orb config docker`、`orb debug`、`orb report`、`/mnt/mac`、`/mnt/machines`、`*.k8s.orb.local`、`:latest` 拉取行为、Apple Silicon 嵌套 KVM 限制。
+- catalog 与 sidebars 均按字母序插入；`optional-skills-catalog.md` 行格式与兄弟条目一致。
+- 生成页 `Path` 行用 `/`，与生成器（`f"{source_dir}/{rel_path}"`，Linux CI 再生）一致；兄弟页面的 `\` 才是既有 Windows 漂移 —— 不是本 PR 的问题。
+- 无重复 skill（仓库内 orbstack 相关仅 4 处，均为 WAL/文档，非 skill）。
+→ 无实质问题，按克制口径**静默 CLEAN**（frontier → 117342）。
+
+## 流水线 · 第19/21批（进行中）
+- 第19批 4 条（#117337–#117340）2 路代理在跑；配对预警 #117339↔#117340（`gateway/platforms/base.py`）、#117338 与在审 #117318 跨批共享 `plugins_cmd.py`。
+- 第21批 2 条（#117343/#117344）各 1 路（单 PR/代理，压缩墙钟时间）在跑。
+
+
+## 续战 · 第19批 4 条（frontier 117336 → 117340）与第21批 2 条（117343/117344）
+**第19批结果:** 活检 4 · **发帖 2** · skip 2（#117339/#117340 在审阅期间被 `ashishsinghbora` 先 review → post_one 硬跳，本地分析归档）。零 blocker。
+- **117337** runtime 空 base_url：修复对上 #116800（模块级验证：空行由 `("chat_completions","")` → `https://opencode.ai/zen/v1`）；但 **xai 仍走早返回**——`_POOL_ENTRY_SIMPLE_MODES["xai"] = ("codex_responses","")`（:489）在 :497-510 直接 return，到不了新 fallback :528-532，跨 provider 切到这类行仍报 `no base_url resolved`（已核 head 代码路径）。已发。
+- **117338** CRLF 插件更新：机制正确（scratch 仓实测：钉 `core.autocrlf=true` 后幽灵脏、整文件 autostash、编辑滞留 stash 全部消失）；但探测只认字面 `true`（`yes|on|1` 与裸 `[core] autocrlf` 被漏掉，已用 `--bool` 验证语义），且 autocrlf=true 机器上会改写 pre-fix 保留的 LF。已发。
+- **117339/#117340**（human_delay 边界守卫 / typing 暂停）分析归档未发：对方 review 点到了相近区域（#117340 的 `_typing_paused` 生命周期），避免叠评。
+
+**第21批结果:** 活检 2 · 发帖 2 · 零 blocker。
+- **117344** 桌面会话列表栅栏释放：修复正确且承重（populated refresh 顶掉 boot 请求会让 `$sessionsLoading` 永久卡 true）；但释放变成"最新请求赢"，`wipeSessionListsForGatewaySwitch()` 自己抬的栅栏（gateway-switch.ts:219 实测 `setSessionsLoading(true)`）会被 pre-switch 的 refresh 放下——建议改为栅栏所有权判定。
+- **117343** cron Slack 合成线程：创建路径修复正确（head `_origin_from_env` 实测 `"in 30m"` 保留、`"in 61m"/"in 2h"/"every 1h"/cron 串`丢弃）；但 `update_job` 从不重推 `origin`（已核 `cron/jobs.py:1996-2018`：只 `_rederive_repeat_for_schedule_change` 且仅 kind 翻转时）→ 近一次性任务改成 `every 1h` 后合成线程永久保留。
+
+### 数字
+frontier **117344** · posted **3822** · reviewed_clean **2303** · deferred 0 · rb/ 415 份。
+
+## 流水线 · 第22批（进行中）
+候选 5 条（#117348–#117352）预检 0 apply-fail / 0 配对，3 路代理（2+2+1）审阅中。frontier 117352 之上当前 0 条新候选。
+
+
+## 吞吐优化（2026-09-21 01:20-01:40 · 用户问"效率低了点"）
+**先量再改（实测数字）**：
+- 候选到达速率：12 分钟 eligible 由 6 → 12 条 ≈ **23 条/小时**
+- 我方吞吐（backlog 模式）：≈ 17 条/小时 → **净落后，队列在长**
+- 单代理真实耗时：单 PR ≈ 8–10 分钟（batch22 的 #117348 代理 8 分钟出活）
+- prep 耗时：12 条 diff 拉取 **1.8 秒** + 预检 **7 秒** → **不是瓶颈**
+
+**真瓶颈 = 波浪式派工的两个结构性税**：
+1. 一次 `delegate_task` 调用 = 一个完成单元（3 个 task 也只回一条汇总）→ 只能等最慢的那个
+2. 波与波之间主流程空转（收集 → 核验 → 发帖），期间空闲槽位不干活
+
+**已改（4 项）**：
+1. `delegation.max_concurrent_children` 10 → **20**（真 home 写入并读回；踩坑：shell 残留 `HERMES_HOME=/tmp/b2c2/hermes_home_test` 把首次写入带进了测试 home，已修正）
+2. **一 PR 一代理**、**整批一次铺满**（batch24 一次 12 路，不再 2-3 条小波）
+3. 子代理简报加时间盒：≤12 分钟 / 静态证据优先不跑全量测试 / <120 行干净直接 CLEAN
+4. SOP §2.3 与 skill `github-contribution-workflow` §6 同步写入"吞吐模型"，含 HERMES_HOME 读回纪律
+
+**预期**：12 路一波墙钟 ≈ 10 分钟 → **60-70 条/小时**（到达 23/小时），可建立缓冲并回补积压。
+
+
+## 收尾（2026-09-21 01:45 · batch22/23/24 全归档）
+- 今晚窗口 117278–117380：**发帖 38 · 静默 clean 8 · skip 5**（共 51 条记录）
+- batch22（5 条）/ batch23（6 条）/ batch24（12 条，一 PR 一代理大波）全部归档；frontier **117380**
+- #117377 在审阅期间被作者关闭（state=closed）→ 正确跳过不发；#117348 同批被他人先评 → skip
+- 复验过的真 blocker 1 条：#117359（`hermes_constants._is_managed_home()` 空 marker 返回 False，与 `hermes_cli.config.is_managed()` 的空 marker=True 分歧，且与自身 docstring 矛盾）→ 已发
+- 队列：**0 条积压**（117380 之上无新候选）
+- 吞吐改造（一 PR 一代理 / 一次铺满 / 上限 30 / 时间盒 12 分钟）在本轮跑通：batch24 十二路 = 一次调用，墙钟约 10 分钟
+
+
+# 第20批 · 2026-09-21（37 条）→ 已清零
+**账号:** Enough1122 · **处理:** 37/37 标 Done（集合级 PUT）· **处理后未读:** 0
+构成: comment 31 + mention 6 · **复审回复 6** · 静默归档 31 · 列请示 0
+
+## 🎯 复审回复（作者按我们的意见改动后 @ 我 → 已实证复审）
+| PR | 作者 | 我方原意见 | 复审结论 | 回评 |
+|---|---|---|---|---|
+| #117359 | liuhao1024 | **blocker**：`_is_managed_home()` 空 marker 与 `config.get_managed_system()` 分歧 | ✅ 已修：false 元组已移除 `""`，空/不可读 marker 归 managed；容器探测也扩到 `_detect_container()` | [5751513082](https://github.com/NousResearch/hermes-agent/pull/117359#issuecomment-5751513082) |
+| #117321 | edosulai | **blocker×2**：契约未声明 + 兄弟租约未驱逐 | ✅ 已修：`allow_session_takeover` 进契约与生成的 TS；`_evict_other_session_leases` 已定义并调用 | [5751514076](https://github.com/NousResearch/hermes-agent/pull/117321#issuecomment-5751514076) |
+| #117287 | fangliquanflq | non-blocking：SHA-1/256 身份比对失配 | ✅ 已修：`len(value) in {40, 64}`；TOCTOU 属信息性（fail-open）判断合理 | [5751514966](https://github.com/NousResearch/hermes-agent/pull/117287#issuecomment-5751514966) |
+| #117302 | liuhao1024 | non-blocking：跨模块调用私有帮助函数 | ✅ 已修：模块级 `is_cron_silence_response` 公开别名 | [5751515925](https://github.com/NousResearch/hermes-agent/pull/117302#issuecomment-5751515925) |
+| #117351 | Wenfengcheng | non-blocking：`model.api_key` 同类强转残留 | ⚖️ 作者边界辩护（该分支先于本 diff）→ 接受边界，记入 #117345 跟进 | [5751516926](https://github.com/NousResearch/hermes-agent/pull/117351#issuecomment-5751516926) |
+| #117379 | Wenfengcheng | non-blocking：相邻 filter 形态 | ⚖️ 非目标声明 → 接受范围，保留分歧点作跟进 | [5751517864](https://github.com/NousResearch/hermes-agent/pull/117379#issuecomment-5751517864) |
+
+## 静默归档（31）
+致谢/修复告知、CI 与推送回声、`kyssta-exe` 等第三方 AI 在同批 PR 上的复评、他人之间的讨论等纯噪音类。
+
+## 其它
+- #117265：作者致谢并宣布关闭、让位 #117264（先 claim 者）→ 收尾致谢，不回。
+- 我方小过失：rb 存档本次误用 `cp` 覆盖原文 → 已用 GitHub 原文重建为「原文 + Follow-up 追加」两段式。

@@ -14,6 +14,7 @@ from stock_data import get_realtime, get_daily_kline, NAME, cross_check
 from analyze import generate_signal, direction_label
 from fundamentals import snapshot as fund_snapshot
 from news import line as news_line
+from corp_actions import line as corp_actions_line
 
 
 # A 股时段(分钟): 集合竞价 9:15 起, 午休 11:30–13:00, 尾盘 15:00 收
@@ -125,6 +126,14 @@ def build_report():
         nl = news_line(days=3, max_items=2)
         if nl:
             lines.append(f"【事件面】{nl}")
+    except Exception:
+        pass
+
+    # ④ 前瞻事件面(除权除息等已知公司行动 —— news.py 只看过去,这里看将来)
+    try:
+        ca = corp_actions_line(days=7)
+        if ca:
+            lines.append(ca)
     except Exception:
         pass
 
