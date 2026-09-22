@@ -14,13 +14,16 @@ import signal
 OAS_DIR = os.path.dirname(os.path.abspath(__file__))
 SERVER_PORT = 22267
 SERVER_URL = f"http://127.0.0.1:{SERVER_PORT}"
-WS_URL = f"ws://127.0.0.1:{SERVER_PORT}/ws/oas"
 PYTHON = os.path.join(OAS_DIR, "toolkit", "python.exe")
 LOG_DIR = os.path.join(OAS_DIR, "log")
 
 
 def log(msg):
     print(f"[OAS] {msg}")
+
+
+def ws_url(config):
+    return f"ws://127.0.0.1:{SERVER_PORT}/ws/{config}"
 
 
 def find_pid_by_port(port):
@@ -74,9 +77,9 @@ def wait_for_server(timeout=30):
     return False
 
 
-async def start_script_via_ws():
+async def start_script_via_ws(config):
     """Start OAS script via WebSocket"""
-    async with websockets.connect(WS_URL) as ws:
+    async with websockets.connect(ws_url(config)) as ws:
         initial = await ws.recv()
         log(f"WS connected, initial state: {initial}")
         await ws.send("start")
@@ -88,11 +91,11 @@ async def start_script_via_ws():
         return state
 
 
-def force_adb_screenshot():
+def force_adb_screenshot(config):
     """Force screenshot method to ADB_nc to avoid window_background issue"""
     try:
         r = requests.put(
-            f"{SERVER_URL}/oas/Script/device/screenshot_method/value",
+            f"{SERVER_URL}/{config}/Script/device/screenshot_method/value",
             params={"types": "string", "value": "ADB_nc"},
             timeout=5
         )
@@ -104,8 +107,8 @@ def force_adb_screenshot():
     return False
 
 
-def main():
-    log("=== OAS Auto-Start ===")
+def main(config):
+    log(f"=== OAS Auto-Start (config={config}) ===")
 
     # 1. Kill old server if running
     pid = find_pid_by_port(SERVER_PORT)
@@ -129,18 +132,18 @@ def main():
         return 1
 
     # 4. Force ADB screenshot method
-    force_adb_screenshot()
+    force_adb_screenshot(config)
     time.sleep(1)
 
     # 5. Start script via WebSocket
-    asyncio.run(start_script_via_ws())
+    asyncio.run(start_script_via_ws(config))
 
     # 6. Quick verification
     time.sleep(5)
     log("Let's check the log...")
     try:
         today = time.strftime("%Y-%m-%d")
-        log_path = os.path.join(LOG_DIR, f"{today}_oas.txt")
+        log_path = os.path.join(LOG_DIR, f"{today}_{config}.txt")
         result = subprocess.run(
             ["tail", "-5", log_path], capture_output=True, text=True
         )
@@ -155,4 +158,10 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    import argparse
+
+    parser = argparse.ArgumentParser(description="OAS 一键启动：起 server 并拉起指定配置实例")
+    parser.add_argument("-c", "--config", default="oas_daily",
+                        help="配置名（config/ 下的 json 名，不带后缀），默认 oas_daily")
+    cli_args = parser.parse_args()
+    sys.exit(main(cli_args.config))
