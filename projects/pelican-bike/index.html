@@ -370,6 +370,120 @@ function updateProjectiles(g, dt) {
   }
   g.projectiles = kept;
 }
+
+var SPAWN_X = 1000;
+var DESPAWN_X = -200;
+var FOOT_HALF_WIDTH = 20;
+var OBSTACLE_CHANCE = 0.7;
+
+var OBSTACLE_SPECS = {
+  bin:     { w: 54, h: 70,  bottom: 0 },
+  barrier: { w: 60, h: 46,  bottom: 0 },
+  crow:    { w: 48, h: 34,  bottom: 60 },
+  wall:    { w: 46, h: 170, bottom: 0 },
+  pit:     { w: 90, h: 0,   bottom: 0 }
+};
+
+function pickObstacleType(rng, difficulty) {
+  var roll = rng();
+  if (difficulty < 0.25) {
+    return roll < 0.6 ? 'bin' : 'barrier';
+  }
+  if (difficulty < 0.55) {
+    if (roll < 0.40) return 'bin';
+    if (roll < 0.70) return 'barrier';
+    if (roll < 0.90) return 'crow';
+    return 'pit';
+  }
+  if (roll < 0.25) return 'bin';
+  if (roll < 0.45) return 'barrier';
+  if (roll < 0.65) return 'crow';
+  if (roll < 0.82) return 'pit';
+  return 'wall';
+}
+
+function spawnAhead(g) {
+  while (g.distance >= g.nextSpawnAt) {
+    var d = difficultyAt(g.t);
+    if (g.rng() < OBSTACLE_CHANCE) spawnObstacle(g, d);
+    else spawnItems(g);
+    g.nextSpawnAt += gapAt(d, g.rng() * 2 - 1);
+  }
+}
+
+function spawnObstacle(g, difficulty) {
+  var type = pickObstacleType(g.rng, difficulty);
+  var spec = OBSTACLE_SPECS[type];
+  g.entities.push({
+    kind: 'obstacle', type: type, x: SPAWN_X,
+    bottom: spec.bottom, w: spec.w, h: spec.h
+  });
+}
+
+function spawnItems(g) {
+  var type = pickItemType(g.rng);
+  if (type === 'fish') {
+    var n = 3 + Math.floor(g.rng() * 3);          // 3..5
+    var arcPeak = 60 + g.rng() * 90;
+    for (var i = 0; i < n; i++) {
+      var k = n === 1 ? 0.5 : i / (n - 1);
+      g.entities.push({
+        kind: 'item', type: 'fish',
+        x: SPAWN_X + i * 46,
+        bottom: 40 + Math.sin(k * Math.PI) * arcPeak,
+        w: 32, h: 32
+      });
+    }
+  } else {
+    g.entities.push({
+      kind: 'item', type: type, x: SPAWN_X,
+      bottom: 40 + g.rng() * 100, w: 32, h: 32
+    });
+  }
+}
+
+// 坑洞不看碰撞盒，只看脚有没有踩空
+function hitsPit(g, ent) {
+  if (g.height > 0) return false;
+  return PELICAN_X + FOOT_HALF_WIDTH > ent.x - ent.w / 2 &&
+         PELICAN_X - FOOT_HALF_WIDTH < ent.x + ent.w / 2;
+}
+
+function updateEntities(g, dt) {
+  var v = currentSpeed(g);
+  var kept = [];
+  for (var i = 0; i < g.entities.length; i++) {
+    var e = g.entities[i];
+    e.x -= v * dt;
+    if (e.x < DESPAWN_X) continue;
+    // 上一帧已被道具清掉的，不再参与碰撞判定
+    if (e.dead) continue;
+
+    if (e.kind === 'obstacle') {
+      if (e.type === 'pit') {
+        if (hitsPit(g, e)) { e.dead = true; crash(g); }
+      } else if (aabbOverlap(pelicanBox(g.height, g.ducking), obstacleBox(e))) {
+        e.dead = true;
+        crash(g);
+      }
+    } else if (e.kind === 'item') {
+      // resolved 保证同一道具只判定一次（满囊时不会每帧重试）
+      if (!e.resolved && aabbOverlap(pelicanBox(g.height, g.ducking), obstacleBox(e))) {
+        e.resolved = true;
+        if (pouchSwallow(g.pouch, e.type)) {
+          e.dead = true;
+          if (e.type === 'fish') scoreSwallowFish(g.score);
+        } else {
+          e.missed = true;      // 满囊错过，继续飞过
+        }
+      }
+    }
+    // 本帧刚死掉的，立刻移除 —— 否则会多画一帧
+    if (e.dead) continue;
+    kept.push(e);
+  }
+  g.entities = kept;
+}
 /* ==== CORE:END ==== */
 
 /* ==== TESTS:BEGIN ==== */
@@ -772,6 +886,158 @@ test('无敌或冲刺期间撞车不掉命', function () {
   g.dash = 0;
   assert(crash(g) === true, '无保护时撞车应生效');
   assert(g.lives === 2, '应掉 1 命');
+});
+
+test('障碍规格与 spec 一致', function () {
+  assert(OBSTACLE_SPECS.crow.bottom === 60 && OBSTACLE_SPECS.crow.h === 34, '乌鸦占离地 60..94');
+  assert(OBSTACLE_SPECS.wall.h === 170, '高墙 170，跳不过去');
+  assert(OBSTACLE_SPECS.pit.w === 90, '坑洞宽 90');
+});
+
+test('难度 0 时不生成高墙和坑洞', function () {
+  var rng = makeRng(7);
+  for (var i = 0; i < 500; i++) {
+    var t = pickObstacleType(rng, 0);
+    assert(t === 'bin' || t === 'barrier', '难度 0 只应出 bin/barrier，实际 ' + t);
+  }
+});
+
+test('难度 1 时五种障碍都会出现', function () {
+  var rng = makeRng(11);
+  var seen = {};
+  for (var i = 0; i < 3000; i++) seen[pickObstacleType(rng, 1)] = true;
+  ['bin', 'barrier', 'crow', 'pit', 'wall'].forEach(function (t) {
+    assert(seen[t] === true, '难度 1 应能生成 ' + t);
+  });
+});
+
+test('spawnAhead 随距离推进产生实体', function () {
+  var g = createGame(makeRng(3));
+  startRun(g);
+  assert(g.entities.length === 0, '开局无实体');
+  g.distance = 5000;
+  spawnAhead(g);
+  assert(g.entities.length > 0, '推进距离后应产生实体');
+  g.entities.forEach(function (e) {
+    assert(e.x === SPAWN_X || e.x > SPAWN_X, '实体应从右侧屏外生成，实际 x=' + e.x);
+  });
+});
+
+test('鱼按 3–5 个一组生成，长度随随机数变化', function () {
+  var g = createGame(makeRng(5));
+  startRun(g);
+
+  // spawnItems 会用同一个 rng 先选类型、再定长度。这里让第一次调用必定命中 fish
+  function spawnWith(seed, later) {
+    g.entities = [];
+    var first = true;
+    g.rng = function () {
+      if (first) { first = false; return 0.1; }   // roll = 10 < 65 → fish
+      return later;
+    };
+    spawnItems(g);
+  }
+
+  spawnWith(1, 0);
+  assert(g.entities.length === 3, 'later=0 应生成 3 个，实际 ' + g.entities.length);
+  g.entities.forEach(function (e) { assert(e.type === 'fish', '鱼串里应全是鱼'); });
+
+  spawnWith(2, 0.99);
+  assert(g.entities.length === 5, 'later=0.99 应生成 5 个，实际 ' + g.entities.length);
+
+  for (var i = 0; i < 200; i++) {
+    spawnWith(i + 10, i / 200);
+    var n = g.entities.length;
+    assert(n >= 3 && n <= 5, '鱼串长度应在 3..5，实际 ' + n);
+    g.entities.forEach(function (e) { assert(e.type === 'fish', '鱼串里应全是鱼'); });
+  }
+});
+
+test('非鱼道具单个生成', function () {
+  var g = createGame(makeRng(5));
+  startRun(g);
+  // 第一次调用返回 0.99 → roll = 99 → 命中 star（最后一个）
+  var first = true;
+  g.rng = function () {
+    if (first) { first = false; return 0.99; }
+    return 0.5;
+  };
+  spawnItems(g);
+  assert(g.entities.length === 1, '非鱼应只生成 1 个，实际 ' + g.entities.length);
+  assert(g.entities[0].type === 'star', '应生成 star，实际 ' + g.entities[0].type);
+});
+
+test('撞障碍掉命并移除障碍', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  g.entities = [{ kind: 'obstacle', type: 'bin', x: PELICAN_X, bottom: 0, w: 54, h: 70 }];
+  updateEntities(g, 1 / 60);
+  assert(g.lives === 2, '应掉 1 命，实际剩 ' + g.lives);
+  assert(g.entities.length === 0, '撞上的障碍应被移除');
+});
+
+test('跳到 60 高能越过路障', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  g.height = 60;
+  g.entities = [{ kind: 'obstacle', type: 'barrier', x: PELICAN_X, bottom: 0, w: 60, h: 46 }];
+  updateEntities(g, 1 / 60);
+  assert(g.lives === 3, '跳起来应越过路障');
+});
+
+test('蹲下能躲开乌鸦', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  g.ducking = true;
+  g.entities = [{ kind: 'obstacle', type: 'crow', x: PELICAN_X, bottom: 60, w: 48, h: 34 }];
+  updateEntities(g, 1 / 60);
+  assert(g.lives === 3, '蹲下应躲开乌鸦');
+});
+
+test('坑洞：在地面掉命，跳起安全', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  g.entities = [{ kind: 'obstacle', type: 'pit', x: PELICAN_X, bottom: 0, w: 90, h: 0 }];
+  updateEntities(g, 1 / 60);
+  assert(g.lives === 2, '踩进坑洞应掉命');
+
+  var g2 = createGame(makeRng(1));
+  startRun(g2);
+  g2.height = 80;
+  g2.entities = [{ kind: 'obstacle', type: 'pit', x: PELICAN_X, bottom: 0, w: 90, h: 0 }];
+  updateEntities(g2, 1 / 60);
+  assert(g2.lives === 3, '跳过坑洞应安全');
+});
+
+test('吞道具入囊，鱼同时加分', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  g.entities = [{ kind: 'item', type: 'fish', x: PELICAN_X, bottom: 40, w: 32, h: 32 }];
+  updateEntities(g, 1 / 60);
+  assert(pouchCount(g.pouch) === 1, '鱼应进囊');
+  assert(g.score.points === 10, '鱼应 +10');
+});
+
+test('Review Focus 3：满囊错过道具不重复计分', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  for (var i = 0; i < 6; i++) pouchSwallow(g.pouch, 'fish');
+  var before = g.score.points;
+  g.entities = [{ kind: 'item', type: 'fish', x: PELICAN_X, bottom: 40, w: 32, h: 32 }];
+  for (var f = 0; f < 30; f++) updateEntities(g, 1 / 60);
+  assert(pouchCount(g.pouch) === 6, '满囊不应吞入');
+  assert(g.score.points === before, '错过的道具不应加分，实际 ' + g.score.points);
+  assert(g.entities.length === 1, '错过的道具应继续飞过而非消失');
+  assert(g.entities[0].missed === true, '应被标记为 missed');
+  assert(g.entities[0].resolved === true, '应被标记为已判定，避免重复处理');
+});
+
+test('实体飞出左边界后被移除', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  g.entities = [{ kind: 'obstacle', type: 'bin', x: DESPAWN_X - 1, bottom: 0, w: 54, h: 70 }];
+  updateEntities(g, 1 / 60);
+  assert(g.entities.length === 0, '出屏实体应被移除');
 });
 /* ==== TESTS:END ==== */
 

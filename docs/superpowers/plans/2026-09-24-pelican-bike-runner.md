@@ -1585,6 +1585,7 @@ function updateEntities(g, dt) {
     var e = g.entities[i];
     e.x -= v * dt;
     if (e.x < DESPAWN_X) continue;
+    // 上一帧已被道具清掉的，不再参与碰撞判定
     if (e.dead) continue;
 
     if (e.kind === 'obstacle') {
@@ -1606,6 +1607,8 @@ function updateEntities(g, dt) {
         }
       }
     }
+    // 本帧刚死掉的，立刻移除 —— 否则会多画一帧
+    if (e.dead) continue;
     kept.push(e);
   }
   g.entities = kept;
