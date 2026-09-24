@@ -205,6 +205,7 @@ function createGame(rng) {
     pouch: createPouch(POUCH_CAPACITY),
     height: 0,
     vy: 0,
+    airborne: false,
     ducking: false,
     jumpsUsed: 0,
     crashTimer: 0,
@@ -229,6 +230,7 @@ function startRun(g) {
   g.pouch = createPouch(POUCH_CAPACITY);
   g.height = 0;
   g.vy = 0;
+  g.airborne = false;
   g.ducking = false;
   g.jumpsUsed = 0;
   g.crashTimer = 0;
@@ -310,14 +312,22 @@ function updateGame(g, dt) {
 
   var scoredBeforeDistance = distanceScore(g.distance);
 
-  // 垂直运动。落回地面时钳制 height >= 0（超大 dt 也不会穿地）
-  g.vy -= GRAVITY * dt;
-  g.height += g.vy * dt;
+  // 垂直运动。梯形积分：匀加速下精确，跳跃最高点不随 dt 漂移
+  //（半隐式欧拉在 dt=1/60 下只有 131.8px，比 spec 的 138px 低 4.7%）
+  var vyNext = g.vy - GRAVITY * dt;
+  g.height += (g.vy + vyNext) / 2 * dt;
+  g.vy = vyNext;
   if (g.height <= 0) {
+    // 只有「真的从空中落下来」才重置浮空。若在地面就直接清零，
+    // 吐泡泡的当帧就会被清掉，spec §4 的「泡泡浮空过墙」从地面根本用不出来。
+    var justLanded = g.airborne;
     g.height = 0;
     g.vy = 0;
     g.jumpsUsed = 0;
-    g.float = 0;
+    g.airborne = false;
+    if (justLanded) g.float = 0;
+  } else {
+    g.airborne = true;
   }
 
   g.distance += currentSpeed(g) * dt;
@@ -383,6 +393,7 @@ function updateProjectiles(g, dt) {
   var kept = [];
   for (var i = 0; i < g.projectiles.length; i++) {
     var p = g.projectiles[i];
+    var prevX = p.x;
     p.x += PROJECTILE_SPEED * dt;
     if (p.x > PROJECTILE_DESPAWN_X) continue;
 
@@ -390,7 +401,12 @@ function updateProjectiles(g, dt) {
     for (var j = 0; j < g.entities.length; j++) {
       var e = g.entities[j];
       if (e.kind !== 'obstacle' || e.dead) continue;
-      if (p.x < e.x - e.w / 2 || p.x > e.x + e.w / 2) continue;
+      // 扫掠判定：拿本帧走过的线段 [prevX, p.x] 去撞障碍的 x 区间。
+      // 只测端点不行 —— 抛射物 900px/s、障碍以世界速度迎面而来，dt 达到
+      // MAX_DT(1/30) 时相对位移可达 58px，比 46px 宽的高墙还长，整步就跨过去了。
+      var left = e.x - e.w / 2;
+      var right = e.x + e.w / 2;
+      if (p.x < left || prevX > right) continue;
       if (p.y < GROUND_Y - e.bottom - e.h || p.y > GROUND_Y - e.bottom) continue;
       e.dead = true;
       if (!p.piercing) { consumed = true; break; }
@@ -490,11 +506,13 @@ function updateEntities(g, dt) {
     if (e.dead) continue;
 
     if (e.kind === 'obstacle') {
+      // 只有「真的撞上（掉命）」或「冲刺期间」才清除障碍。
+      // spec §5：无敌闪烁期间撞障碍不掉命，但障碍本身不消失 ——
+      // 否则每次撞车送的 1.5s 无敌会变成免费推土机。
       if (e.type === 'pit') {
-        if (hitsPit(g, e)) { e.dead = true; crash(g); }
+        if (hitsPit(g, e) && (crash(g) || g.dash > 0)) e.dead = true;
       } else if (aabbOverlap(pelicanBox(g.height, g.ducking), obstacleBox(e))) {
-        e.dead = true;
-        crash(g);
+        if (crash(g) || g.dash > 0) e.dead = true;
       }
     } else if (e.kind === 'item') {
       // resolved 保证同一道具只判定一次（满囊时不会每帧重试）
@@ -639,6 +657,29 @@ function actionForKey(key) {
 function clampDt(dt) {
   if (!isFinite(dt) || dt < 0) return 0;
   return Math.min(dt, MAX_DT);
+}
+
+var FIXED_STEP = 1 / 60;
+var MAX_STEPS_PER_FRAME = 4;
+
+// 固定步长累加器（spec §11）。把不定的真实 dt 切成等长的模拟步，
+// 物理因此与显示器刷新率无关（跳跃高度在任何刷新率下都一致）；
+// 单帧步数有上限，避免卡顿后爆发式补步。
+function createStepper(step) {
+  var acc = 0;
+  return {
+    advance: function (dt, maxSteps, onStep) {
+      acc += dt;
+      var n = 0;
+      while (acc >= step && n < maxSteps) {
+        onStep(step);
+        acc -= step;
+        n += 1;
+      }
+      if (n === maxSteps) acc = 0;   // 落后太多就丢弃，避免死亡螺旋
+      return n;
+    }
+  };
 }
 
 // storage 作为参数传入，便于测试注入会抛异常的假实现
@@ -1165,10 +1206,12 @@ function createAudio(Ctor) {
 
       var now = ctx.currentTime;
       var spec = SOUND_SPECS[name];
+      // 每种音效用自己的增益峰值，而不是统一写死一个值
+      var peak = spec ? spec.gain : 0.25;
       var gain = ctx.createGain();
       gain.connect(ctx.destination);
       gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.exponentialRampToValueAtTime(0.25, now + 0.01);
+      gain.gain.exponentialRampToValueAtTime(peak, now + 0.01);
       gain.gain.exponentialRampToValueAtTime(0.0001, now + (spec ? spec.duration : 0.1));
 
       if (name === 'score') {
@@ -2087,6 +2130,184 @@ test('撞车期间距离与距离分都不增长', function () {
   assert(g.distance === d0, 'crashed 期间世界不推进');
   assert(g.score.points === p0, 'crashed 期间不应加距离分');
 });
+
+// ===== 审查发现 1：在地面吐泡泡会被同一帧的落地钳制清掉 =====
+test('在地面吐泡泡：浮空不会被同一帧的落地钳制清掉', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  assert(g.height === 0, '前提：鹈鹕在地面上');
+  pouchSwallow(g.pouch, 'bubble');
+  spit(g);
+  assertClose(g.float, 4, 1e-9, '吐泡泡后浮空应为 4s');
+  updateGame(g, 1 / 60);
+  assertClose(g.float, 4 - 1 / 60, 1e-6,
+    '在地面推进一帧后浮空应仍在倒数，而不是被清零 —— 否则「泡泡浮空过墙」从地面根本用不出来');
+  assert(maxJumps(g) === 3, '在地面吐泡泡后也应拿到三段跳');
+});
+
+test('从空中落地才重置浮空', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  pouchSwallow(g.pouch, 'bubble');
+  spit(g);
+  jump(g);
+  updateGame(g, 1 / 60);
+  assert(g.airborne === true, '起跳后应标记为在空中');
+  for (var i = 0; i < 400; i++) updateGame(g, 1 / 60);
+  assert(g.height === 0, '应已落地');
+  assert(g.airborne === false, '落地后应清掉空中标记');
+  assert(g.float === 0, '从空中落地应重置浮空');
+});
+
+// ===== 审查发现 2：dt 达上限时抛射物整步跨过障碍 =====
+test('dt 达到上限时抛射物也不会整步跨过障碍（多种相位）', function () {
+  var misses = 0;
+  for (var k = 0; k < 12; k++) {
+    var g = createGame(makeRng(1));
+    startRun(g);
+    g.t = 90;   // 最高难度 → 世界速度 850px/s
+    g.entities = [{ kind: 'obstacle', type: 'wall', x: 880 + k * 5, bottom: 0, w: 46, h: 170 }];
+    pouchSwallow(g.pouch, 'rock');
+    spit(g);
+    var hit = false;
+    // 相对位移 = (900 + 850) / 30 ≈ 58px，远大于 46px 宽的墙。
+    // 只跑 15 步：交汇发生在第 10~11 步；再往后墙会撞上鹈鹕（那是撞车不是命中）
+    // 或飞出左边界被移除，两种都会把「没打中」误判成「打中了」。
+    for (var i = 0; i < 15 && !hit; i++) {
+      updateEntities(g, MAX_DT);
+      updateProjectiles(g, MAX_DT);
+      if (g.entities.length === 0 || (g.entities[0] && g.entities[0].dead)) hit = true;
+    }
+    assert(g.lives === 3, '本用例不该发生撞车，否则「命中」判定不可信');
+    if (!hit) misses += 1;
+  }
+  assert(misses === 0, '12 种相位下石头都该砸中高墙，实际漏掉 ' + misses + ' 次');
+});
+
+// ===== 审查发现 3：无敌期间撞障碍，障碍不该消失 =====
+test('无敌闪烁期间撞障碍：不掉命，且障碍不消失', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  g.invuln = 1.0;
+  g.entities = [{ kind: 'obstacle', type: 'wall', x: PELICAN_X, bottom: 0, w: 46, h: 170 }];
+  updateEntities(g, 1 / 60);
+  assert(g.lives === 3, '无敌期间不应掉命');
+  assert(g.entities.length === 1, '障碍不应消失（spec §5：只有冲刺和石头能清除障碍）');
+});
+
+test('无敌闪烁期间踩坑：不掉命，且坑不消失', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  g.invuln = 1.0;
+  g.entities = [{ kind: 'obstacle', type: 'pit', x: PELICAN_X, bottom: 0, w: 90, h: 0 }];
+  updateEntities(g, 1 / 60);
+  assert(g.lives === 3, '无敌期间不应掉命');
+  assert(g.entities.length === 1, '坑不应消失');
+});
+
+test('冲刺期间撞障碍：不掉命，且障碍被撞碎', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  g.dash = 1.0;
+  g.entities = [{ kind: 'obstacle', type: 'bin', x: PELICAN_X, bottom: 0, w: 54, h: 70 }];
+  updateEntities(g, 1 / 60);
+  assert(g.lives === 3, '冲刺期间不应掉命');
+  assert(g.entities.length === 0, '冲刺应撞碎障碍');
+});
+
+test('无保护撞障碍：掉命且障碍消失', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  g.entities = [{ kind: 'obstacle', type: 'bin', x: PELICAN_X, bottom: 0, w: 54, h: 70 }];
+  updateEntities(g, 1 / 60);
+  assert(g.lives === 2, '应掉 1 命');
+  assert(g.entities.length === 0, '撞上的障碍应消失');
+});
+
+// ===== 审查发现 4：音效的 gain 是死数据 =====
+test('play 使用各音效自己的 gain，而不是写死一个值', function () {
+  var peaks = [];
+  function FakeCtx() { this.currentTime = 0; this.sampleRate = 44100; this.destination = {}; }
+  FakeCtx.prototype.createGain = function () {
+    var slot = { peak: 0 };
+    peaks.push(slot);
+    return {
+      connect: function () {},
+      gain: {
+        setValueAtTime: function () {},
+        exponentialRampToValueAtTime: function (v) { if (v > slot.peak) slot.peak = v; }
+      }
+    };
+  };
+  FakeCtx.prototype.createOscillator = function () {
+    return { type: '', frequency: { setValueAtTime: function () {}, exponentialRampToValueAtTime: function () {} },
+             connect: function () {}, start: function () {}, stop: function () {} };
+  };
+  FakeCtx.prototype.createBuffer = function (c, len) {
+    return { getChannelData: function () { return new Float32Array(len); } };
+  };
+  FakeCtx.prototype.createBufferSource = function () {
+    return { buffer: null, connect: function () {}, start: function () {}, stop: function () {} };
+  };
+  FakeCtx.prototype.createBiquadFilter = function () {
+    return { type: '', frequency: { setValueAtTime: function () {}, exponentialRampToValueAtTime: function () {} },
+             connect: function () {} };
+  };
+
+  var audio = createAudio(FakeCtx);
+  audio.play('crash');
+  assert(peaks.length === 1, '应创建了一个增益节点');
+  assertClose(peaks[0].peak, SOUND_SPECS.crash.gain, 1e-9,
+    'crash 的增益峰值应等于 SOUND_SPECS.crash.gain = ' + SOUND_SPECS.crash.gain + '，实际 ' + peaks[0].peak);
+});
+
+// ===== 审查发现 5：固定步长累加器 =====
+test('固定步长累加器：把不定 dt 切成等长步，单帧步数有上限', function () {
+  var steps, n;
+  steps = [];
+  n = createStepper(FIXED_STEP).advance(1 / 60, MAX_STEPS_PER_FRAME, function (d) { steps.push(d); });
+  assert(n === 1 && Math.abs(steps[0] - FIXED_STEP) < 1e-12, '1/60 输入应产生 1 步');
+
+  steps = [];
+  n = createStepper(FIXED_STEP).advance(1 / 30, MAX_STEPS_PER_FRAME, function (d) { steps.push(d); });
+  assert(n === 2, '1/30 输入应产生 2 步，实际 ' + n);
+  assert(steps.every(function (d) { return Math.abs(d - FIXED_STEP) < 1e-12; }), '每步都应是固定步长');
+
+  n = createStepper(FIXED_STEP).advance(1 / 144, MAX_STEPS_PER_FRAME, function () {});
+  assert(n === 0, '1/144 输入这一帧不应产生步（累加到下一帧）');
+
+  n = createStepper(FIXED_STEP).advance(10, MAX_STEPS_PER_FRAME, function () {});
+  assert(n === MAX_STEPS_PER_FRAME, '单帧步数应被上限截断，实际 ' + n);
+
+  var s2 = createStepper(FIXED_STEP);
+  s2.advance(10, MAX_STEPS_PER_FRAME, function () {});
+  n = s2.advance(1 / 60, MAX_STEPS_PER_FRAME, function () {});
+  assert(n === 1, '被截断后累加器应清零，下一帧不得爆发式补步；实际产生了 ' + n + ' 步');
+});
+
+test('固定步长下跳跃高度与输入帧率无关', function () {
+  function peakWith(incomingDt, frames) {
+    var g = createGame(makeRng(1));
+    startRun(g);
+    jump(g);
+    var s = createStepper(FIXED_STEP);
+    var peak = 0;
+    for (var i = 0; i < frames; i++) {
+      s.advance(incomingDt, MAX_STEPS_PER_FRAME, function (d) {
+        updateGame(g, d);
+        if (g.height > peak) peak = g.height;
+      });
+    }
+    return peak;
+  }
+  var at30 = peakWith(1 / 30, 300);
+  var at60 = peakWith(1 / 60, 150);
+  var at144 = peakWith(1 / 144, 400);
+  // 采样点粒度不同会让测到的峰值差最多 g*dt²/8 ≈ 0.31px（30fps），故容差 0.5
+  assertClose(at30, at60, 0.5, '30fps 与 60fps 的跳跃最高点应一致：' + at30.toFixed(2) + ' vs ' + at60.toFixed(2));
+  assertClose(at60, at144, 0.5, '60fps 与 144fps 的跳跃最高点应一致：' + at60.toFixed(2) + ' vs ' + at144.toFixed(2));
+  assertClose(at60, 138, 6, '且应约 138px，实际 ' + at60.toFixed(1));
+});
 /* ==== TESTS:END ==== */
 
 /* ==== APP:BEGIN ==== */
@@ -2181,19 +2402,24 @@ test('撞车期间距离与距离分都不增长', function () {
   // ---- 主循环 ----
   var last = 0;
   var clock = 0;
+  var stepper = createStepper(FIXED_STEP);
 
-  function frame(now) {
-    var dt = clampDt((now - last) / 1000);
-    last = now;
+  // 一步模拟：只推进状态，不绘制
+  function step(dt) {
     clock += dt;
 
     if (g.state === 'playing' || g.state === 'crashed') {
       var prevLives = g.lives;
       updateGame(g, dt);
       if (g.state === 'playing') {
+        // 吞与得分没有可观察的返回值，用前后快照判断本步是否发生
+        var pouchBefore = pouchCount(g.pouch);
+        var streakBefore = g.score.streak;
         spawnAhead(g);
         updateEntities(g, dt);
         updateProjectiles(g, dt);
+        if (pouchCount(g.pouch) > pouchBefore) audio.play('swallow');
+        if (g.score.streak > streakBefore) audio.play('score', g.score.streak);
       }
       if (g.lives < prevLives) {
         // 撞车：羽毛飞散 + 震屏
@@ -2213,8 +2439,10 @@ test('撞车期间距离与距离分都不增长', function () {
     poolUpdate(particles, dt);
     if (shake > 0) shake = Math.max(0, shake - dt * 60);
     if (flash > 0) flash = Math.max(0, flash - dt * 2.5);
+  }
 
-    // ---- 绘制 ----
+  // 绘制一帧：只读状态，不改状态
+  function draw() {
     ctx.save();
     if (shake > 0) {
       ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
@@ -2237,6 +2465,15 @@ test('撞车期间距离与距离分都不增长', function () {
     }
 
     drawHud(ctx, g);
+  }
+
+  function frame(now) {
+    var dt = clampDt((now - last) / 1000);
+    last = now;
+    // 固定步长推进：物理与刷新率无关，每步位移也有界
+    // （抛射物相对位移 ≤ (900+850)/60 ≈ 29px < 46px 的高墙，不会整步跨过）
+    stepper.advance(dt, MAX_STEPS_PER_FRAME, step);
+    draw();
     requestAnimationFrame(frame);
   }
 

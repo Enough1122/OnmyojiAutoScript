@@ -2947,7 +2947,7 @@ function safeSaveBest(storage, value) {
 - [ ] **Step 4: 跑测试确认全过**
 
 Run: `cd /d/hermes/projects/pelican-bike && node tools/run-tests.mjs`
-Expected: 86/86 passed。
+Expected: 96/96 passed。
 
 - [ ] **Step 5: 写 UI 与接线（`APP` 区块，放在 `TESTS` 块之后）**
 
@@ -3224,14 +3224,14 @@ canvas { display: block; border-radius: 12px; box-shadow: 0 12px 48px rgba(0,0,0
 - [ ] **Step 6: 跑测试确认全过**
 
 Run: `cd /d/hermes/projects/pelican-bike && node tools/run-tests.mjs`
-Expected: 86/86 passed，退出码 0。
+Expected: 96/96 passed，退出码 0。
 
 - [ ] **Step 7: 逐条核对 spec 的验收标准**
 
 双击 `projects/pelican-bike/index.html`，逐条确认并记录实际观察到的结果：
 
 1. **双击能开玩，控制台无报错** —— 打开 DevTools Console，确认没有红色报错
-2. **`?test=1` 全 PASS** —— 地址栏加 `?test=1`，确认页面显示 `86/86 passed`
+2. **`?test=1` 全 PASS** —— 地址栏加 `?test=1`，确认页面显示 `96/96 passed`
 3. **一局能跑到速度 2.5x** —— 撑满 90 秒，确认障碍明显变密变快
 4. **喉囊满 6 格后不再吞入** —— 右上角 6 个圆点填满后，再碰到道具应直接飞过（变半透明）
 5. **空格吐出的石头能砸碎高墙** —— 吞到石头，遇到高墙时按空格，墙应被砸掉且不掉命
@@ -3273,11 +3273,29 @@ EOF
 
 ---
 
+## 交付后修正（整支审查发现，已改代码 + 补测试）
+
+全部 13 个任务完成后做了一次独立整支审查，发现 3 个 Critical、3 个 Important。**下列修正只体现在代码与 ledger 里，本文件上面的代码块保留原样**——任务已全部完成，没有后续任务会再读它们。
+
+| 位置 | 原计划 | 实际交付 | 为什么 |
+|---|---|---|---|
+| `updateGame` 垂直运动 | `g.vy -= GRAVITY*dt; g.height += g.vy*dt` | 梯形积分 `g.height += (vy+vyNext)/2*dt` | 半隐式欧拉在 dt=1/60 下跳跃峰值只有 131.8px，比 spec 的 138px 低 4.7%；梯形积分在匀加速下精确 |
+| `updateGame` 落地分支 | 无条件 `g.float = 0` | 新增 `g.airborne`，只有真的从空中落下才重置浮空 | **Critical**：该分支每帧都跑，在地面吐泡泡的当帧就被清零，spec §4 的「泡泡浮空过墙」从地面根本用不出来 |
+| `updateProjectiles` | 单点判定 `p.x` 是否落在障碍区间内 | 扫掠判定线段 `[prevX, p.x]` | **Critical**：dt 达上限时相对位移 (900+850)/30≈58px > 46px 的高墙，整步跨过；实测 1px 扫描漏 18% |
+| `updateEntities` | `e.dead = true; crash(g)` 无条件执行 | `if (crash(g) \|\| g.dash > 0) e.dead = true` | **Critical**：spec §5 明说「无敌闪烁期间撞障碍不掉命，但障碍本身不消失」，原写法让每次撞车送的 1.5s 无敌变成免费推土机 |
+| `createAudio.play` | 增益峰值写死 `0.25` | 用 `spec.gain` | Important：五条音效的 gain 是死数据，而测试还在断言它 ∈ (0,1]，读起来像有覆盖 |
+| 主循环 | 直接吃变长 dt | `createStepper` 固定步长累加器（`FIXED_STEP=1/60`，`MAX_STEPS_PER_FRAME=4`） | Important：spec §11 要求固定步长；顺带让每步位移有界，物理与刷新率无关 |
+| APP 音效 | 只播 jump/spit/dash/crash | 补上 `swallow` 与 `score` | Important：spec §8/§10 规定的两个音效从未被调用，吞——游戏的核心动词——是静音的 |
+
+测试数从 83 涨到 96：新增 13 条（8 条复现审查发现，5 条覆盖修复后的行为）。详见 ledger 的 `Final: fixed` 与 `Final: minor (deferred)` 行。
+
+---
+
 ## 完成标准
 
 全部 13 个任务完成后：
 
-- `node tools/run-tests.mjs` 输出 86/86 passed，退出码 0
+- `node tools/run-tests.mjs` 输出 96/96 passed，退出码 0
 - 双击 `projects/pelican-bike/index.html` 可直接游玩
 - spec 第 12 节的 6 条验收标准逐条通过
 - `projects/pelican-bike/pelican-bike.html`（原插画）未被改动
