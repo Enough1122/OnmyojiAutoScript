@@ -738,6 +738,7 @@ EOF
   - `BUBBLE_JUMP_MULT` → `0.85`
   - `MAX_JUMPS_WITH_BUBBLE` → `3`（虽然要到 Task 7 的泡泡才用得上，但 `maxJumps` 在 Task 6 就引用它，必须在此定义）
   - `DUCK_SPEED_MULT` → `0.55`
+  - `DASH_SPEED_MULT` → `1.9`（同理，`currentSpeed` 在 Task 6 就引用它）
   - `makeRng(seed)` → `function(): number`
   - `createGame(rng?)` → `game`（字段见下）
   - `startRun(g)` → `void`
@@ -873,6 +874,8 @@ var GRAVITY = 2200;
 var JUMP_VELOCITY = 780;
 var BUBBLE_JUMP_MULT = 0.85;
 var DUCK_SPEED_MULT = 0.55;
+// 冲刺要到 Task 7 才做，但 currentSpeed 现在就引用它，必须在此定义
+var DASH_SPEED_MULT = 1.9;
 var MAX_JUMPS_WITH_BUBBLE = 3;
 
 // 确定性伪随机（mulberry32）。游戏与测试共用
@@ -1046,7 +1049,7 @@ EOF
 **Interfaces:**
 - Consumes: Task 2 `pouchSpit`；Task 6 `createGame`/`startRun`/`crash`/`updateGame`/`PELICAN_X`/`GROUND_Y`
 - Produces:
-  - `DASH_DURATION` → `1.5`，`DASH_SPEED_MULT` → `1.9`
+  - `DASH_DURATION` → `1.5`（`DASH_SPEED_MULT` 已在 Task 6 定义，此处不要重复）
   - `FLOAT_DURATION` → `4`（`MAX_JUMPS_WITH_BUBBLE` 已在 Task 6 定义，此处不要重复）
   - `STAR_PER_OBSTACLE` → `10`，`STAR_CLEAR_BONUS` → `50`
   - `PROJECTILE_SPEED` → `900`，`PROJECTILE_DESPAWN_X` → `1100`
@@ -1212,7 +1215,6 @@ Expected: FAIL，报 `spit is not defined`。
 
 ```js
 var DASH_DURATION = 1.5;
-var DASH_SPEED_MULT = 1.9;
 var FLOAT_DURATION = 4;
 var STAR_PER_OBSTACLE = 10;
 var STAR_CLEAR_BONUS = 50;

@@ -144,6 +144,158 @@ function obstacleBox(ent) {
     h: ent.h
   };
 }
+
+var LIVES = 3;
+var CRASH_DURATION = 0.3;
+var INVULN_DURATION = 1.5;
+var SPEED_RECOVER_DURATION = 1.2;
+var CRASH_SPEED_FACTOR = 0.6;
+var GRAVITY = 2200;
+var JUMP_VELOCITY = 780;
+var BUBBLE_JUMP_MULT = 0.85;
+var DUCK_SPEED_MULT = 0.55;
+var MAX_JUMPS_WITH_BUBBLE = 3;
+// 冲刺要到 Task 7 才做，但 currentSpeed 现在就引用它，必须在此定义
+var DASH_SPEED_MULT = 1.9;
+
+// 确定性伪随机（mulberry32）。游戏与测试共用
+function makeRng(seed) {
+  var a = seed >>> 0;
+  return function () {
+    a = (a + 0x6D2B79F5) >>> 0;
+    var t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function createGame(rng) {
+  return {
+    state: 'title',
+    rng: rng || makeRng(1),
+    t: 0,
+    distance: 0,
+    lives: LIVES,
+    score: createScore(),
+    pouch: createPouch(POUCH_CAPACITY),
+    height: 0,
+    vy: 0,
+    ducking: false,
+    jumpsUsed: 0,
+    crashTimer: 0,
+    invuln: 0,
+    recoverTimer: 0,
+    speedFactor: 1,
+    dash: 0,
+    float: 0,
+    entities: [],
+    projectiles: [],
+    nextSpawnAt: 600,
+    best: 0
+  };
+}
+
+function startRun(g) {
+  g.state = 'playing';
+  g.t = 0;
+  g.distance = 0;
+  g.lives = LIVES;
+  g.score = createScore();
+  g.pouch = createPouch(POUCH_CAPACITY);
+  g.height = 0;
+  g.vy = 0;
+  g.ducking = false;
+  g.jumpsUsed = 0;
+  g.crashTimer = 0;
+  g.invuln = 0;
+  g.recoverTimer = 0;
+  g.speedFactor = 1;
+  g.dash = 0;
+  g.float = 0;
+  g.entities = [];
+  g.projectiles = [];
+  g.nextSpawnAt = 600;
+}
+
+function currentSpeed(g) {
+  var v = speedAt(g.t) * g.speedFactor;
+  if (g.dash > 0) v *= DASH_SPEED_MULT;
+  if (g.ducking && g.height === 0) v *= DUCK_SPEED_MULT;
+  return v;
+}
+
+function maxJumps(g) {
+  return g.float > 0 ? MAX_JUMPS_WITH_BUBBLE : 1;
+}
+
+function jump(g) {
+  if (g.state !== 'playing') return false;
+  if (g.jumpsUsed >= maxJumps(g)) return false;
+  g.vy = g.jumpsUsed > 0 ? JUMP_VELOCITY * BUBBLE_JUMP_MULT : JUMP_VELOCITY;
+  g.jumpsUsed += 1;
+  return true;
+}
+
+function setDucking(g, on) {
+  g.ducking = !!on;
+}
+
+// 被无敌或冲刺挡下时返回 false 且不改变任何状态
+function crash(g) {
+  if (g.invuln > 0 || g.dash > 0) return false;
+  g.lives -= 1;
+  scoreCrash(g.score);
+  g.speedFactor = CRASH_SPEED_FACTOR;
+  g.recoverTimer = SPEED_RECOVER_DURATION;
+  g.crashTimer = CRASH_DURATION;
+  g.state = 'crashed';
+  return true;
+}
+
+function updateGame(g, dt) {
+  // 速度惩罚线性恢复（撞车即刻开始计时）
+  if (g.recoverTimer > 0) {
+    g.recoverTimer = Math.max(0, g.recoverTimer - dt);
+    var k = 1 - g.recoverTimer / SPEED_RECOVER_DURATION;
+    g.speedFactor = CRASH_SPEED_FACTOR + (1 - CRASH_SPEED_FACTOR) * k;
+  } else {
+    g.speedFactor = 1;
+  }
+
+  // crashed 期间世界不推进，只走撞车计时
+  if (g.crashTimer > 0) {
+    g.crashTimer = Math.max(0, g.crashTimer - dt);
+    if (g.crashTimer === 0) {
+      if (g.lives <= 0) {
+        g.state = 'gameover';
+      } else {
+        g.state = 'playing';
+        g.invuln = INVULN_DURATION;
+      }
+    }
+    return;
+  }
+
+  if (g.state !== 'playing') return;
+
+  g.t += dt;
+  if (g.invuln > 0) g.invuln = Math.max(0, g.invuln - dt);
+  if (g.dash > 0) g.dash = Math.max(0, g.dash - dt);
+  if (g.float > 0) g.float = Math.max(0, g.float - dt);
+
+  // 垂直运动。落回地面时钳制 height >= 0（超大 dt 也不会穿地）
+  g.vy -= GRAVITY * dt;
+  g.height += g.vy * dt;
+  if (g.height <= 0) {
+    g.height = 0;
+    g.vy = 0;
+    g.jumpsUsed = 0;
+    g.float = 0;
+  }
+
+  g.distance += currentSpeed(g) * dt;
+}
 /* ==== CORE:END ==== */
 
 /* ==== TESTS:BEGIN ==== */
@@ -255,17 +407,7 @@ test('道具权重总和为 100', function () {
 });
 
 test('pickItemType：10000 次采样各类型占比在期望 ±3% 内', function () {
-  // 确定性伪随机（mulberry32），避免测试偶发失败
-  function makeRng(seed) {
-    var a = seed >>> 0;
-    return function () {
-      a = (a + 0x6D2B79F5) >>> 0;
-      var t = a;
-      t = Math.imul(t ^ (t >>> 15), t | 1);
-      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
-  }
+  // 用 CORE 的确定性伪随机，避免测试偶发失败
   var rng = makeRng(20260924);
   var counts = {};
   ITEM_TYPES.forEach(function (k) { counts[k] = 0; });
@@ -318,6 +460,103 @@ test('高墙跳不过去（必须用道具）', function () {
   var wall = { x: PELICAN_X, bottom: 0, w: 46, h: 170 };
   assert(aabbOverlap(pelicanBox(0, false), obstacleBox(wall)) === true, '地面应撞墙');
   assert(aabbOverlap(pelicanBox(138, false), obstacleBox(wall)) === true, '跳到最高点 138 仍应撞墙');
+});
+
+test('新游戏初始为 title，3 条命', function () {
+  var g = createGame(makeRng(1));
+  assert(g.state === 'title', '初始状态应为 title');
+  assert(g.lives === 3, '初始 3 条命');
+});
+
+test('startRun 重置所有局内状态', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  assert(g.state === 'playing', '应进入 playing');
+  assert(g.t === 0 && g.distance === 0, '时间与距离归零');
+  assert(pouchCount(g.pouch) === 0, '喉囊清空');
+  assert(g.score.points === 0 && g.score.streak === 0, '分数清零');
+  assert(g.speedFactor === 1 && g.dash === 0 && g.float === 0, '修正项归零');
+});
+
+test('跳跃：地面只能跳一次，落地后恢复', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  assert(jump(g) === true, '第一次跳应成功');
+  assert(jump(g) === false, '空中第二次跳应失败（无泡泡）');
+  assertClose(g.vy, 780, 1e-9, '起跳初速应为 780');
+  // 落到地面
+  for (var i = 0; i < 200; i++) updateGame(g, 1 / 60);
+  assert(g.height === 0, '最终应回到地面');
+  assert(g.jumpsUsed === 0, '落地后跳跃次数应重置');
+  assert(jump(g) === true, '落地后应能再跳');
+});
+
+test('跳跃高度约为 138px', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  jump(g);
+  var peak = 0;
+  for (var i = 0; i < 200; i++) {
+    updateGame(g, 1 / 120);
+    if (g.height > peak) peak = g.height;
+  }
+  assertClose(peak, 138, 6, '跳跃最高点应约 138px，实际 ' + peak.toFixed(1));
+});
+
+test('蹲下在地面时降低速度', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  var normal = currentSpeed(g);
+  setDucking(g, true);
+  assertClose(currentSpeed(g), normal * 0.55, 1e-6, '蹲下速度应为 0.55x');
+  setDucking(g, false);
+  assertClose(currentSpeed(g), normal, 1e-6, '站起应恢复');
+});
+
+test('撞车时序：crashed 0.3s → playing 并起 1.5s 无敌', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  crash(g);
+  assert(g.state === 'crashed', '撞车后应进入 crashed');
+  assertClose(g.speedFactor, 0.6, 1e-9, '速度应立刻降到 0.6x');
+  updateGame(g, 0.2);
+  assert(g.state === 'crashed', '0.2s 时仍在 crashed');
+  assert(g.invuln === 0, 'crashed 期间无敌尚未开始');
+  updateGame(g, 0.15);
+  assert(g.state === 'playing', '0.35s 后应回到 playing');
+  assertClose(g.invuln, 1.5, 1e-9, '应起 1.5s 无敌');
+});
+
+test('撞车后速度在 1.2s 内线性恢复到 1.0x', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  crash(g);
+  assertClose(g.speedFactor, 0.6, 1e-9, '起点 0.6');
+  updateGame(g, 0.6);
+  assertClose(g.speedFactor, 0.8, 1e-6, '0.6s 时应为 0.8');
+  updateGame(g, 0.6);
+  assertClose(g.speedFactor, 1.0, 1e-6, '1.2s 后应恢复 1.0');
+});
+
+test('命掉光进入 gameover', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  for (var i = 0; i < 3; i++) {
+    g.invuln = 0; g.dash = 0; g.crashTimer = 0; g.state = 'playing';
+    crash(g);
+    updateGame(g, 0.35);
+  }
+  assert(g.lives === 0, '应掉光 3 条命，实际剩 ' + g.lives);
+  assert(g.state === 'gameover', '应进入 gameover，实际 ' + g.state);
+});
+
+test('Review Focus 2：单帧超大 dt 不会让鹈鹕瞬移穿地', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  jump(g);
+  updateGame(g, 30);   // 模拟切标签页回来
+  assert(g.height === 0, '超大 dt 后 height 应被钳在地面，不得为负');
+  assert(g.height >= 0, 'height 不允许为负');
 });
 /* ==== TESTS:END ==== */
 
