@@ -528,6 +528,65 @@ function legPhaseFor(wheelAngle) {
 function pouchBulgeFor(count) {
   return 1 + (POUCH_BULGE_MAX - 1) * (count / POUCH_CAPACITY);
 }
+
+var PARTICLE_GRAVITY = 900;
+var PARTICLE_POOL_SIZE = 256;
+
+function createPool(size) {
+  var pool = { size: size, cursor: 0, items: [] };
+  for (var i = 0; i < size; i++) {
+    pool.items.push({
+      alive: false, x: 0, y: 0, vx: 0, vy: 0,
+      life: 0, maxLife: 1, radius: 4, color: '#ffffff'
+    });
+  }
+  return pool;
+}
+
+// 优先复用死亡槽位；池满则覆盖 cursor 指向的最老槽位。绝不分配新对象
+function poolSpawn(pool, props) {
+  var p = null;
+  for (var i = 0; i < pool.size; i++) {
+    var idx = (pool.cursor + i) % pool.size;
+    if (!pool.items[idx].alive) {
+      p = pool.items[idx];
+      pool.cursor = (idx + 1) % pool.size;
+      break;
+    }
+  }
+  if (p === null) {
+    p = pool.items[pool.cursor];
+    pool.cursor = (pool.cursor + 1) % pool.size;
+  }
+  p.alive = true;
+  p.x = props.x;
+  p.y = props.y;
+  p.vx = props.vx || 0;
+  p.vy = props.vy || 0;
+  p.life = props.life === undefined ? 0.6 : props.life;
+  p.maxLife = p.life;
+  p.radius = props.radius === undefined ? 4 : props.radius;
+  p.color = props.color || '#ffffff';
+  return p;
+}
+
+function poolUpdate(pool, dt) {
+  for (var i = 0; i < pool.size; i++) {
+    var p = pool.items[i];
+    if (!p.alive) continue;
+    p.life -= dt;
+    if (p.life <= 0) { p.alive = false; continue; }
+    p.vy += PARTICLE_GRAVITY * dt;
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+  }
+}
+
+function poolAliveCount(pool) {
+  var n = 0;
+  for (var i = 0; i < pool.size; i++) if (pool.items[i].alive) n += 1;
+  return n;
+}
 /* ==== CORE:END ==== */
 
 /* ==== RENDER:BEGIN ==== */
@@ -882,6 +941,125 @@ function drawPelican(ctx, g, time) {
   // 近侧腿
   drawLeg(ctx, pedalAngle, PELICAN_X + 10, LEG_COLOR);
 
+  ctx.restore();
+}
+
+function drawEntity(ctx, ent) {
+  var box = obstacleBox(ent);
+  ctx.save();
+
+  if (ent.kind === 'item') {
+    ctx.globalAlpha = ent.missed ? 0.35 : 1;
+    ctx.fillStyle = ITEM_COLORS[ent.type] || '#ffffff';
+    ctx.beginPath();
+    ctx.arc(ent.x, box.y + box.h / 2, ent.w / 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.restore();
+    return;
+  }
+
+  if (ent.type === 'pit') {
+    ctx.fillStyle = '#7a8a6e';
+    ctx.beginPath();
+    ctx.ellipse(ent.x, GROUND_Y + 6, ent.w / 2, 16, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#3d4a36';
+    ctx.beginPath();
+    ctx.ellipse(ent.x, GROUND_Y + 8, ent.w / 2 - 6, 11, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    return;
+  }
+
+  if (ent.type === 'crow') {
+    ctx.fillStyle = '#2b2f33';
+    ctx.beginPath();
+    ctx.ellipse(ent.x, box.y + box.h / 2, ent.w / 2, ent.h / 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(ent.x - 6, box.y + 6);
+    ctx.lineTo(ent.x - 30, box.y - 10);
+    ctx.lineTo(ent.x + 2, box.y + 14);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#ffc75f';
+    ctx.beginPath();
+    ctx.moveTo(ent.x + ent.w / 2 - 4, box.y + box.h / 2);
+    ctx.lineTo(ent.x + ent.w / 2 + 14, box.y + box.h / 2 + 3);
+    ctx.lineTo(ent.x + ent.w / 2 - 4, box.y + box.h / 2 + 7);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+    return;
+  }
+
+  if (ent.type === 'wall') {
+    ctx.fillStyle = '#9aa6b2';
+    ctx.fillRect(box.x, box.y, box.w, box.h);
+    ctx.fillStyle = '#7d8b98';
+    for (var y = box.y; y < box.y + box.h; y += 26) {
+      ctx.fillRect(box.x, y, box.w, 4);
+    }
+    ctx.strokeStyle = '#6d7883';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(box.x, box.y, box.w, box.h);
+    ctx.restore();
+    return;
+  }
+
+  // bin / barrier
+  ctx.fillStyle = ent.type === 'bin' ? '#5c6b7a' : '#e07a3f';
+  ctx.fillRect(box.x, box.y, box.w, box.h);
+  ctx.fillStyle = ent.type === 'bin' ? '#48555f' : '#c2652f';
+  ctx.fillRect(box.x, box.y, box.w, 10);
+  ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(box.x, box.y, box.w, box.h);
+  ctx.restore();
+}
+
+function drawEntities(ctx, g) {
+  for (var i = 0; i < g.entities.length; i++) {
+    var e = g.entities[i];
+    if (e.x < -160 || e.x > VIEW_W + 160) continue;
+    drawEntity(ctx, e);
+  }
+}
+
+function drawProjectiles(ctx, g) {
+  for (var i = 0; i < g.projectiles.length; i++) {
+    var p = g.projectiles[i];
+    ctx.save();
+    ctx.fillStyle = ITEM_COLORS[p.item] || '#ffffff';
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.piercing ? 14 : 11, 0, Math.PI * 2);
+    ctx.fill();
+    if (p.piercing) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(p.x - 34, p.y);
+      ctx.lineTo(p.x - 16, p.y);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+}
+
+function drawParticles(ctx, pool) {
+  ctx.save();
+  for (var i = 0; i < pool.size; i++) {
+    var p = pool.items[i];
+    if (!p.alive) continue;
+    ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
   ctx.restore();
 }
 /* ==== RENDER:END ==== */
@@ -1550,6 +1728,92 @@ test('drawPelican 在囊满与空囊两种状态下都不崩', function () {
     drawPelican(ctx, g, 1);
   });
 });
+
+test('粒子池预分配且初始全为死亡', function () {
+  var pool = createPool(64);
+  assert(pool.items.length === 64, '应预分配 64 个');
+  assert(poolAliveCount(pool) === 0, '初始应全部死亡');
+});
+
+test('poolSpawn 复用池内对象，不新增引用', function () {
+  var pool = createPool(64);
+  var p = poolSpawn(pool, { x: 1, y: 2, life: 0.5 });
+  assert(pool.items.indexOf(p) !== -1, '返回的粒子必须是池内已有对象');
+  assert(poolAliveCount(pool) === 1, '存活数应为 1');
+  assertClose(p.life, 0.5, 1e-9, 'life 应被设置');
+  assertClose(p.maxLife, 0.5, 1e-9, 'maxLife 应记录初始 life');
+});
+
+test('连续 spawn 200 次池长度不增长（不每帧分配）', function () {
+  var pool = createPool(64);
+  var firstRef = pool.items[0];
+  for (var i = 0; i < 200; i++) poolSpawn(pool, { x: i, y: 0, life: 10 });
+  assert(pool.items.length === 64, '池长度应恒为 64，实际 ' + pool.items.length);
+  assert(pool.items[0] === firstRef, '池内对象应被复用而非重建');
+  assert(poolAliveCount(pool) === 64, '池满时全部存活');
+});
+
+test('池满时覆盖最老的粒子而不是丢弃', function () {
+  var pool = createPool(4);
+  var spawned = [];
+  for (var i = 0; i < 4; i++) spawned.push(poolSpawn(pool, { x: i, y: 0, life: 10 }));
+  var over = poolSpawn(pool, { x: 99, y: 0, life: 10 });
+  assert(over === spawned[0], '应覆盖最早分配的那个');
+  assertClose(over.x, 99, 1e-9, '被覆盖的粒子应带上新属性');
+  assert(poolAliveCount(pool) === 4, '存活数仍为 4');
+});
+
+test('poolUpdate 推进位置并在 life 归零后回收', function () {
+  var pool = createPool(4);
+  var p = poolSpawn(pool, { x: 0, y: 0, vx: 100, vy: 0, life: 0.1 });
+  poolUpdate(pool, 0.05);
+  assertClose(p.x, 5, 1e-6, '应前进 100 * 0.05 = 5');
+  assert(p.alive === true, 'life 未耗尽应仍存活');
+  poolUpdate(pool, 0.1);
+  assert(p.alive === false, 'life 耗尽应回收');
+  assert(poolAliveCount(pool) === 0, '存活数应回到 0');
+});
+
+test('回收后的槽位能被再次复用', function () {
+  var pool = createPool(1);
+  var a = poolSpawn(pool, { x: 0, y: 0, life: 0.05 });
+  poolUpdate(pool, 0.1);
+  assert(poolAliveCount(pool) === 0, '应已回收');
+  var b = poolSpawn(pool, { x: 7, y: 0, life: 1 });
+  assert(b === a, '应复用同一个对象');
+  assertClose(b.x, 7, 1e-9, '应是新属性');
+});
+
+test('drawEntities / drawProjectiles / drawParticles 不抛异常', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  g.entities = [
+    { kind: 'obstacle', type: 'bin', x: 600, bottom: 0, w: 54, h: 70 },
+    { kind: 'obstacle', type: 'crow', x: 700, bottom: 60, w: 48, h: 34 },
+    { kind: 'obstacle', type: 'pit', x: 800, bottom: 0, w: 90, h: 0 },
+    { kind: 'obstacle', type: 'wall', x: 900, bottom: 0, w: 46, h: 170 },
+    { kind: 'item', type: 'fish', x: 500, bottom: 40, w: 32, h: 32 },
+    { kind: 'item', type: 'rock', x: 520, bottom: 90, w: 32, h: 32 },
+    { kind: 'item', type: 'chili', x: 540, bottom: 60, w: 32, h: 32 },
+    { kind: 'item', type: 'bubble', x: 560, bottom: 120, w: 32, h: 32 },
+    { kind: 'item', type: 'star', x: 580, bottom: 70, w: 32, h: 32 }
+  ];
+  g.projectiles = [{ item: 'rock', x: 400, y: 300, piercing: true }];
+  var pool = createPool(16);
+  poolSpawn(pool, { x: 10, y: 10, life: 1 });
+
+  var ctx = makeStubCtx();
+  drawEntities(ctx, g);
+  drawProjectiles(ctx, g);
+  drawParticles(ctx, pool);
+  assert(ctx.did('fill'), '应画出内容');
+});
+
+test('每种道具都有配色', function () {
+  ITEM_TYPES.forEach(function (t) {
+    assert(typeof ITEM_COLORS[t] === 'string' && ITEM_COLORS[t].length > 0, t + ' 缺少配色');
+  });
+});
 /* ==== TESTS:END ==== */
 
 // ?test=1 时把结果画到页面上
@@ -1563,13 +1827,40 @@ if (location.search.indexOf('test=1') !== -1) {
   document.getElementById('out').textContent = lines.join('\n');
   document.getElementById('out').hidden = false;
 } else {
-  // ---- 临时渲染：仅用于 Task 9/10 目视确认，Task 13 会被真正的 APP 块替换 ----
+  // ---- 临时渲染：仅用于 Task 9/10/11 目视确认，Task 13 会被真正的 APP 块替换 ----
   (function () {
     var canvas = document.getElementById('game');
     var ctx = canvas.getContext('2d');
     var g = createGame(makeRng(1));
     startRun(g);
     for (var i = 0; i < 4; i++) pouchSwallow(g.pouch, ITEM_TYPES[i]);   // 塞点东西看喉囊鼓起
+
+    // 铺开五种障碍（贴地）与五种道具（高处），便于分辨每种画法
+    var kinds = ['bin', 'barrier', 'crow', 'pit', 'wall'];
+    for (var k = 0; k < kinds.length; k++) {
+      var spec = OBSTACLE_SPECS[kinds[k]];
+      g.entities.push({
+        kind: 'obstacle', type: kinds[k], x: 430 + k * 118,
+        bottom: spec.bottom, w: spec.w, h: spec.h
+      });
+    }
+    for (var m = 0; m < ITEM_TYPES.length; m++) {
+      g.entities.push({
+        kind: 'item', type: ITEM_TYPES[m], x: 70 + m * 76,
+        bottom: 285, w: 32, h: 32
+      });
+    }
+    g.projectiles.push({ item: 'rock', x: 640, y: 250, piercing: true });
+    g.projectiles.push({ item: 'fish', x: 740, y: 200, piercing: false });
+
+    var pool = createPool(PARTICLE_POOL_SIZE);
+    for (var q = 0; q < 40; q++) {
+      poolSpawn(pool, {
+        x: 400 + Math.random() * 520, y: 60 + Math.random() * 180,
+        vx: 0, vy: 0, life: 0.3 + Math.random() * 0.7,
+        radius: 3 + Math.random() * 5, color: '#ffffff'
+      });
+    }
 
     var dpr = window.devicePixelRatio || 1;
     canvas.width = VIEW_W * dpr;
@@ -1588,6 +1879,9 @@ if (location.search.indexOf('test=1') !== -1) {
       ctx.clearRect(0, 0, VIEW_W, VIEW_H);
       drawBackground(ctx, g);
       drawGround(ctx, g);
+      drawEntities(ctx, g);
+      drawProjectiles(ctx, g);
+      drawParticles(ctx, pool);
       drawPelican(ctx, g, clock);
       requestAnimationFrame(frame);
     }
