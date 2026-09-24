@@ -1004,6 +1004,8 @@ function updateGame(g, dt) {
   if (g.dash > 0) g.dash = Math.max(0, g.dash - dt);
   if (g.float > 0) g.float = Math.max(0, g.float - dt);
 
+  var scoredBeforeDistance = distanceScore(g.distance);
+
   // 垂直运动。落回地面时钳制 height >= 0（超大 dt 也不会穿地）
   g.vy -= GRAVITY * dt;
   g.height += g.vy * dt;
@@ -1015,6 +1017,10 @@ function updateGame(g, dt) {
   }
 
   g.distance += currentSpeed(g) * dt;
+
+  // 距离分：每 10px 一分，不乘连击倍率。用「前后的 distanceScore 之差」累加，
+  // 保证总分恒等于 distanceScore(distance)，且不会因浮点累积而漂移。
+  g.score.points += distanceScore(g.distance) - scoredBeforeDistance;
 }
 ```
 
@@ -2941,7 +2947,7 @@ function safeSaveBest(storage, value) {
 - [ ] **Step 4: 跑测试确认全过**
 
 Run: `cd /d/hermes/projects/pelican-bike && node tools/run-tests.mjs`
-Expected: 83/83 passed。
+Expected: 86/86 passed。
 
 - [ ] **Step 5: 写 UI 与接线（`APP` 区块，放在 `TESTS` 块之后）**
 
@@ -3218,14 +3224,14 @@ canvas { display: block; border-radius: 12px; box-shadow: 0 12px 48px rgba(0,0,0
 - [ ] **Step 6: 跑测试确认全过**
 
 Run: `cd /d/hermes/projects/pelican-bike && node tools/run-tests.mjs`
-Expected: 83/83 passed，退出码 0。
+Expected: 86/86 passed，退出码 0。
 
 - [ ] **Step 7: 逐条核对 spec 的验收标准**
 
 双击 `projects/pelican-bike/index.html`，逐条确认并记录实际观察到的结果：
 
 1. **双击能开玩，控制台无报错** —— 打开 DevTools Console，确认没有红色报错
-2. **`?test=1` 全 PASS** —— 地址栏加 `?test=1`，确认页面显示 `83/83 passed`
+2. **`?test=1` 全 PASS** —— 地址栏加 `?test=1`，确认页面显示 `86/86 passed`
 3. **一局能跑到速度 2.5x** —— 撑满 90 秒，确认障碍明显变密变快
 4. **喉囊满 6 格后不再吞入** —— 右上角 6 个圆点填满后，再碰到道具应直接飞过（变半透明）
 5. **空格吐出的石头能砸碎高墙** —— 吞到石头，遇到高墙时按空格，墙应被砸掉且不掉命
@@ -3271,7 +3277,7 @@ EOF
 
 全部 13 个任务完成后：
 
-- `node tools/run-tests.mjs` 输出 83/83 passed，退出码 0
+- `node tools/run-tests.mjs` 输出 86/86 passed，退出码 0
 - 双击 `projects/pelican-bike/index.html` 可直接游玩
 - spec 第 12 节的 6 条验收标准逐条通过
 - `projects/pelican-bike/pelican-bike.html`（原插画）未被改动

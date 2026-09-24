@@ -10,6 +10,15 @@ html, body {
   font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 canvas { display: block; border-radius: 12px; box-shadow: 0 12px 48px rgba(0,0,0,.55); }
+#overlay {
+  position: fixed; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 10px;
+  background: rgba(12,74,110,.55); color: #fff; text-align: center;
+}
+#overlay[hidden] { display: none; }
+#overlay h1 { font-size: 40px; margin: 0; }
+#overlay .score { font-size: 56px; font-weight: 700; margin: 0; }
+#overlay .hint { opacity: .85; margin: 2px; }
 #out {
   position: fixed; inset: 0; margin: 0; padding: 24px; overflow: auto;
   background: #0e1626; color: #d6e4f0; font: 14px/1.6 ui-monospace, Consolas, monospace;
@@ -19,6 +28,7 @@ canvas { display: block; border-radius: 12px; box-shadow: 0 12px 48px rgba(0,0,0
 </head>
 <body>
 <canvas id="game"></canvas>
+<div id="overlay"></div>
 <pre id="out" hidden></pre>
 <script>
 // 浏览器侧 harness —— node 侧由 run-tests.mjs 注入等价实现
@@ -298,6 +308,8 @@ function updateGame(g, dt) {
   if (g.dash > 0) g.dash = Math.max(0, g.dash - dt);
   if (g.float > 0) g.float = Math.max(0, g.float - dt);
 
+  var scoredBeforeDistance = distanceScore(g.distance);
+
   // 垂直运动。落回地面时钳制 height >= 0（超大 dt 也不会穿地）
   g.vy -= GRAVITY * dt;
   g.height += g.vy * dt;
@@ -309,6 +321,10 @@ function updateGame(g, dt) {
   }
 
   g.distance += currentSpeed(g) * dt;
+
+  // 距离分：每 10px 一分，不乘连击倍率。用「前后的 distanceScore 之差」累加，
+  // 保证总分恒等于 distanceScore(distance)，且不会因浮点累积而漂移。
+  g.score.points += distanceScore(g.distance) - scoredBeforeDistance;
 }
 
 var DASH_DURATION = 1.5;
@@ -602,6 +618,47 @@ var SOUND_SPECS = {
   crash:   { type: 'noise',    from: 200, to: 60,  duration: 0.25, gain: 0.30 },
   dash:    { type: 'sawtooth', from: 120, to: 900, duration: 0.35, gain: 0.22 }
 };
+
+var MAX_DT = 1 / 30;
+var BEST_KEY = 'pelicanRunner.best';
+
+var KEY_ACTIONS = {
+  'ArrowUp': 'jump', 'w': 'jump', 'W': 'jump',
+  'ArrowDown': 'duck', 's': 'duck', 'S': 'duck',
+  ' ': 'spit',
+  'p': 'pause', 'P': 'pause', 'Escape': 'pause',
+  'r': 'restart', 'R': 'restart',
+  'm': 'mute', 'M': 'mute'
+};
+
+function actionForKey(key) {
+  return Object.prototype.hasOwnProperty.call(KEY_ACTIONS, key) ? KEY_ACTIONS[key] : null;
+}
+
+// 切标签页回来后 dt 可能是几十秒，必须钳制
+function clampDt(dt) {
+  if (!isFinite(dt) || dt < 0) return 0;
+  return Math.min(dt, MAX_DT);
+}
+
+// storage 作为参数传入，便于测试注入会抛异常的假实现
+function safeLoadBest(storage) {
+  try {
+    var n = parseInt(storage.getItem(BEST_KEY), 10);
+    return isFinite(n) && n > 0 ? n : 0;
+  } catch (err) {
+    return 0;
+  }
+}
+
+function safeSaveBest(storage, value) {
+  try {
+    storage.setItem(BEST_KEY, String(value));
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
 /* ==== CORE:END ==== */
 
 /* ==== RENDER:BEGIN ==== */
@@ -1947,80 +2004,318 @@ test('静音时 play 是空操作，toggleMute 可来回切换', function () {
   assert(audio.play('jump', 0) === undefined, '静音时 play 应无返回、不抛异常');
   assert(audio.toggleMute() === false, '再切换应取消静音');
 });
+
+test('按键映射覆盖 spec 第 7 节全部按键', function () {
+  assert(actionForKey('ArrowUp') === 'jump', '↑ 应为跳');
+  assert(actionForKey('w') === 'jump', 'W 应为跳');
+  assert(actionForKey('ArrowDown') === 'duck', '↓ 应为蹲');
+  assert(actionForKey('s') === 'duck', 'S 应为蹲');
+  assert(actionForKey(' ') === 'spit', '空格应为吐');
+  assert(actionForKey('p') === 'pause', 'P 应为暂停');
+  assert(actionForKey('Escape') === 'pause', 'Esc 应为暂停');
+  assert(actionForKey('r') === 'restart', 'R 应为重开');
+  assert(actionForKey('m') === 'mute', 'M 应为静音');
+  assert(actionForKey('z') === null, '未映射的键应返回 null');
+});
+
+test('Review Focus 2：clampDt 钳制切标签页后的超大 dt', function () {
+  assertClose(clampDt(1 / 60), 1 / 60, 1e-12, '正常帧不受影响');
+  assertClose(clampDt(30), MAX_DT, 1e-12, '30 秒应被钳到 MAX_DT');
+  assertClose(clampDt(1e9), MAX_DT, 1e-12, '极大值应被钳到 MAX_DT');
+  assertClose(clampDt(-5), 0, 1e-12, '负值应为 0');
+  assertClose(clampDt(NaN), 0, 1e-12, 'NaN 应为 0');
+  assertClose(clampDt(Infinity), 0, 1e-12, 'Infinity 是无效输入，应返回 0');
+});
+
+test('Review Focus 5：localStorage 抛异常时读写都安全降级', function () {
+  var throwing = {
+    getItem: function () { throw new Error('denied'); },
+    setItem: function () { throw new Error('quota exceeded'); }
+  };
+  assert(safeLoadBest(throwing) === 0, '读失败应返回 0');
+  assert(safeSaveBest(throwing, 123) === false, '写失败应返回 false 且不抛异常');
+});
+
+test('最高分读写往返正确', function () {
+  var store = {};
+  var fake = {
+    getItem: function (k) { return Object.prototype.hasOwnProperty.call(store, k) ? store[k] : null; },
+    setItem: function (k, v) { store[k] = String(v); }
+  };
+  assert(safeLoadBest(fake) === 0, '空存储应返回 0');
+  assert(safeSaveBest(fake, 4321) === true, '写入应成功');
+  assert(safeLoadBest(fake) === 4321, '应读回 4321');
+  assert(store[BEST_KEY] === '4321', 'key 应为 ' + BEST_KEY);
+});
+
+test('最高分读到脏数据时降级为 0', function () {
+  var dirty = { getItem: function () { return 'abc'; }, setItem: function () {} };
+  assert(safeLoadBest(dirty) === 0, '非数字应返回 0');
+  var negative = { getItem: function () { return '-50'; }, setItem: function () {} };
+  assert(safeLoadBest(negative) === 0, '负数应返回 0');
+});
+
+test('距离分随前进累加，总分等于 distanceScore(distance)', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  assert(g.score.points === 0, '起步应为 0 分');
+  for (var i = 0; i < 60; i++) updateGame(g, 1 / 60);
+  assert(g.distance > 300, '1 秒应前进 300px 以上，实际 ' + g.distance.toFixed(1));
+  assert(g.score.points > 0, '前进后分数必须大于 0（否则一局不吞鱼就是 0 分，最高分永远存不下来）');
+  assertClose(g.score.points, distanceScore(g.distance), 1e-9,
+    '总分应正好等于 distanceScore(distance)，实际 ' + g.score.points + ' vs ' + distanceScore(g.distance));
+});
+
+test('距离分不乘连击倍率', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  for (var i = 0; i < 20; i++) scoreSwallowFish(g.score);   // streak 20 → x3
+  var beforePoints = g.score.points;
+  var beforeDist = distanceScore(g.distance);
+  for (var j = 0; j < 60; j++) updateGame(g, 1 / 60);
+  assertClose(g.score.points - beforePoints, distanceScore(g.distance) - beforeDist, 1e-9,
+    '距离分应为裸距离分，不乘倍率');
+});
+
+test('撞车期间距离与距离分都不增长', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  for (var i = 0; i < 60; i++) updateGame(g, 1 / 60);
+  var d0 = g.distance, p0 = g.score.points;
+  crash(g);
+  updateGame(g, 0.2);
+  assert(g.distance === d0, 'crashed 期间世界不推进');
+  assert(g.score.points === p0, 'crashed 期间不应加距离分');
+});
 /* ==== TESTS:END ==== */
 
-// ?test=1 时把结果画到页面上
-if (location.search.indexOf('test=1') !== -1) {
-  var lines = results.map(function (r) {
-    return (r.ok ? 'PASS  ' : 'FAIL  ') + r.name + (r.ok ? '' : '  → ' + r.err);
-  });
-  var failed = results.filter(function (r) { return !r.ok; }).length;
-  lines.push('');
-  lines.push((results.length - failed) + '/' + results.length + ' passed');
-  document.getElementById('out').textContent = lines.join('\n');
-  document.getElementById('out').hidden = false;
-} else {
-  // ---- 临时渲染：仅用于 Task 9/10/11 目视确认，Task 13 会被真正的 APP 块替换 ----
-  (function () {
-    var canvas = document.getElementById('game');
-    var ctx = canvas.getContext('2d');
-    var g = createGame(makeRng(1));
-    startRun(g);
-    for (var i = 0; i < 4; i++) pouchSwallow(g.pouch, ITEM_TYPES[i]);   // 塞点东西看喉囊鼓起
+/* ==== APP:BEGIN ==== */
+(function () {
+  var canvas = document.getElementById('game');
+  var ctx = canvas.getContext('2d');
+  var overlay = document.getElementById('overlay');
+  var out = document.getElementById('out');
 
-    // 铺开五种障碍（贴地）与五种道具（高处），便于分辨每种画法
-    var kinds = ['bin', 'barrier', 'crow', 'pit', 'wall'];
-    for (var k = 0; k < kinds.length; k++) {
-      var spec = OBSTACLE_SPECS[kinds[k]];
-      g.entities.push({
-        kind: 'obstacle', type: kinds[k], x: 430 + k * 118,
-        bottom: spec.bottom, w: spec.w, h: spec.h
-      });
-    }
-    for (var m = 0; m < ITEM_TYPES.length; m++) {
-      g.entities.push({
-        kind: 'item', type: ITEM_TYPES[m], x: 70 + m * 76,
-        bottom: 285, w: 32, h: 32
-      });
-    }
-    g.projectiles.push({ item: 'rock', x: 640, y: 250, piercing: true });
-    g.projectiles.push({ item: 'fish', x: 740, y: 200, piercing: false });
+  var g = createGame(makeRng(Date.now() >>> 0));
+  var audio = createAudio(window.AudioContext || window.webkitAudioContext);
+  var particles = createPool(PARTICLE_POOL_SIZE);
+  var storage = null;
+  try { storage = window.localStorage; } catch (err) { storage = null; }
 
-    var pool = createPool(PARTICLE_POOL_SIZE);
-    for (var q = 0; q < 40; q++) {
-      poolSpawn(pool, {
-        x: 400 + Math.random() * 520, y: 60 + Math.random() * 180,
-        vx: 0, vy: 0, life: 0.3 + Math.random() * 0.7,
-        radius: 3 + Math.random() * 5, color: '#ffffff'
-      });
-    }
+  var safeStorage = storage || {
+    getItem: function () { return null; },
+    setItem: function () {}
+  };
+  g.best = safeLoadBest(safeStorage);
 
+  // ---- 自适应缩放 ----
+  function resize() {
     var dpr = window.devicePixelRatio || 1;
-    canvas.width = VIEW_W * dpr;
-    canvas.height = VIEW_H * dpr;
-    canvas.style.width = VIEW_W + 'px';
-    canvas.style.height = VIEW_H + 'px';
+    var scale = Math.min(window.innerWidth / VIEW_W, window.innerHeight / VIEW_H);
+    canvas.style.width = Math.floor(VIEW_W * scale) + 'px';
+    canvas.style.height = Math.floor(VIEW_H * scale) + 'px';
+    canvas.width = Math.floor(VIEW_W * dpr);
+    canvas.height = Math.floor(VIEW_H * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  window.addEventListener('resize', resize);
+  resize();
 
-    var last = 0;
-    var clock = 0;
-    function frame(now) {
-      var dt = Math.min((now - last) / 1000, 1 / 30);
-      last = now;
-      clock += dt;
-      g.distance += 340 * dt;          // 让车轮与腿真的转起来
-      ctx.clearRect(0, 0, VIEW_W, VIEW_H);
-      drawBackground(ctx, g);
-      drawGround(ctx, g);
-      drawEntities(ctx, g);
-      drawProjectiles(ctx, g);
-      drawParticles(ctx, pool);
-      drawPelican(ctx, g, clock);
-      requestAnimationFrame(frame);
+  // ---- 粒子辅助 ----
+  function burst(x, y, n, color, speed) {
+    for (var i = 0; i < n; i++) {
+      var a = Math.random() * Math.PI * 2;
+      var s = speed * (0.4 + Math.random() * 0.8);
+      poolSpawn(particles, {
+        x: x, y: y,
+        vx: Math.cos(a) * s, vy: Math.sin(a) * s - 60,
+        life: 0.4 + Math.random() * 0.5,
+        radius: 2 + Math.random() * 4,
+        color: color
+      });
     }
-    requestAnimationFrame(function (t) { last = t; requestAnimationFrame(frame); });
-  })();
-}
+  }
+
+  var shake = 0;
+  var flash = 0;
+
+  // ---- 输入 ----
+  window.addEventListener('keydown', function (ev) {
+    var action = actionForKey(ev.key);
+    if (!action) return;
+    ev.preventDefault();
+
+    if (action === 'mute') { audio.toggleMute(); return; }
+    if (action === 'restart') { startRun(g); overlay.hidden = true; return; }
+    if (action === 'pause') {
+      if (g.state === 'playing') g.state = 'paused';
+      else if (g.state === 'paused') g.state = 'playing';
+      return;
+    }
+
+    if (g.state === 'title') { startRun(g); overlay.hidden = true; return; }
+    if (g.state === 'gameover') { startRun(g); overlay.hidden = true; return; }
+    if (g.state !== 'playing') return;
+
+    if (action === 'jump') {
+      if (jump(g)) audio.play('jump');
+    } else if (action === 'duck') {
+      setDucking(g, true);
+    } else if (action === 'spit') {
+      var eff = spit(g);
+      if (eff) {
+        audio.play('spit');
+        burst(PELICAN_X + 70, GROUND_Y - g.height - 70, 8, '#ffffff', 180);
+        if (eff.kind === 'dash') { flash = 1; shake = 14; audio.play('dash'); }
+        if (eff.kind === 'clear') { flash = 0.8; shake = 10; }
+      }
+    }
+  });
+
+  window.addEventListener('keyup', function (ev) {
+    if (actionForKey(ev.key) === 'duck') {
+      setDucking(g, false);
+    }
+  });
+
+  // ---- 主循环 ----
+  var last = 0;
+  var clock = 0;
+
+  function frame(now) {
+    var dt = clampDt((now - last) / 1000);
+    last = now;
+    clock += dt;
+
+    if (g.state === 'playing' || g.state === 'crashed') {
+      var prevLives = g.lives;
+      updateGame(g, dt);
+      if (g.state === 'playing') {
+        spawnAhead(g);
+        updateEntities(g, dt);
+        updateProjectiles(g, dt);
+      }
+      if (g.lives < prevLives) {
+        // 撞车：羽毛飞散 + 震屏
+        audio.play('crash');
+        burst(PELICAN_X, GROUND_Y - 150, 26, PLUME_COLOR, 320);
+        shake = 20;
+      }
+      if (g.state === 'gameover') {
+        if (g.score.points > g.best) {
+          g.best = g.score.points;
+          safeSaveBest(safeStorage, g.best);
+        }
+        showOverlay('gameover');
+      }
+    }
+
+    poolUpdate(particles, dt);
+    if (shake > 0) shake = Math.max(0, shake - dt * 60);
+    if (flash > 0) flash = Math.max(0, flash - dt * 2.5);
+
+    // ---- 绘制 ----
+    ctx.save();
+    if (shake > 0) {
+      ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+    }
+    drawBackground(ctx, g);
+    drawGround(ctx, g);
+    drawEntities(ctx, g);
+    drawProjectiles(ctx, g);
+    drawParticles(ctx, particles);
+    if (g.invuln > 0 && Math.floor(clock * 20) % 2 === 0) ctx.globalAlpha = 0.45;
+    drawPelican(ctx, g, clock);
+    ctx.restore();
+
+    if (flash > 0) {
+      ctx.save();
+      ctx.globalAlpha = flash * 0.55;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+      ctx.restore();
+    }
+
+    drawHud(ctx, g);
+    requestAnimationFrame(frame);
+  }
+
+  function drawHud(ctx2, gg) {
+    ctx2.save();
+    ctx2.font = 'bold 26px system-ui, sans-serif';
+    ctx2.fillStyle = '#0c4a6e';
+    ctx2.fillText(String(gg.score.points), 24, 44);
+    ctx2.font = '16px system-ui, sans-serif';
+    ctx2.fillText('最高 ' + gg.best, 24, 68);
+
+    var mult = multiplierFor(gg.score.streak);
+    if (mult > 1) {
+      ctx2.font = 'bold 20px system-ui, sans-serif';
+      ctx2.fillStyle = '#d94f3d';
+      ctx2.fillText('x' + mult, 24, 96);
+    }
+
+    // 喉囊状态条
+    var n = pouchCount(gg.pouch);
+    for (var i = 0; i < POUCH_CAPACITY; i++) {
+      ctx2.fillStyle = i < n ? (ITEM_COLORS[gg.pouch.items[i]] || '#ffffff') : 'rgba(12,74,110,0.18)';
+      ctx2.beginPath();
+      ctx2.arc(VIEW_W - 40 - i * 34, 40, 13, 0, Math.PI * 2);
+      ctx2.fill();
+    }
+
+    // 命
+    for (var h = 0; h < gg.lives; h++) {
+      ctx2.fillStyle = '#d94f3d';
+      ctx2.beginPath();
+      ctx2.arc(VIEW_W - 40 - h * 30, 82, 10, 0, Math.PI * 2);
+      ctx2.fill();
+    }
+
+    // 冲刺/浮空计时条
+    if (gg.dash > 0) {
+      ctx2.fillStyle = '#ffc75f';
+      ctx2.fillRect(24, 108, 180 * (gg.dash / DASH_DURATION), 8);
+    }
+    if (gg.float > 0) {
+      ctx2.fillStyle = '#a8d8ea';
+      ctx2.fillRect(24, 122, 180 * (gg.float / FLOAT_DURATION), 8);
+    }
+    ctx2.restore();
+  }
+
+  function showOverlay(kind) {
+    overlay.hidden = false;
+    if (kind === 'gameover') {
+      overlay.innerHTML =
+        '<h1>摔车了</h1>' +
+        '<p class="score">' + g.score.points + '</p>' +
+        '<p>最高分 ' + g.best + '</p>' +
+        '<p class="hint">R 重开 · 空格吐 · ↑跳 · ↓蹲</p>';
+    } else {
+      overlay.innerHTML =
+        '<h1>鹈鹕骑士 · 喉囊弹匣</h1>' +
+        '<p class="hint">嘴一直张着，碰到什么吞什么</p>' +
+        '<p class="hint">↑/W 跳 · ↓/S 蹲 · 空格 吐</p>' +
+        '<p class="hint">按任意方向键开始</p>';
+    }
+  }
+
+  if (location.search.indexOf('test=1') !== -1) {
+    var failedCount = results.filter(function (r) { return !r.ok; }).length;
+    out.textContent = results.map(function (r) {
+      return (r.ok ? 'PASS  ' : 'FAIL  ') + r.name + (r.ok ? '' : '  → ' + r.err);
+    }).join('\n') + '\n\n' + (results.length - failedCount) + '/' + results.length + ' passed';
+    out.hidden = false;
+    overlay.hidden = true;
+    return;
+  }
+
+  showOverlay('title');
+  requestAnimationFrame(function (t) { last = t; requestAnimationFrame(frame); });
+})();
+/* ==== APP:END ==== */
+
 </script>
 </body>
 </html>
