@@ -74,6 +74,38 @@ function scoreCrash(score) {
 function distanceScore(distance) {
   return Math.floor(distance / 10);
 }
+
+var BASE_SPEED = 340;
+var MAX_SPEED_MULT = 2.5;
+var DIFFICULTY_RAMP_SECONDS = 90;
+
+var ITEM_TYPES = ['fish', 'rock', 'chili', 'bubble', 'star'];
+var ITEM_WEIGHTS = { fish: 65, rock: 15, chili: 10, bubble: 7, star: 3 };
+
+function difficultyAt(t) {
+  return Math.min(t / DIFFICULTY_RAMP_SECONDS, 1);
+}
+
+function speedAt(t) {
+  return BASE_SPEED * (1 + (MAX_SPEED_MULT - 1) * difficultyAt(t));
+}
+
+// jitter ∈ [-1, 1]，线性映射到 ±15%
+function gapAt(difficulty, jitter) {
+  var base = 520 + (260 - 520) * difficulty;
+  return base * (1 + 0.15 * jitter);
+}
+
+// 累积权重法。rng 注入以便测试确定性
+function pickItemType(rng) {
+  var roll = rng() * 100;
+  var acc = 0;
+  for (var i = 0; i < ITEM_TYPES.length; i++) {
+    acc += ITEM_WEIGHTS[ITEM_TYPES[i]];
+    if (roll < acc) return ITEM_TYPES[i];
+  }
+  return ITEM_TYPES[ITEM_TYPES.length - 1];
+}
 /* ==== CORE:END ==== */
 
 /* ==== TESTS:BEGIN ==== */
@@ -154,6 +186,67 @@ test('距离分：每 10px 一分，向下取整', function () {
   assert(distanceScore(10) === 1, '10px → 1 分');
   assert(distanceScore(19) === 1, '19px → 1 分');
   assert(distanceScore(1000) === 100, '1000px → 100 分');
+});
+
+test('难度曲线：t=0→0, t=90→1, t=200→1 封顶', function () {
+  assertClose(difficultyAt(0), 0, 1e-9, 't=0 难度应为 0');
+  assertClose(difficultyAt(45), 0.5, 1e-9, 't=45 难度应为 0.5');
+  assertClose(difficultyAt(90), 1, 1e-9, 't=90 难度应为 1');
+  assertClose(difficultyAt(200), 1, 1e-9, 't=200 应封顶在 1');
+});
+
+test('速度曲线：340 → 850 封顶', function () {
+  assertClose(speedAt(0), 340, 1e-6, 't=0 速度应为 340');
+  assertClose(speedAt(90), 850, 1e-6, 't=90 速度应为 850（340 * 2.5）');
+  assertClose(speedAt(200), 850, 1e-6, 't=200 应封顶在 850');
+  assert(speedAt(45) > speedAt(0), '速度应随难度递增');
+});
+
+test('生成间距：难度越高越密，jitter 在 ±15% 内', function () {
+  assertClose(gapAt(0, 0), 520, 1e-9, '难度 0 时基础间距 520');
+  assertClose(gapAt(1, 0), 260, 1e-9, '难度 1 时基础间距 260');
+  assert(gapAt(1, 0) < gapAt(0, 0), '难度越高间距越小');
+  assertClose(gapAt(0, 1), 520 * 1.15, 1e-9, 'jitter=1 应为 +15%');
+  assertClose(gapAt(0, -1), 520 * 0.85, 1e-9, 'jitter=-1 应为 -15%');
+});
+
+test('道具权重总和为 100', function () {
+  var sum = 0;
+  for (var i = 0; i < ITEM_TYPES.length; i++) sum += ITEM_WEIGHTS[ITEM_TYPES[i]];
+  assert(sum === 100, '权重总和应为 100，实际 ' + sum);
+});
+
+test('pickItemType：10000 次采样各类型占比在期望 ±3% 内', function () {
+  // 确定性伪随机（mulberry32），避免测试偶发失败
+  function makeRng(seed) {
+    var a = seed >>> 0;
+    return function () {
+      a = (a + 0x6D2B79F5) >>> 0;
+      var t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  var rng = makeRng(20260924);
+  var counts = {};
+  ITEM_TYPES.forEach(function (k) { counts[k] = 0; });
+  var N = 10000;
+  for (var i = 0; i < N; i++) {
+    var t = pickItemType(rng);
+    assert(counts[t] !== undefined, '返回了未知类型: ' + t);
+    counts[t] += 1;
+  }
+  ITEM_TYPES.forEach(function (k) {
+    var pct = counts[k] / N * 100;
+    var want = ITEM_WEIGHTS[k];
+    assertClose(pct, want, 3, k + ' 占比应接近 ' + want + '%，实际 ' + pct.toFixed(2) + '%');
+  });
+});
+
+test('pickItemType：rng=0 命中第一个，rng→1 命中最后一个', function () {
+  assert(pickItemType(function () { return 0; }) === 'fish', 'rng=0 应命中 fish');
+  assert(pickItemType(function () { return 0.999999; }) === 'star', 'rng 接近 1 应命中 star');
 });
 /* ==== TESTS:END ==== */
 
