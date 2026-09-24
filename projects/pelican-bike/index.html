@@ -662,6 +662,15 @@ function clampDt(dt) {
 var FIXED_STEP = 1 / 60;
 var MAX_STEPS_PER_FRAME = 4;
 
+// 暂停切换。只在 playing ⇄ paused 之间来回，其他状态一律不响应
+//（title/crashed/gameover 下按 P 不该把状态搅乱）。
+// 返回新状态，调用方据此决定是否显示暂停遮罩。
+function togglePause(g) {
+  if (g.state === 'playing') { g.state = 'paused'; return 'paused'; }
+  if (g.state === 'paused') { g.state = 'playing'; return 'playing'; }
+  return null;
+}
+
 // 固定步长累加器（spec §11）。把不定的真实 dt 切成等长的模拟步，
 // 物理因此与显示器刷新率无关（跳跃高度在任何刷新率下都一致）；
 // 单帧步数有上限，避免卡顿后爆发式补步。
@@ -2308,6 +2317,47 @@ test('固定步长下跳跃高度与输入帧率无关', function () {
   assertClose(at60, at144, 0.5, '60fps 与 144fps 的跳跃最高点应一致：' + at60.toFixed(2) + ' vs ' + at144.toFixed(2));
   assertClose(at60, 138, 6, '且应约 138px，实际 ' + at60.toFixed(1));
 });
+
+test('暂停切换：playing ⇄ paused，其他状态一律不响应', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  assert(togglePause(g) === 'paused', 'playing 时应切到 paused');
+  assert(g.state === 'paused', '状态应为 paused');
+  assert(togglePause(g) === 'playing', 'paused 时应切回 playing');
+  assert(g.state === 'playing', '状态应为 playing');
+
+  var t = createGame(makeRng(1));
+  assert(togglePause(t) === null, 'title 状态不应响应暂停');
+  assert(t.state === 'title', 'title 状态不应被改动');
+  t.state = 'crashed';
+  assert(togglePause(t) === null, 'crashed 状态不应响应暂停');
+  assert(t.state === 'crashed', 'crashed 状态不应被改动');
+  t.state = 'gameover';
+  assert(togglePause(t) === null, 'gameover 状态不应响应暂停');
+  assert(t.state === 'gameover', 'gameover 状态不应被改动');
+});
+
+test('暂停期间世界不推进（回归护栏）', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  for (var i = 0; i < 30; i++) updateGame(g, 1 / 60);
+  var d = g.distance, t = g.t;
+  togglePause(g);
+  for (var j = 0; j < 60; j++) updateGame(g, 1 / 60);
+  assert(g.distance === d, '暂停期间距离不应增长');
+  assert(g.t === t, '暂停期间本局秒数不应增长');
+  assert(pouchCount(g.pouch) === pouchCount(g.pouch), '暂停不应改动喉囊');
+});
+
+test('松开蹲下键会把 ducking 清掉（失焦释放依赖它）', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  setDucking(g, true);
+  assert(g.ducking === true, '按住时应为蹲下');
+  setDucking(g, false);
+  assert(g.ducking === false, '释放后应站起');
+  assertClose(currentSpeed(g), speedAt(g.t), 1e-9, '站起后速度应回到 1.0x');
+});
 /* ==== TESTS:END ==== */
 
 /* ==== APP:BEGIN ==== */
@@ -2369,8 +2419,9 @@ test('固定步长下跳跃高度与输入帧率无关', function () {
     if (action === 'mute') { audio.toggleMute(); return; }
     if (action === 'restart') { startRun(g); overlay.hidden = true; return; }
     if (action === 'pause') {
-      if (g.state === 'playing') g.state = 'paused';
-      else if (g.state === 'paused') g.state = 'playing';
+      var next = togglePause(g);
+      if (next === 'paused') showOverlay('paused');
+      else if (next === 'playing') overlay.hidden = true;
       return;
     }
 
@@ -2399,6 +2450,12 @@ test('固定步长下跳跃高度与输入帧率无关', function () {
     }
   });
 
+  // 窗口失焦（Alt+Tab、切标签页、点走）时不会再收到 keyup，
+  // 按住 ↓ 离开会让 ducking 永久卡住：速度 0.55x、碰撞盒 42px。
+  window.addEventListener('blur', function () {
+    setDucking(g, false);
+  });
+
   // ---- 主循环 ----
   var last = 0;
   var clock = 0;
@@ -2406,6 +2463,10 @@ test('固定步长下跳跃高度与输入帧率无关', function () {
 
   // 一步模拟：只推进状态，不绘制
   function step(dt) {
+    // 暂停时整个模拟冻结 —— 不推进 clock，也不更新粒子。
+    // 否则鹈鹕还在浮动、无敌还在闪、粒子还在飘，玩家分不清「暂停」和「卡死」。
+    if (g.state === 'paused') return;
+
     clock += dt;
 
     if (g.state === 'playing' || g.state === 'crashed') {
@@ -2529,6 +2590,10 @@ test('固定步长下跳跃高度与输入帧率无关', function () {
         '<p class="score">' + g.score.points + '</p>' +
         '<p>最高分 ' + g.best + '</p>' +
         '<p class="hint">R 重开 · 空格吐 · ↑跳 · ↓蹲</p>';
+    } else if (kind === 'paused') {
+      overlay.innerHTML =
+        '<h1>暂停</h1>' +
+        '<p class="hint">P / Esc 继续 · R 重开</p>';
     } else {
       overlay.innerHTML =
         '<h1>鹈鹕骑士 · 喉囊弹匣</h1>' +
