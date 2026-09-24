@@ -296,6 +296,80 @@ function updateGame(g, dt) {
 
   g.distance += currentSpeed(g) * dt;
 }
+
+var DASH_DURATION = 1.5;
+var FLOAT_DURATION = 4;
+var STAR_PER_OBSTACLE = 10;
+var STAR_CLEAR_BONUS = 50;
+var PROJECTILE_SPEED = 900;
+var PROJECTILE_DESPAWN_X = 1100;
+
+// 吐：从喉囊取最旧的一个并生效。空囊返回 null
+function spit(g) {
+  if (g.state !== 'playing') return null;
+  var item = pouchSpit(g.pouch);
+  if (item === null) return null;
+  return applySpitEffect(g, item);
+}
+
+function applySpitEffect(g, item) {
+  if (item === null || item === undefined) return null;
+
+  if (item === 'chili') {
+    // 独立计时器：绝不写 g.invuln
+    g.dash = DASH_DURATION;
+    return { kind: 'dash' };
+  }
+
+  if (item === 'bubble') {
+    g.float = FLOAT_DURATION;
+    return { kind: 'float' };
+  }
+
+  if (item === 'star') {
+    var cleared = 0;
+    var kept = [];
+    for (var i = 0; i < g.entities.length; i++) {
+      if (g.entities[i].kind === 'obstacle') cleared += 1;
+      else kept.push(g.entities[i]);
+    }
+    g.entities = kept;
+    var points = cleared * STAR_PER_OBSTACLE + STAR_CLEAR_BONUS;
+    g.score.points += points;
+    return { kind: 'clear', cleared: cleared, points: points };
+  }
+
+  // fish / rock 走抛射物。鱼不穿透（击落乌鸦），石头穿透（砸碎一切）
+  g.projectiles.push({
+    item: item,
+    x: PELICAN_X + 60,
+    y: GROUND_Y - g.height - 60,
+    piercing: item === 'rock'
+  });
+  return { kind: 'projectile', item: item };
+}
+
+function updateProjectiles(g, dt) {
+  var kept = [];
+  for (var i = 0; i < g.projectiles.length; i++) {
+    var p = g.projectiles[i];
+    p.x += PROJECTILE_SPEED * dt;
+    if (p.x > PROJECTILE_DESPAWN_X) continue;
+
+    var consumed = false;
+    for (var j = 0; j < g.entities.length; j++) {
+      var e = g.entities[j];
+      if (e.kind !== 'obstacle' || e.dead) continue;
+      if (p.x < e.x - e.w / 2 || p.x > e.x + e.w / 2) continue;
+      if (p.y < GROUND_Y - e.bottom - e.h || p.y > GROUND_Y - e.bottom) continue;
+      e.dead = true;
+      if (!p.piercing) { consumed = true; break; }
+    }
+    if (consumed) continue;
+    kept.push(p);
+  }
+  g.projectiles = kept;
+}
 /* ==== CORE:END ==== */
 
 /* ==== TESTS:BEGIN ==== */
@@ -557,6 +631,147 @@ test('Review Focus 2：单帧超大 dt 不会让鹈鹕瞬移穿地', function ()
   updateGame(g, 30);   // 模拟切标签页回来
   assert(g.height === 0, '超大 dt 后 height 应被钳在地面，不得为负');
   assert(g.height >= 0, 'height 不允许为负');
+});
+
+test('吐空囊返回 null', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  assert(spit(g) === null, '空囊吐应返回 null');
+});
+
+test('吐辣椒启动 1.5s 冲刺且速度 ×1.9', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  var before = currentSpeed(g);
+  pouchSwallow(g.pouch, 'chili');
+  var eff = spit(g);
+  assert(eff.kind === 'dash', '应返回 dash 效果');
+  assertClose(g.dash, 1.5, 1e-9, '冲刺应为 1.5s');
+  assertClose(currentSpeed(g), before * 1.9, 1e-6, '冲刺速度应为 1.9x');
+});
+
+test('吐泡泡启动 4s 浮空且允许三段跳', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  pouchSwallow(g.pouch, 'bubble');
+  spit(g);
+  assertClose(g.float, 4, 1e-9, '浮空应为 4s');
+  assert(maxJumps(g) === 3, '浮空期间最多 3 段跳');
+  assert(jump(g) === true, '第 1 跳');
+  assert(jump(g) === true, '第 2 跳');
+  assert(jump(g) === true, '第 3 跳');
+  assert(jump(g) === false, '第 4 跳应失败');
+});
+
+test('落地后浮空重置，回到单段跳', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  pouchSwallow(g.pouch, 'bubble');
+  spit(g);
+  jump(g);
+  for (var i = 0; i < 400; i++) updateGame(g, 1 / 60);
+  assert(g.height === 0, '应已落地');
+  assert(g.float === 0, '落地后浮空应重置');
+  assert(maxJumps(g) === 1, '应回到单段跳');
+});
+
+test('吐石头生成穿透抛射物', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  pouchSwallow(g.pouch, 'rock');
+  var eff = spit(g);
+  assert(eff.kind === 'projectile' && eff.item === 'rock', '应生成 rock 抛射物');
+  assert(g.projectiles.length === 1, '应有 1 个抛射物');
+  assert(g.projectiles[0].piercing === true, '石头应穿透');
+});
+
+test('吐鱼生成非穿透抛射物（可击落乌鸦）', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  pouchSwallow(g.pouch, 'fish');
+  spit(g);
+  assert(g.projectiles[0].piercing === false, '鱼不穿透');
+});
+
+test('抛射物砸中障碍并标记 dead', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  g.entities = [{ kind: 'obstacle', type: 'crow', x: PELICAN_X + 100, bottom: 60, w: 48, h: 34 }];
+  pouchSwallow(g.pouch, 'rock');
+  spit(g);
+  updateProjectiles(g, 0.02);
+  assert(g.entities[0].dead === true, '障碍应被标记 dead');
+});
+
+test('石头穿透：一次更新砸中两个障碍', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  g.entities = [
+    { kind: 'obstacle', type: 'crow', x: PELICAN_X + 80, bottom: 60, w: 48, h: 34 },
+    { kind: 'obstacle', type: 'crow', x: PELICAN_X + 90, bottom: 60, w: 48, h: 34 }
+  ];
+  pouchSwallow(g.pouch, 'rock');
+  spit(g);
+  updateProjectiles(g, 0.02);
+  assert(g.entities[0].dead === true && g.entities[1].dead === true, '石头应穿透并砸中两个');
+  assert(g.projectiles.length === 1, '穿透的石头不应消失');
+});
+
+test('鱼不穿透：砸中一个就消失', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  g.entities = [
+    { kind: 'obstacle', type: 'crow', x: PELICAN_X + 80, bottom: 60, w: 48, h: 34 },
+    { kind: 'obstacle', type: 'crow', x: PELICAN_X + 90, bottom: 60, w: 48, h: 34 }
+  ];
+  pouchSwallow(g.pouch, 'fish');
+  spit(g);
+  updateProjectiles(g, 0.02);
+  assert(g.projectiles.length === 0, '鱼砸中后应消失');
+});
+
+test('星星清屏：移除所有障碍并按数量加分', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  g.entities = [
+    { kind: 'obstacle', type: 'crow', x: 600, bottom: 60, w: 48, h: 34 },
+    { kind: 'obstacle', type: 'bin', x: 700, bottom: 0, w: 54, h: 70 },
+    { kind: 'item', type: 'fish', x: 800, bottom: 40, w: 32, h: 32 }
+  ];
+  var before = g.score.points;
+  pouchSwallow(g.pouch, 'star');
+  var eff = spit(g);
+  assert(eff.kind === 'clear', '应返回 clear 效果');
+  assert(eff.cleared === 2, '应清掉 2 个障碍，实际 ' + eff.cleared);
+  assertClose(g.score.points, before + 2 * 10 + 50, 1e-9, '应加 2*10 + 50');
+  assert(g.entities.length === 1, '道具不应被清掉');
+  assert(g.entities[0].kind === 'item', '留下的应是道具');
+});
+
+test('Review Focus 4：冲刺无敌与受击无敌是两套独立计时器', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  g.invuln = 1.0;
+  applySpitEffect(g, 'chili');
+  assertClose(g.dash, 1.5, 1e-9, '冲刺应为 1.5s');
+  assertClose(g.invuln, 1.0, 1e-9, '冲刺不应改动受击无敌');
+  g.dash = 0;   // 冲刺自然结束
+  assertClose(g.invuln, 1.0, 1e-9, '冲刺结束不应清零受击无敌');
+});
+
+test('无敌或冲刺期间撞车不掉命', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  g.invuln = 0.5;
+  assert(crash(g) === false, '无敌期间撞车应被忽略');
+  assert(g.lives === 3, '命数不应减少');
+  g.invuln = 0;
+  g.dash = 1.0;
+  assert(crash(g) === false, '冲刺期间撞车应被忽略');
+  assert(g.lives === 3, '命数不应减少');
+  g.dash = 0;
+  assert(crash(g) === true, '无保护时撞车应生效');
+  assert(g.lives === 2, '应掉 1 命');
 });
 /* ==== TESTS:END ==== */
 
