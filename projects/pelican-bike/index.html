@@ -106,6 +106,44 @@ function pickItemType(rng) {
   }
   return ITEM_TYPES[ITEM_TYPES.length - 1];
 }
+
+var PELICAN_X = 220;
+var GROUND_Y = 430;
+var HITBOX_STAND = { w: 96, h: 78 };
+var HITBOX_DUCK = { w: 96, h: 42 };
+
+function hitboxFor(isDucking) {
+  return isDucking ? HITBOX_DUCK : HITBOX_STAND;
+}
+
+// a/b 的 y 都是顶边。贴边（恰好相接）不算相交
+function aabbOverlap(a, b) {
+  return a.x < b.x + b.w &&
+         b.x < a.x + a.w &&
+         a.y < b.y + b.h &&
+         b.y < a.y + a.h;
+}
+
+// height = 离地高度（正数向上）
+function pelicanBox(height, isDucking) {
+  var box = hitboxFor(isDucking);
+  return {
+    x: PELICAN_X - box.w / 2,
+    y: GROUND_Y - height - box.h,
+    w: box.w,
+    h: box.h
+  };
+}
+
+// ent 用 { x, bottom, w, h }：bottom = 底边的离地高度
+function obstacleBox(ent) {
+  return {
+    x: ent.x - ent.w / 2,
+    y: GROUND_Y - ent.bottom - ent.h,
+    w: ent.w,
+    h: ent.h
+  };
+}
 /* ==== CORE:END ==== */
 
 /* ==== TESTS:BEGIN ==== */
@@ -247,6 +285,39 @@ test('pickItemType：10000 次采样各类型占比在期望 ±3% 内', function
 test('pickItemType：rng=0 命中第一个，rng→1 命中最后一个', function () {
   assert(pickItemType(function () { return 0; }) === 'fish', 'rng=0 应命中 fish');
   assert(pickItemType(function () { return 0.999999; }) === 'star', 'rng 接近 1 应命中 star');
+});
+
+test('蹲下碰撞盒比站立矮', function () {
+  assert(hitboxFor(false).h === 78, '站立高度 78');
+  assert(hitboxFor(true).h === 42, '蹲下高度 42');
+  assert(hitboxFor(false).w === hitboxFor(true).w, '宽度不随蹲下改变');
+});
+
+test('aabbOverlap 基本正确性', function () {
+  var a = { x: 0, y: 0, w: 10, h: 10 };
+  assert(aabbOverlap(a, { x: 5, y: 5, w: 10, h: 10 }) === true, '相交应为 true');
+  assert(aabbOverlap(a, { x: 20, y: 0, w: 10, h: 10 }) === false, '分离应为 false');
+  assert(aabbOverlap(a, { x: 10, y: 0, w: 10, h: 10 }) === false, '仅贴边不算相交');
+  assert(aabbOverlap(a, { x: -5, y: -5, w: 20, h: 20 }) === true, '包含应为 true');
+});
+
+test('蹲下能躲开乌鸦，站立躲不开', function () {
+  // 乌鸦占据离地 60..94 的高度带
+  var crow = { x: PELICAN_X, bottom: 60, w: 48, h: 34 };
+  assert(aabbOverlap(pelicanBox(0, false), obstacleBox(crow)) === true, '站立应该撞上乌鸦');
+  assert(aabbOverlap(pelicanBox(0, true), obstacleBox(crow)) === false, '蹲下应该躲开乌鸦');
+});
+
+test('跳得够高能越过路障', function () {
+  var barrier = { x: PELICAN_X, bottom: 0, w: 60, h: 46 };
+  assert(aabbOverlap(pelicanBox(0, false), obstacleBox(barrier)) === true, '在地面时应撞上路障');
+  assert(aabbOverlap(pelicanBox(60, false), obstacleBox(barrier)) === false, '跳到 60 高时应越过路障');
+});
+
+test('高墙跳不过去（必须用道具）', function () {
+  var wall = { x: PELICAN_X, bottom: 0, w: 46, h: 170 };
+  assert(aabbOverlap(pelicanBox(0, false), obstacleBox(wall)) === true, '地面应撞墙');
+  assert(aabbOverlap(pelicanBox(138, false), obstacleBox(wall)) === true, '跳到最高点 138 仍应撞墙');
 });
 /* ==== TESTS:END ==== */
 
