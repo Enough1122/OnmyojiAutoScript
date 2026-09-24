@@ -736,6 +736,7 @@ EOF
   - `GRAVITY` → `2200`
   - `JUMP_VELOCITY` → `780`
   - `BUBBLE_JUMP_MULT` → `0.85`
+  - `MAX_JUMPS_WITH_BUBBLE` → `3`（虽然要到 Task 7 的泡泡才用得上，但 `maxJumps` 在 Task 6 就引用它，必须在此定义）
   - `DUCK_SPEED_MULT` → `0.55`
   - `makeRng(seed)` → `function(): number`
   - `createGame(rng?)` → `game`（字段见下）
@@ -872,6 +873,7 @@ var GRAVITY = 2200;
 var JUMP_VELOCITY = 780;
 var BUBBLE_JUMP_MULT = 0.85;
 var DUCK_SPEED_MULT = 0.55;
+var MAX_JUMPS_WITH_BUBBLE = 3;
 
 // 确定性伪随机（mulberry32）。游戏与测试共用
 function makeRng(seed) {
@@ -1045,7 +1047,7 @@ EOF
 - Consumes: Task 2 `pouchSpit`；Task 6 `createGame`/`startRun`/`crash`/`updateGame`/`PELICAN_X`/`GROUND_Y`
 - Produces:
   - `DASH_DURATION` → `1.5`，`DASH_SPEED_MULT` → `1.9`
-  - `FLOAT_DURATION` → `4`，`MAX_JUMPS_WITH_BUBBLE` → `3`
+  - `FLOAT_DURATION` → `4`（`MAX_JUMPS_WITH_BUBBLE` 已在 Task 6 定义，此处不要重复）
   - `STAR_PER_OBSTACLE` → `10`，`STAR_CLEAR_BONUS` → `50`
   - `PROJECTILE_SPEED` → `900`，`PROJECTILE_DESPAWN_X` → `1100`
   - `spit(g)` → `effect | null`，`effect` 为 `{ kind: 'projectile', item }` / `{ kind: 'dash' }` / `{ kind: 'float' }` / `{ kind: 'clear', cleared, points }`
@@ -1123,7 +1125,7 @@ test('抛射物砸中障碍并标记 dead', function () {
   g.entities = [{ kind: 'obstacle', type: 'crow', x: PELICAN_X + 100, bottom: 60, w: 48, h: 34 }];
   pouchSwallow(g.pouch, 'rock');
   spit(g);
-  updateProjectiles(g, 0.2);
+  updateProjectiles(g, 0.02);
   assert(g.entities[0].dead === true, '障碍应被标记 dead');
 });
 
@@ -1136,7 +1138,7 @@ test('石头穿透：一次更新砸中两个障碍', function () {
   ];
   pouchSwallow(g.pouch, 'rock');
   spit(g);
-  updateProjectiles(g, 0.2);
+  updateProjectiles(g, 0.02);
   assert(g.entities[0].dead === true && g.entities[1].dead === true, '石头应穿透并砸中两个');
   assert(g.projectiles.length === 1, '穿透的石头不应消失');
 });
@@ -1150,7 +1152,7 @@ test('鱼不穿透：砸中一个就消失', function () {
   ];
   pouchSwallow(g.pouch, 'fish');
   spit(g);
-  updateProjectiles(g, 0.2);
+  updateProjectiles(g, 0.02);
   assert(g.projectiles.length === 0, '鱼砸中后应消失');
 });
 
@@ -1212,7 +1214,6 @@ Expected: FAIL，报 `spit is not defined`。
 var DASH_DURATION = 1.5;
 var DASH_SPEED_MULT = 1.9;
 var FLOAT_DURATION = 4;
-var MAX_JUMPS_WITH_BUBBLE = 3;
 var STAR_PER_OBSTACLE = 10;
 var STAR_CLEAR_BONUS = 50;
 var PROJECTILE_SPEED = 900;
@@ -1369,16 +1370,48 @@ test('spawnAhead 随距离推进产生实体', function () {
   });
 });
 
-test('鱼按 3–5 个一组生成', function () {
+test('鱼按 3–5 个一组生成，长度随随机数变化', function () {
   var g = createGame(makeRng(5));
   startRun(g);
-  for (var i = 0; i < 200; i++) {
+
+  // spawnItems 会用同一个 rng 先选类型、再定长度。这里让第一次调用必定命中 fish
+  function spawnWith(seed, later) {
     g.entities = [];
+    var first = true;
+    g.rng = function () {
+      if (first) { first = false; return 0.1; }   // roll = 10 < 65 → fish
+      return later;
+    };
     spawnItems(g);
+  }
+
+  spawnWith(1, 0);
+  assert(g.entities.length === 3, 'later=0 应生成 3 个，实际 ' + g.entities.length);
+  g.entities.forEach(function (e) { assert(e.type === 'fish', '鱼串里应全是鱼'); });
+
+  spawnWith(2, 0.99);
+  assert(g.entities.length === 5, 'later=0.99 应生成 5 个，实际 ' + g.entities.length);
+
+  for (var i = 0; i < 200; i++) {
+    spawnWith(i + 10, i / 200);
     var n = g.entities.length;
     assert(n >= 3 && n <= 5, '鱼串长度应在 3..5，实际 ' + n);
     g.entities.forEach(function (e) { assert(e.type === 'fish', '鱼串里应全是鱼'); });
   }
+});
+
+test('非鱼道具单个生成', function () {
+  var g = createGame(makeRng(5));
+  startRun(g);
+  // 第一次调用返回 0.99 → roll = 99 → 命中 star（最后一个）
+  var first = true;
+  g.rng = function () {
+    if (first) { first = false; return 0.99; }
+    return 0.5;
+  };
+  spawnItems(g);
+  assert(g.entities.length === 1, '非鱼应只生成 1 个，实际 ' + g.entities.length);
+  assert(g.entities[0].type === 'star', '应生成 star，实际 ' + g.entities[0].type);
 });
 
 test('撞障碍掉命并移除障碍', function () {
@@ -1580,7 +1613,7 @@ function updateEntities(g, dt) {
 - [ ] **Step 4: 跑测试确认全过**
 
 Run: `cd /d/hermes/projects/pelican-bike && node tools/run-tests.mjs`
-Expected: 56/56 passed。
+Expected: 57/57 passed。
 
 - [ ] **Step 5: Commit**
 
@@ -1804,7 +1837,7 @@ vm.runInContext(harness + core + '\n' + render + '\n' + tests, sandbox, { filena
 - [ ] **Step 4: 跑测试确认全过**
 
 Run: `cd /d/hermes/projects/pelican-bike && node tools/run-tests.mjs`
-Expected: 60/60 passed。
+Expected: 61/61 passed。
 
 - [ ] **Step 5: 目视确认**
 
@@ -2229,7 +2262,7 @@ Task 11 会用到同一份常量，不要重复定义。
 - [ ] **Step 5: 跑测试确认全过**
 
 Run: `cd /d/hermes/projects/pelican-bike && node tools/run-tests.mjs`
-Expected: 66/66 passed。
+Expected: 67/67 passed。
 
 - [ ] **Step 6: 目视确认（本任务的关键验收）**
 
@@ -2564,7 +2597,7 @@ function drawParticles(ctx, pool) {
 - [ ] **Step 5: 跑测试确认全过**
 
 Run: `cd /d/hermes/projects/pelican-bike && node tools/run-tests.mjs`
-Expected: 74/74 passed。
+Expected: 75/75 passed。
 
 - [ ] **Step 6: 目视确认**
 
@@ -2611,7 +2644,7 @@ Web Audio 程序化生成，无音频文件。把「声音参数」做成可测�
 test('连击音高：基准 440Hz，每级升半音，8 级后回绕', function () {
   assertClose(pitchForStreak(0), 440, 1e-9, 'streak 0 → 440Hz');
   assertClose(pitchForStreak(8), 440, 1e-9, 'streak 8 应回绕到 440Hz');
-  assertClose(pitchForStreak(12), 440, 1e-9, 'streak 12 回绕到 440Hz（12 是半音数）');
+  assertClose(pitchForStreak(16), 440, 1e-9, 'streak 16 应回绕到 440Hz（16 % 8 === 0）');
   assertClose(pitchForStreak(1), 440 * Math.pow(2, 1 / 12), 1e-9, 'streak 1 应升一个半音');
   assert(pitchForStreak(7) > pitchForStreak(3), '连击越高音越高');
 });
@@ -2758,7 +2791,7 @@ function createAudio(Ctor) {
 - [ ] **Step 5: 跑测试确认全过**
 
 Run: `cd /d/hermes/projects/pelican-bike && node tools/run-tests.mjs`
-Expected: 79/79 passed。
+Expected: 80/80 passed。
 
 - [ ] **Step 6: Commit**
 
@@ -2903,7 +2936,7 @@ function safeSaveBest(storage, value) {
 - [ ] **Step 4: 跑测试确认全过**
 
 Run: `cd /d/hermes/projects/pelican-bike && node tools/run-tests.mjs`
-Expected: 84/84 passed。
+Expected: 85/85 passed。
 
 - [ ] **Step 5: 写 UI 与接线（`APP` 区块，放在 `TESTS` 块之后）**
 
@@ -3180,14 +3213,14 @@ canvas { display: block; border-radius: 12px; box-shadow: 0 12px 48px rgba(0,0,0
 - [ ] **Step 6: 跑测试确认全过**
 
 Run: `cd /d/hermes/projects/pelican-bike && node tools/run-tests.mjs`
-Expected: 84/84 passed，退出码 0。
+Expected: 85/85 passed，退出码 0。
 
 - [ ] **Step 7: 逐条核对 spec 的验收标准**
 
 双击 `projects/pelican-bike/index.html`，逐条确认并记录实际观察到的结果：
 
 1. **双击能开玩，控制台无报错** —— 打开 DevTools Console，确认没有红色报错
-2. **`?test=1` 全 PASS** —— 地址栏加 `?test=1`，确认页面显示 `84/84 passed`
+2. **`?test=1` 全 PASS** —— 地址栏加 `?test=1`，确认页面显示 `85/85 passed`
 3. **一局能跑到速度 2.5x** —— 撑满 90 秒，确认障碍明显变密变快
 4. **喉囊满 6 格后不再吞入** —— 右上角 6 个圆点填满后，再碰到道具应直接飞过（变半透明）
 5. **空格吐出的石头能砸碎高墙** —— 吞到石头，遇到高墙时按空格，墙应被砸掉且不掉命
@@ -3233,7 +3266,7 @@ EOF
 
 全部 13 个任务完成后：
 
-- `node tools/run-tests.mjs` 输出 84/84 passed，退出码 0
+- `node tools/run-tests.mjs` 输出 85/85 passed，退出码 0
 - 双击 `projects/pelican-bike/index.html` 可直接游玩
 - spec 第 12 节的 6 条验收标准逐条通过
 - `projects/pelican-bike/pelican-bike.html`（原插画）未被改动
