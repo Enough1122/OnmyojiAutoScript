@@ -19,15 +19,76 @@ function assertClose(a, b, tol, msg) {
 }
 
 /* ==== CORE:BEGIN ==== */
-function addOne(n) { return n + 1; }
+var POUCH_CAPACITY = 6;
+
+function createPouch(capacity) {
+  return { items: [], capacity: capacity };
+}
+
+function pouchCount(pouch) {
+  return pouch.items.length;
+}
+
+function pouchIsFull(pouch) {
+  return pouch.items.length >= pouch.capacity;
+}
+
+// 满囊返回 false，且绝不修改 pouch —— 调用方据此决定是否播放音效/粒子
+function pouchSwallow(pouch, item) {
+  if (pouchIsFull(pouch)) return false;
+  pouch.items.push(item);
+  return true;
+}
+
+// FIFO：吐最旧的。空囊返回 null
+function pouchSpit(pouch) {
+  if (pouch.items.length === 0) return null;
+  return pouch.items.shift();
+}
 /* ==== CORE:END ==== */
 
 /* ==== TESTS:BEGIN ==== */
-test('addOne 加一', function () {
-  assert(addOne(1) === 2, '1 + 1 应该等于 2');
+test('喉囊容量为 6', function () {
+  assert(POUCH_CAPACITY === 6, 'spec 规定容量 6');
 });
-test('addOne 对 0 也成立', function () {
-  assert(addOne(0) === 1, '0 + 1 应该等于 1');
+
+test('吞入后长度增加', function () {
+  var p = createPouch(POUCH_CAPACITY);
+  assert(pouchCount(p) === 0, '初始应为空');
+  assert(pouchSwallow(p, 'fish') === true, '未满时应吞入成功');
+  assert(pouchCount(p) === 1, '吞入后应为 1');
+});
+
+test('FIFO：吐出顺序等于吞入顺序', function () {
+  var p = createPouch(POUCH_CAPACITY);
+  ['fish', 'rock', 'chili'].forEach(function (it) { pouchSwallow(p, it); });
+  assert(pouchSpit(p) === 'fish', '第一个吐出的应是第一个吞入的');
+  assert(pouchSpit(p) === 'rock', '第二个吐出的应是第二个吞入的');
+  assert(pouchSpit(p) === 'chili', '第三个吐出的应是第三个吞入的');
+});
+
+test('容量上限：第 7 个被拒且不改变囊内容', function () {
+  var p = createPouch(POUCH_CAPACITY);
+  for (var i = 0; i < 6; i++) assert(pouchSwallow(p, 'fish') === true, '第 ' + (i + 1) + ' 个应成功');
+  assert(pouchIsFull(p) === true, '6 个后应为满');
+  assert(pouchSwallow(p, 'star') === false, '满囊吞入应返回 false');
+  assert(pouchCount(p) === 6, '满囊被拒后长度仍应为 6');
+  assert(pouchSpit(p) === 'fish', '被拒的 star 不应进囊，第一个仍是 fish');
+});
+
+test('吐空囊返回 null 且不抛异常', function () {
+  var p = createPouch(POUCH_CAPACITY);
+  assert(pouchSpit(p) === null, '空囊应返回 null');
+  assert(pouchCount(p) === 0, '空囊吐出后仍为空');
+});
+
+test('Review Focus 3：满囊时同一道具重复判定不重复计数', function () {
+  var p = createPouch(POUCH_CAPACITY);
+  for (var i = 0; i < 6; i++) pouchSwallow(p, 'fish');
+  // 模拟同一帧内同一道具被反复判定 10 次
+  for (var j = 0; j < 10; j++) pouchSwallow(p, 'rock');
+  assert(pouchCount(p) === 6, '反复吞入被拒不应改变长度');
+  assert(pouchSpit(p) === 'fish', '囊内容应完全未被污染');
 });
 /* ==== TESTS:END ==== */
 
