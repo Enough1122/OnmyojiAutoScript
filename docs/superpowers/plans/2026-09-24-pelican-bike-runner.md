@@ -311,7 +311,7 @@ function pouchSpit(pouch) {
 - [ ] **Step 4: 跑测试确认全过**
 
 Run: `cd /d/hermes/projects/pelican-bike && node tools/run-tests.mjs`
-Expected: 8/8 passed，退出码 0。
+Expected: 6/6 passed，退出码 0。
 
 - [ ] **Step 5: Commit**
 
@@ -431,7 +431,7 @@ function distanceScore(distance) {
 - [ ] **Step 4: 跑测试确认全过**
 
 Run: `cd /d/hermes/projects/pelican-bike && node tools/run-tests.mjs`
-Expected: 12/12 passed。
+Expected: 10/10 passed。
 
 - [ ] **Step 5: Commit**
 
@@ -578,7 +578,7 @@ function pickItemType(rng) {
 - [ ] **Step 4: 跑测试确认全过**
 
 Run: `cd /d/hermes/projects/pelican-bike && node tools/run-tests.mjs`
-Expected: 18/18 passed。
+Expected: 16/16 passed。
 
 - [ ] **Step 5: Commit**
 
@@ -704,7 +704,7 @@ function obstacleBox(ent) {
 - [ ] **Step 4: 跑测试确认全过**
 
 Run: `cd /d/hermes/projects/pelican-bike && node tools/run-tests.mjs`
-Expected: 23/23 passed。
+Expected: 21/21 passed。
 
 - [ ] **Step 5: Commit**
 
@@ -1020,9 +1020,9 @@ function updateGame(g, dt) {
 - [ ] **Step 4: 跑测试确认全过**
 
 Run: `cd /d/hermes/projects/pelican-bike && node tools/run-tests.mjs`
-Expected: 32/32 passed。
+Expected: 30/30 passed。
 
-顺带清理：Task 4 的权重测试里有一份局部的 `makeRng`，现在 CORE 已提供同名函数。可以删掉测试内那份局部定义，改为直接调用 CORE 的 `makeRng`。删完重跑确认仍是 32/32。
+顺带清理：Task 4 的权重测试里有一份局部的 `makeRng`，现在 CORE 已提供同名函数。可以删掉测试内那份局部定义，改为直接调用 CORE 的 `makeRng`。删完重跑确认仍是 30/30。
 
 - [ ] **Step 5: Commit**
 
@@ -1290,7 +1290,7 @@ function updateProjectiles(g, dt) {
 - [ ] **Step 4: 跑测试确认全过**
 
 Run: `cd /d/hermes/projects/pelican-bike && node tools/run-tests.mjs`
-Expected: 44/44 passed。
+Expected: 42/42 passed。
 
 - [ ] **Step 5: Commit**
 
@@ -1613,7 +1613,7 @@ function updateEntities(g, dt) {
 - [ ] **Step 4: 跑测试确认全过**
 
 Run: `cd /d/hermes/projects/pelican-bike && node tools/run-tests.mjs`
-Expected: 57/57 passed。
+Expected: 55/55 passed。
 
 - [ ] **Step 5: Commit**
 
@@ -1837,7 +1837,7 @@ vm.runInContext(harness + core + '\n' + render + '\n' + tests, sandbox, { filena
 - [ ] **Step 4: 跑测试确认全过**
 
 Run: `cd /d/hermes/projects/pelican-bike && node tools/run-tests.mjs`
-Expected: 61/61 passed。
+Expected: 59/59 passed。
 
 - [ ] **Step 5: 目视确认**
 
@@ -2262,7 +2262,7 @@ Task 11 会用到同一份常量，不要重复定义。
 - [ ] **Step 5: 跑测试确认全过**
 
 Run: `cd /d/hermes/projects/pelican-bike && node tools/run-tests.mjs`
-Expected: 67/67 passed。
+Expected: 65/65 passed。
 
 - [ ] **Step 6: 目视确认（本任务的关键验收）**
 
@@ -2597,7 +2597,7 @@ function drawParticles(ctx, pool) {
 - [ ] **Step 5: 跑测试确认全过**
 
 Run: `cd /d/hermes/projects/pelican-bike && node tools/run-tests.mjs`
-Expected: 75/75 passed。
+Expected: 73/73 passed。
 
 - [ ] **Step 6: 目视确认**
 
@@ -2791,7 +2791,7 @@ function createAudio(Ctor) {
 - [ ] **Step 5: 跑测试确认全过**
 
 Run: `cd /d/hermes/projects/pelican-bike && node tools/run-tests.mjs`
-Expected: 80/80 passed。
+Expected: 78/78 passed。
 
 - [ ] **Step 6: Commit**
 
@@ -2936,7 +2936,7 @@ function safeSaveBest(storage, value) {
 - [ ] **Step 4: 跑测试确认全过**
 
 Run: `cd /d/hermes/projects/pelican-bike && node tools/run-tests.mjs`
-Expected: 85/85 passed。
+Expected: 83/83 passed。
 
 - [ ] **Step 5: 写 UI 与接线（`APP` 区块，放在 `TESTS` 块之后）**
 
@@ -3213,14 +3213,14 @@ canvas { display: block; border-radius: 12px; box-shadow: 0 12px 48px rgba(0,0,0
 - [ ] **Step 6: 跑测试确认全过**
 
 Run: `cd /d/hermes/projects/pelican-bike && node tools/run-tests.mjs`
-Expected: 85/85 passed，退出码 0。
+Expected: 83/83 passed，退出码 0。
 
 - [ ] **Step 7: 逐条核对 spec 的验收标准**
 
 双击 `projects/pelican-bike/index.html`，逐条确认并记录实际观察到的结果：
 
 1. **双击能开玩，控制台无报错** —— 打开 DevTools Console，确认没有红色报错
-2. **`?test=1` 全 PASS** —— 地址栏加 `?test=1`，确认页面显示 `85/85 passed`
+2. **`?test=1` 全 PASS** —— 地址栏加 `?test=1`，确认页面显示 `83/83 passed`
 3. **一局能跑到速度 2.5x** —— 撑满 90 秒，确认障碍明显变密变快
 4. **喉囊满 6 格后不再吞入** —— 右上角 6 个圆点填满后，再碰到道具应直接飞过（变半透明）
 5. **空格吐出的石头能砸碎高墙** —— 吞到石头，遇到高墙时按空格，墙应被砸掉且不掉命
@@ -3266,7 +3266,7 @@ EOF
 
 全部 13 个任务完成后：
 
-- `node tools/run-tests.mjs` 输出 85/85 passed，退出码 0
+- `node tools/run-tests.mjs` 输出 83/83 passed，退出码 0
 - 双击 `projects/pelican-bike/index.html` 可直接游玩
 - spec 第 12 节的 6 条验收标准逐条通过
 - `projects/pelican-bike/pelican-bike.html`（原插画）未被改动
