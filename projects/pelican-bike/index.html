@@ -505,6 +505,29 @@ var VIEW_H = 540;
 function cloudOffset(distance, factor, span) {
   return (distance * factor) % span;
 }
+
+var WHEEL_RADIUS = 34;
+var PEDAL_RADIUS = 26;
+var GEAR_RATIO = 0.4;
+var POUCH_BULGE_MAX = 1.6;
+
+// 车轮转过的弧度 = 前进距离 / 半径
+function wheelAngleFor(distance) {
+  return distance / WHEEL_RADIUS;
+}
+
+function pedalAngleFor(wheelAngle) {
+  return wheelAngle * GEAR_RATIO;
+}
+
+// 腿的踩踏相位完全由车轮角度决定，没有独立计时器
+function legPhaseFor(wheelAngle) {
+  return pedalAngleFor(wheelAngle);
+}
+
+function pouchBulgeFor(count) {
+  return 1 + (POUCH_BULGE_MAX - 1) * (count / POUCH_CAPACITY);
+}
 /* ==== CORE:END ==== */
 
 /* ==== RENDER:BEGIN ==== */
@@ -582,6 +605,283 @@ function drawGround(ctx, g) {
   for (var x = -span; x < VIEW_W + span; x += span) {
     ctx.fillRect(x - off, GROUND_Y + 42, 44, 8);
   }
+  ctx.restore();
+}
+
+var PLUME_COLOR = '#ffffff';
+var PLUME_SHADE = '#e8eef4';
+var PLUME_EDGE  = '#c3ccd4';
+var BEAK_COLOR  = '#ffc75f';
+var BEAK_EDGE   = '#ef8f2a';
+var POUCH_COLOR = '#ffb44a';
+var LEG_COLOR   = '#ef9b2e';
+var LEG_DARK    = '#d4821f';
+var FRAME_COLOR = '#d94f3d';
+var TIRE_COLOR  = '#2b2f33';
+var RIM_COLOR   = '#b9c3cc';
+var SPOKE_COLOR = '#a6b2be';
+var HUB_COLOR   = '#6d7883';
+var METAL_COLOR = '#8d97a2';
+var DARK_COLOR  = '#33383d';
+
+// 道具配色 —— Task 11 的 drawEntity 与 HUD 共用这一份，不要重复定义
+var ITEM_COLORS = {
+  fish: '#5fb3d4', rock: '#8d97a2', chili: '#d94f3d',
+  bubble: '#a8d8ea', star: '#ffd93b'
+};
+
+function drawWheel(ctx, c, angle) {
+  ctx.save();
+  ctx.strokeStyle = TIRE_COLOR;
+  ctx.lineWidth = 9;
+  ctx.beginPath();
+  ctx.arc(c.x, c.y, WHEEL_RADIUS, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.strokeStyle = RIM_COLOR;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(c.x, c.y, WHEEL_RADIUS - 8, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // 辐条随 angle 旋转 —— 车轮真的在转，不是贴图
+  ctx.save();
+  ctx.translate(c.x, c.y);
+  ctx.rotate(angle);
+  ctx.strokeStyle = SPOKE_COLOR;
+  ctx.lineWidth = 2;
+  for (var i = 0; i < 4; i++) {
+    var a = (i / 4) * Math.PI;
+    var dx = Math.cos(a) * (WHEEL_RADIUS - 8);
+    var dy = Math.sin(a) * (WHEEL_RADIUS - 8);
+    ctx.beginPath();
+    ctx.moveTo(dx, dy);
+    ctx.lineTo(-dx, -dy);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  ctx.fillStyle = HUB_COLOR;
+  ctx.beginPath();
+  ctx.arc(c.x, c.y, 5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawLeg(ctx, angle, hipX, color) {
+  var crankX = PELICAN_X;
+  var crankY = GROUND_Y - 32;
+  var px = crankX + Math.cos(angle) * PEDAL_RADIUS;
+  var py = crankY + Math.sin(angle) * PEDAL_RADIUS;
+  var hipY = GROUND_Y - 132;
+  var kneeX = (hipX + px) / 2 + 14;
+  var kneeY = (hipY + py) / 2;
+
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 9;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(hipX, hipY);
+  ctx.lineTo(kneeX, kneeY);
+  ctx.lineTo(px, py);
+  ctx.stroke();
+
+  // 蹼足
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(px - 9, py);
+  ctx.lineTo(px + 15, py + 4);
+  ctx.lineTo(px - 7, py + 13);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawBike(ctx, g, wheelAngle) {
+  var rear  = { x: PELICAN_X - 78, y: GROUND_Y - WHEEL_RADIUS };
+  var front = { x: PELICAN_X + 78, y: GROUND_Y - WHEEL_RADIUS };
+  var crank = { x: PELICAN_X,      y: GROUND_Y - 32 };
+  var seat  = { x: PELICAN_X - 24, y: GROUND_Y - 100 };
+  var head  = { x: PELICAN_X + 66, y: GROUND_Y - 100 };
+
+  drawWheel(ctx, rear, wheelAngle);
+  drawWheel(ctx, front, wheelAngle);
+
+  // 车架
+  ctx.save();
+  ctx.strokeStyle = FRAME_COLOR;
+  ctx.lineWidth = 7;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(rear.x, rear.y);   ctx.lineTo(crank.x, crank.y);
+  ctx.moveTo(crank.x, crank.y); ctx.lineTo(seat.x, seat.y);
+  ctx.moveTo(seat.x, seat.y);   ctx.lineTo(head.x, head.y);
+  ctx.moveTo(head.x, head.y);   ctx.lineTo(crank.x, crank.y);
+  ctx.stroke();
+
+  // 前叉
+  ctx.strokeStyle = METAL_COLOR;
+  ctx.lineWidth = 6;
+  ctx.beginPath();
+  ctx.moveTo(head.x, head.y);
+  ctx.lineTo(front.x, front.y);
+  ctx.stroke();
+
+  // 座管与车把立管
+  ctx.beginPath();
+  ctx.moveTo(seat.x, seat.y); ctx.lineTo(seat.x - 2, seat.y - 16);
+  ctx.moveTo(head.x, head.y); ctx.lineTo(head.x + 4, head.y - 16);
+  ctx.stroke();
+
+  // 车座
+  ctx.fillStyle = DARK_COLOR;
+  ctx.beginPath();
+  ctx.ellipse(seat.x - 4, seat.y - 18, 20, 7, -0.1, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 车把
+  ctx.strokeStyle = DARK_COLOR;
+  ctx.lineWidth = 6;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(head.x - 14, head.y - 20);
+  ctx.quadraticCurveTo(head.x + 6, head.y - 30, head.x + 22, head.y - 18);
+  ctx.stroke();
+
+  // 曲柄与脚踏
+  ctx.strokeStyle = METAL_COLOR;
+  ctx.lineWidth = 6;
+  ctx.beginPath();
+  ctx.moveTo(crank.x, crank.y);
+  ctx.lineTo(crank.x + Math.cos(wheelAngle * GEAR_RATIO) * PEDAL_RADIUS,
+             crank.y + Math.sin(wheelAngle * GEAR_RATIO) * PEDAL_RADIUS);
+  ctx.moveTo(crank.x, crank.y);
+  ctx.lineTo(crank.x - Math.cos(wheelAngle * GEAR_RATIO) * PEDAL_RADIUS,
+             crank.y - Math.sin(wheelAngle * GEAR_RATIO) * PEDAL_RADIUS);
+  ctx.stroke();
+
+  ctx.fillStyle = HUB_COLOR;
+  ctx.beginPath();
+  ctx.arc(crank.x, crank.y, 6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawPelican(ctx, g, time) {
+  var wheelAngle = wheelAngleFor(g.distance);
+  var pedalAngle = legPhaseFor(wheelAngle);
+  var bulge = pouchBulgeFor(pouchCount(g.pouch));
+  var bob = Math.sin(time * 9) * 1.6;
+
+  drawBike(ctx, g, wheelAngle);
+
+  ctx.save();
+  ctx.translate(0, bob);
+
+  // 远侧腿（先画，被身体遮住）
+  drawLeg(ctx, pedalAngle + Math.PI, PELICAN_X - 30, LEG_DARK);
+
+  // 尾巴
+  ctx.fillStyle = PLUME_SHADE;
+  ctx.strokeStyle = PLUME_EDGE;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(PELICAN_X - 62, GROUND_Y - 176);
+  ctx.lineTo(PELICAN_X - 118, GROUND_Y - 202);
+  ctx.lineTo(PELICAN_X - 110, GROUND_Y - 160);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // 身体
+  ctx.fillStyle = PLUME_COLOR;
+  ctx.beginPath();
+  ctx.ellipse(PELICAN_X - 16, GROUND_Y - 158, 62, 42, -0.12, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // 脖子（粗描边模拟圆柱）
+  var neckFromX = PELICAN_X + 24, neckFromY = GROUND_Y - 186;
+  var headX = PELICAN_X + 82,    headY = GROUND_Y - 236;
+  ctx.strokeStyle = PLUME_EDGE;
+  ctx.lineWidth = 40;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(neckFromX, neckFromY);
+  ctx.quadraticCurveTo(PELICAN_X + 56, GROUND_Y - 216, headX, headY);
+  ctx.stroke();
+  ctx.strokeStyle = PLUME_COLOR;
+  ctx.lineWidth = 35;
+  ctx.beginPath();
+  ctx.moveTo(neckFromX, neckFromY);
+  ctx.quadraticCurveTo(PELICAN_X + 56, GROUND_Y - 216, headX, headY);
+  ctx.stroke();
+
+  // 头
+  ctx.fillStyle = PLUME_COLOR;
+  ctx.beginPath();
+  ctx.arc(headX, headY, 24, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // 上喙
+  ctx.fillStyle = BEAK_COLOR;
+  ctx.strokeStyle = BEAK_EDGE;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(headX + 12, headY - 8);
+  ctx.lineTo(headX + 96, headY + 4);
+  ctx.lineTo(headX + 94, headY + 16);
+  ctx.lineTo(headX + 14, headY + 10);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // 喉囊：bulge 直接控制下垂深度 —— 吞得越多越鼓
+  var drop = 46 * bulge;
+  ctx.fillStyle = POUCH_COLOR;
+  ctx.beginPath();
+  ctx.moveTo(headX + 14, headY + 10);
+  ctx.quadraticCurveTo(headX + 56, headY + 10 + drop, headX + 94, headY + 14);
+  ctx.closePath();
+  ctx.fill();
+
+  // 囊内容物：按囊里实际的道具画小圆点
+  var items = g.pouch.items;
+  for (var i = 0; i < items.length; i++) {
+    var k = (i + 0.5) / POUCH_CAPACITY;
+    ctx.fillStyle = ITEM_COLORS[items[i]] || '#ffffff';
+    ctx.beginPath();
+    ctx.arc(headX + 20 + k * 68, headY + 20 + Math.sin(k * Math.PI) * (drop * 0.55), 6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // 眼睛
+  ctx.fillStyle = DARK_COLOR;
+  ctx.beginPath();
+  ctx.arc(headX + 6, headY - 6, 5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.arc(headX + 7.5, headY - 7.5, 1.6, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 近侧翅膀
+  ctx.fillStyle = PLUME_SHADE;
+  ctx.strokeStyle = PLUME_EDGE;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(PELICAN_X - 20, GROUND_Y - 190);
+  ctx.quadraticCurveTo(PELICAN_X + 30, GROUND_Y - 176, PELICAN_X + 44, GROUND_Y - 140);
+  ctx.quadraticCurveTo(PELICAN_X + 6, GROUND_Y - 138, PELICAN_X - 26, GROUND_Y - 152);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // 近侧腿
+  drawLeg(ctx, pedalAngle, PELICAN_X + 10, LEG_COLOR);
+
   ctx.restore();
 }
 /* ==== RENDER:END ==== */
@@ -1198,6 +1498,58 @@ test('drawBackground/drawGround 在极端 distance 下不崩', function () {
     drawGround(ctx, g);
   });
 });
+
+test('车轮角度与前进距离成正比', function () {
+  assertClose(wheelAngleFor(0), 0, 1e-9, '距离 0 → 角度 0');
+  assertClose(wheelAngleFor(WHEEL_RADIUS * Math.PI), Math.PI, 1e-9, '走过一个半径长度 → 1 弧度');
+  assertClose(wheelAngleFor(WHEEL_RADIUS * 2 * Math.PI), Math.PI * 2, 1e-9, '走过一个周长 → 一整圈');
+  assert(wheelAngleFor(1000) > wheelAngleFor(500), '走得越远转得越多');
+});
+
+test('腿相位绑定车轮角度，不独立循环', function () {
+  assertClose(legPhaseFor(1), pedalAngleFor(1), 1e-9, '腿相位应等于曲柄角度');
+  assertClose(pedalAngleFor(1), 0.4, 1e-9, '曲柄角度应为车轮角度的 GEAR_RATIO 倍');
+  // 关键：距离不变时相位不变（说明没有独立的循环计时器）
+  var a = legPhaseFor(wheelAngleFor(1234));
+  var b = legPhaseFor(wheelAngleFor(1234));
+  assertClose(a, b, 1e-12, '相同距离必须得到相同相位');
+});
+
+test('喉囊鼓起程度随囊内容线性增长', function () {
+  assertClose(pouchBulgeFor(0), 1, 1e-9, '空囊不鼓');
+  assertClose(pouchBulgeFor(3), 1.3, 1e-9, '半满应鼓到 1.3');
+  assertClose(pouchBulgeFor(6), 1.6, 1e-9, '满囊应鼓到 1.6');
+  assert(pouchBulgeFor(6) > pouchBulgeFor(3), '越满越鼓');
+});
+
+test('drawWheel 不抛异常且画出轮胎、轮辋与辐条', function () {
+  var ctx = makeStubCtx();
+  drawWheel(ctx, { x: 200, y: 396 }, 1.2);
+  assert(ctx.did('arc'), '应画圆');
+  assert(ctx.did('rotate'), '辐条应随角度旋转');
+  assert(ctx.did('stroke'), '应有描边');
+});
+
+test('drawPelican 不抛异常且画出车架与身体', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  var ctx = makeStubCtx();
+  drawPelican(ctx, g, 0.5);
+  assert(ctx.did('ellipse'), '应画身体椭圆');
+  assert(ctx.did('rotate'), '车轮应旋转');
+  assert(ctx.did('translate'), '应有位移变换');
+});
+
+test('drawPelican 在囊满与空囊两种状态下都不崩', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  [0, 6].forEach(function (n) {
+    g.pouch = createPouch(POUCH_CAPACITY);
+    for (var i = 0; i < n; i++) pouchSwallow(g.pouch, 'fish');
+    var ctx = makeStubCtx();
+    drawPelican(ctx, g, 1);
+  });
+});
 /* ==== TESTS:END ==== */
 
 // ?test=1 时把结果画到页面上
@@ -1211,13 +1563,13 @@ if (location.search.indexOf('test=1') !== -1) {
   document.getElementById('out').textContent = lines.join('\n');
   document.getElementById('out').hidden = false;
 } else {
-  // ---- 临时渲染：仅用于 Task 9 目视确认，Task 13 会被真正的 APP 块替换 ----
+  // ---- 临时渲染：仅用于 Task 9/10 目视确认，Task 13 会被真正的 APP 块替换 ----
   (function () {
     var canvas = document.getElementById('game');
     var ctx = canvas.getContext('2d');
     var g = createGame(makeRng(1));
     startRun(g);
-    g.distance = 300;
+    for (var i = 0; i < 4; i++) pouchSwallow(g.pouch, ITEM_TYPES[i]);   // 塞点东西看喉囊鼓起
 
     var dpr = window.devicePixelRatio || 1;
     canvas.width = VIEW_W * dpr;
@@ -1226,8 +1578,20 @@ if (location.search.indexOf('test=1') !== -1) {
     canvas.style.height = VIEW_H + 'px';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    drawBackground(ctx, g);
-    drawGround(ctx, g);
+    var last = 0;
+    var clock = 0;
+    function frame(now) {
+      var dt = Math.min((now - last) / 1000, 1 / 30);
+      last = now;
+      clock += dt;
+      g.distance += 340 * dt;          // 让车轮与腿真的转起来
+      ctx.clearRect(0, 0, VIEW_W, VIEW_H);
+      drawBackground(ctx, g);
+      drawGround(ctx, g);
+      drawPelican(ctx, g, clock);
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(function (t) { last = t; requestAnimationFrame(frame); });
   })();
 }
 </script>
