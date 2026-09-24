@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>鹈鹕骑士 · 喉囊弹匣</title>
+</head>
+<body>
+<pre id="out"></pre>
+<script>
+// 浏览器侧 harness —— node 侧由 run-tests.mjs 注入等价实现
+var results = [];
+function test(name, fn) {
+  try { fn(); results.push({ name: name, ok: true }); }
+  catch (err) { results.push({ name: name, ok: false, err: String(err && err.message || err) }); }
+}
+function assert(cond, msg) { if (!cond) throw new Error(msg || 'assertion failed'); }
+function assertClose(a, b, tol, msg) {
+  if (Math.abs(a - b) > tol) throw new Error((msg || 'not close') + ': ' + a + ' vs ' + b);
+}
+
+/* ==== CORE:BEGIN ==== */
+function addOne(n) { return n + 1; }
+/* ==== CORE:END ==== */
+
+/* ==== TESTS:BEGIN ==== */
+test('addOne 加一', function () {
+  assert(addOne(1) === 2, '1 + 1 应该等于 2');
+});
+test('addOne 对 0 也成立', function () {
+  assert(addOne(0) === 1, '0 + 1 应该等于 1');
+});
+/* ==== TESTS:END ==== */
+
+// ?test=1 时把结果画到页面上
+if (location.search.indexOf('test=1') !== -1) {
+  var lines = results.map(function (r) {
+    return (r.ok ? 'PASS  ' : 'FAIL  ') + r.name + (r.ok ? '' : '  → ' + r.err);
+  });
+  var failed = results.filter(function (r) { return !r.ok; }).length;
+  lines.push('');
+  lines.push((results.length - failed) + '/' + results.length + ' passed');
+  document.getElementById('out').textContent = lines.join('\n');
+}
+</script>
+</body>
+</html>
