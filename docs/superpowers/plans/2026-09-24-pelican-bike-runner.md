@@ -3287,7 +3287,14 @@ EOF
 | 主循环 | 直接吃变长 dt | `createStepper` 固定步长累加器（`FIXED_STEP=1/60`，`MAX_STEPS_PER_FRAME=4`） | Important：spec §11 要求固定步长；顺带让每步位移有界，物理与刷新率无关 |
 | APP 音效 | 只播 jump/spit/dash/crash | 补上 `swallow` 与 `score` | Important：spec §8/§10 规定的两个音效从未被调用，吞——游戏的核心动词——是静音的 |
 
-测试数从 83 涨到 96：新增 13 条（8 条复现审查发现，5 条覆盖修复后的行为）。详见 ledger 的 `Final: fixed` 与 `Final: minor (deferred)` 行。
+测试数从 83 涨到 96：新增 13 条（8 条复现审查发现，5 条覆盖修复后的行为）。
+
+随后又按用户要求把两条搁置项提上来修了（测试 96 → 99）：
+
+| 位置 | 问题 | 修法 |
+|---|---|---|
+| APP 主循环 + 新增 `togglePause` | 暂停没有任何视觉反馈，世界冻结但鹈鹕仍在浮动、无敌仍在闪，玩家分不清「暂停」和「卡死」 | 弹「暂停」遮罩；`step()` 在 paused 时整体早退，clock 与粒子都不推进；`togglePause` 只在 playing ⇄ paused 间切换 |
+| APP 输入 | 按住 ↓ 时 Alt+Tab 切走再回来，ducking 永久卡住（收不到 keyup），速度停在 0.55x | 新增 `window` 的 `blur` 处理器释放蹲下 |
 
 ---
 
