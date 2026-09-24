@@ -19,6 +19,7 @@ function extract(begin, end) {
 }
 
 const core = extract('/* ==== CORE:BEGIN ==== */', '/* ==== CORE:END ==== */');
+const render = extract('/* ==== RENDER:BEGIN ==== */', '/* ==== RENDER:END ==== */');
 const tests = extract('/* ==== TESTS:BEGIN ==== */', '/* ==== TESTS:END ==== */');
 
 // 用 vm 沙箱跑，防止 CORE 里误用 DOM 全局时静默通过。
@@ -39,7 +40,7 @@ const harness = `
   };
 `;
 
-vm.runInContext(harness + core + '\n' + tests, sandbox, { filename: 'core+tests.js' });
+vm.runInContext(harness + core + '\n' + render + '\n' + tests, sandbox, { filename: 'core+render+tests.js' });
 
 const results = sandbox.__results;
 const failed = results.filter((r) => !r.ok);

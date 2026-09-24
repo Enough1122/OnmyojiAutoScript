@@ -3,9 +3,23 @@
 <head>
 <meta charset="UTF-8">
 <title>鹈鹕骑士 · 喉囊弹匣</title>
+<style>
+html, body {
+  margin: 0; height: 100%; background: #0e1626; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+canvas { display: block; border-radius: 12px; box-shadow: 0 12px 48px rgba(0,0,0,.55); }
+#out {
+  position: fixed; inset: 0; margin: 0; padding: 24px; overflow: auto;
+  background: #0e1626; color: #d6e4f0; font: 14px/1.6 ui-monospace, Consolas, monospace;
+}
+#out[hidden] { display: none; }
+</style>
 </head>
 <body>
-<pre id="out"></pre>
+<canvas id="game"></canvas>
+<pre id="out" hidden></pre>
 <script>
 // 浏览器侧 harness —— node 侧由 run-tests.mjs 注入等价实现
 var results = [];
@@ -484,9 +498,118 @@ function updateEntities(g, dt) {
   }
   g.entities = kept;
 }
+
+var VIEW_W = 960;
+var VIEW_H = 540;
+
+function cloudOffset(distance, factor, span) {
+  return (distance * factor) % span;
+}
 /* ==== CORE:END ==== */
 
+/* ==== RENDER:BEGIN ==== */
+var SKY_TOP = '#cbe6f7';
+var SKY_BOTTOM = '#f0f8fc';
+var SUN_COLOR = '#ffe28f';
+var CLOUD_COLOR = '#ffffff';
+var GRASS_MAIN = '#dcecd2';
+var GRASS_EDGE = '#c3dcb6';
+var GRASS_SHADOW = '#93b585';
+
+// 云层配置：{ y, rx, ry, factor, span }
+var CLOUDS = [
+  { y: 90,  rx: 62, ry: 24, factor: 0.10, span: 1200 },
+  { y: 150, rx: 54, ry: 20, factor: 0.16, span: 1100 },
+  { y: 60,  rx: 40, ry: 16, factor: 0.07, span: 1300 },
+  { y: 200, rx: 48, ry: 18, factor: 0.22, span: 1000 }
+];
+
+function drawBackground(ctx, g) {
+  var sky = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
+  sky.addColorStop(0, SKY_TOP);
+  sky.addColorStop(1, SKY_BOTTOM);
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, VIEW_W, GROUND_Y);
+
+  // 太阳
+  ctx.save();
+  ctx.fillStyle = SUN_COLOR;
+  ctx.globalAlpha = 0.28;
+  ctx.beginPath();
+  ctx.arc(830, 92, 52, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.beginPath();
+  ctx.arc(830, 92, 38, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // 云（视差）
+  ctx.save();
+  ctx.fillStyle = CLOUD_COLOR;
+  for (var i = 0; i < CLOUDS.length; i++) {
+    var c = CLOUDS[i];
+    var off = cloudOffset(g.distance, c.factor, c.span);
+    for (var k = -1; k <= Math.ceil(VIEW_W / c.span) + 1; k++) {
+      var cx = k * c.span + c.span - off;
+      if (cx < -c.span || cx > VIEW_W + c.span) continue;
+      ctx.beginPath();
+      ctx.ellipse(cx, c.y, c.rx, c.ry, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(cx + c.rx * 0.7, c.y + c.ry * 0.3, c.rx * 0.75, c.ry * 0.8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(cx - c.rx * 0.7, c.y + c.ry * 0.35, c.rx * 0.6, c.ry * 0.7, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
+function drawGround(ctx, g) {
+  ctx.save();
+  ctx.fillStyle = GRASS_MAIN;
+  ctx.fillRect(0, GROUND_Y, VIEW_W, VIEW_H - GROUND_Y);
+  ctx.fillStyle = GRASS_EDGE;
+  ctx.fillRect(0, GROUND_Y, VIEW_W, 3);
+
+  // 滚动条纹：与世界速度同相，形成「地面在跑」的感觉
+  ctx.fillStyle = GRASS_SHADOW;
+  ctx.globalAlpha = 0.55;
+  var span = 80;
+  var off = g.distance % span;
+  for (var x = -span; x < VIEW_W + span; x += span) {
+    ctx.fillRect(x - off, GROUND_Y + 42, 44, 8);
+  }
+  ctx.restore();
+}
+/* ==== RENDER:END ==== */
+
 /* ==== TESTS:BEGIN ==== */
+// 桩 ctx：记录所有被调用的绘制方法，用于冒烟测试
+function makeStubCtx() {
+  var calls = [];
+  var ctx = {};
+  ['save', 'restore', 'beginPath', 'moveTo', 'lineTo', 'closePath', 'fill', 'stroke',
+   'arc', 'ellipse', 'rect', 'fillRect', 'strokeRect', 'quadraticCurveTo',
+   'bezierCurveTo', 'translate', 'rotate', 'scale', 'clip', 'clearRect', 'fillText',
+   'setLineDash'].forEach(function (m) {
+    ctx[m] = function () { calls.push(m); };
+  });
+  ctx.createLinearGradient = function () {
+    calls.push('createLinearGradient');
+    return { addColorStop: function () { calls.push('addColorStop'); } };
+  };
+  ctx.createRadialGradient = function () {
+    calls.push('createRadialGradient');
+    return { addColorStop: function () { calls.push('addColorStop'); } };
+  };
+  ctx.calls = calls;
+  ctx.did = function (m) { return calls.indexOf(m) !== -1; };
+  return ctx;
+}
+
 test('喉囊容量为 6', function () {
   assert(POUCH_CAPACITY === 6, 'spec 规定容量 6');
 });
@@ -1039,6 +1162,42 @@ test('实体飞出左边界后被移除', function () {
   updateEntities(g, 1 / 60);
   assert(g.entities.length === 0, '出屏实体应被移除');
 });
+
+test('视差偏移随距离前进且按 factor 缩放', function () {
+  assertClose(cloudOffset(0, 0.2, 1200), 0, 1e-9, '距离 0 时偏移 0');
+  assertClose(cloudOffset(1200, 0.2, 1200), 240, 1e-9, '走满一个 span 应偏移 span*factor');
+  assertClose(cloudOffset(2400, 0.2, 1200), 480, 1e-9, '继续前进应继续偏移');
+  assert(cloudOffset(600, 0.4, 1200) > cloudOffset(600, 0.2, 1200), 'factor 越大偏移越快');
+});
+
+test('drawBackground 不抛异常且画出天空与太阳', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  var ctx = makeStubCtx();
+  drawBackground(ctx, g);
+  assert(ctx.did('createLinearGradient'), '应创建天空渐变');
+  assert(ctx.did('fillRect'), '应填充天空矩形');
+  assert(ctx.did('arc'), '应画出太阳或云的圆弧');
+});
+
+test('drawGround 不抛异常且画出草地与滚动条纹', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  var ctx = makeStubCtx();
+  drawGround(ctx, g);
+  assert(ctx.did('fillRect'), '应填充草地');
+});
+
+test('drawBackground/drawGround 在极端 distance 下不崩', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  [0, 1e6, 1e9].forEach(function (d) {
+    g.distance = d;
+    var ctx = makeStubCtx();
+    drawBackground(ctx, g);
+    drawGround(ctx, g);
+  });
+});
 /* ==== TESTS:END ==== */
 
 // ?test=1 时把结果画到页面上
@@ -1050,6 +1209,26 @@ if (location.search.indexOf('test=1') !== -1) {
   lines.push('');
   lines.push((results.length - failed) + '/' + results.length + ' passed');
   document.getElementById('out').textContent = lines.join('\n');
+  document.getElementById('out').hidden = false;
+} else {
+  // ---- 临时渲染：仅用于 Task 9 目视确认，Task 13 会被真正的 APP 块替换 ----
+  (function () {
+    var canvas = document.getElementById('game');
+    var ctx = canvas.getContext('2d');
+    var g = createGame(makeRng(1));
+    startRun(g);
+    g.distance = 300;
+
+    var dpr = window.devicePixelRatio || 1;
+    canvas.width = VIEW_W * dpr;
+    canvas.height = VIEW_H * dpr;
+    canvas.style.width = VIEW_W + 'px';
+    canvas.style.height = VIEW_H + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    drawBackground(ctx, g);
+    drawGround(ctx, g);
+  })();
 }
 </script>
 </body>
