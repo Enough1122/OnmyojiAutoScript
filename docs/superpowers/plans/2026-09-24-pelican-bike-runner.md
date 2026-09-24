@@ -362,7 +362,7 @@ test('吞鱼加分并递增 streak', function () {
   var s = createScore();
   assert(scoreSwallowFish(s) === 10, '第一条鱼应 +10（x1）');
   assert(s.streak === 1, 'streak 应为 1');
-  for (var i = 1; i < 10; i++) scoreSwallowFish(s);
+  for (var i = 1; i < 11; i++) scoreSwallowFish(s);
   assert(s.streak === 11, '吞 11 条后 streak 应为 11');
   assert(s.points === 10 + 9 * 10 + 20, '前 10 条各 10 分，第 11 条为 x2 = 20 分');
 });

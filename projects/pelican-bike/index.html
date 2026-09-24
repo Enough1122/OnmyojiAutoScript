@@ -45,6 +45,35 @@ function pouchSpit(pouch) {
   if (pouch.items.length === 0) return null;
   return pouch.items.shift();
 }
+
+var FISH_BASE_POINTS = 10;
+var STREAK_PER_MULTIPLIER = 10;
+var MAX_MULTIPLIER = 5;
+
+function createScore() {
+  return { points: 0, streak: 0 };
+}
+
+function multiplierFor(streak) {
+  var m = 1 + Math.floor(streak / STREAK_PER_MULTIPLIER);
+  return Math.min(m, MAX_MULTIPLIER);
+}
+
+// 鱼在吞入时结算。返回本次增量，调用方用它做飘字/音效
+function scoreSwallowFish(score) {
+  var gained = FISH_BASE_POINTS * multiplierFor(score.streak);
+  score.streak += 1;
+  score.points += gained;
+  return gained;
+}
+
+function scoreCrash(score) {
+  score.streak = 0;
+}
+
+function distanceScore(distance) {
+  return Math.floor(distance / 10);
+}
 /* ==== CORE:END ==== */
 
 /* ==== TESTS:BEGIN ==== */
@@ -89,6 +118,42 @@ test('Review Focus 3：满囊时同一道具重复判定不重复计数', functi
   for (var j = 0; j < 10; j++) pouchSwallow(p, 'rock');
   assert(pouchCount(p) === 6, '反复吞入被拒不应改变长度');
   assert(pouchSpit(p) === 'fish', '囊内容应完全未被污染');
+});
+
+test('倍率曲线：0→x1, 10→x2, 40→x5, 100→x5 封顶', function () {
+  assert(multiplierFor(0) === 1, 'streak 0 应为 x1');
+  assert(multiplierFor(9) === 1, 'streak 9 仍应为 x1');
+  assert(multiplierFor(10) === 2, 'streak 10 应为 x2');
+  assert(multiplierFor(39) === 4, 'streak 39 应为 x4');
+  assert(multiplierFor(40) === 5, 'streak 40 应为 x5');
+  assert(multiplierFor(100) === 5, 'streak 100 应封顶在 x5');
+});
+
+test('吞鱼加分并递增 streak', function () {
+  var s = createScore();
+  assert(scoreSwallowFish(s) === 10, '第一条鱼应 +10（x1）');
+  assert(s.streak === 1, 'streak 应为 1');
+  for (var i = 1; i < 11; i++) scoreSwallowFish(s);
+  assert(s.streak === 11, '吞 11 条后 streak 应为 11');
+  assert(s.points === 10 + 9 * 10 + 20, '前 10 条各 10 分，第 11 条为 x2 = 20 分');
+});
+
+test('撞车清零 streak 与倍率', function () {
+  var s = createScore();
+  for (var i = 0; i < 25; i++) scoreSwallowFish(s);
+  assert(multiplierFor(s.streak) === 3, '25 条时倍率应为 x3');
+  scoreCrash(s);
+  assert(s.streak === 0, '撞车后 streak 归零');
+  assert(multiplierFor(s.streak) === 1, '撞车后倍率回 x1');
+  assert(s.points > 0, '撞车不清空已有分数');
+});
+
+test('距离分：每 10px 一分，向下取整', function () {
+  assert(distanceScore(0) === 0, '0px → 0 分');
+  assert(distanceScore(9) === 0, '9px → 0 分');
+  assert(distanceScore(10) === 1, '10px → 1 分');
+  assert(distanceScore(19) === 1, '19px → 1 分');
+  assert(distanceScore(1000) === 100, '1000px → 100 分');
 });
 /* ==== TESTS:END ==== */
 
