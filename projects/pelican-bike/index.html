@@ -587,6 +587,21 @@ function poolAliveCount(pool) {
   for (var i = 0; i < pool.size; i++) if (pool.items[i].alive) n += 1;
   return n;
 }
+
+var SCORE_BASE_HZ = 440;
+
+// 连击越高音越高，8 级后回绕，避免高到听不见
+function pitchForStreak(streak) {
+  return SCORE_BASE_HZ * Math.pow(2, (streak % 8) / 12);
+}
+
+var SOUND_SPECS = {
+  swallow: { type: 'sine',     from: 220, to: 440, duration: 0.08, gain: 0.18 },
+  spit:    { type: 'noise',    from: 900, to: 200, duration: 0.12, gain: 0.20 },
+  jump:    { type: 'square',   from: 330, to: 660, duration: 0.09, gain: 0.14 },
+  crash:   { type: 'noise',    from: 200, to: 60,  duration: 0.25, gain: 0.30 },
+  dash:    { type: 'sawtooth', from: 120, to: 900, duration: 0.35, gain: 0.22 }
+};
 /* ==== CORE:END ==== */
 
 /* ==== RENDER:BEGIN ==== */
@@ -1061,6 +1076,84 @@ function drawParticles(ctx, pool) {
     ctx.fill();
   }
   ctx.restore();
+}
+
+// Ctor 由调用方注入（浏览器传 AudioContext，测试传 null）
+function createAudio(Ctor) {
+  var audio = {
+    ctx: null,
+    muted: false,
+    Ctor: Ctor || null,
+
+    ensure: function () {
+      if (audio.ctx) return audio.ctx;
+      if (!audio.Ctor) return null;
+      try {
+        audio.ctx = new audio.Ctor();
+      } catch (err) {
+        audio.ctx = null;   // 自动播放策略可能拒绝创建
+      }
+      return audio.ctx;
+    },
+
+    toggleMute: function () {
+      audio.muted = !audio.muted;
+      return audio.muted;
+    },
+
+    play: function (name, streak) {
+      if (audio.muted) return;
+      var ctx = audio.ensure();
+      if (!ctx) return;
+
+      var now = ctx.currentTime;
+      var spec = SOUND_SPECS[name];
+      var gain = ctx.createGain();
+      gain.connect(ctx.destination);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.25, now + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + (spec ? spec.duration : 0.1));
+
+      if (name === 'score') {
+        var osc = ctx.createOscillator();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(pitchForStreak(streak || 0), now);
+        osc.connect(gain);
+        osc.start(now);
+        osc.stop(now + 0.12);
+        return;
+      }
+
+      if (!spec) return;
+
+      if (spec.type === 'noise') {
+        var len = Math.max(1, Math.floor(ctx.sampleRate * spec.duration));
+        var buf = ctx.createBuffer(1, len, ctx.sampleRate);
+        var data = buf.getChannelData(0);
+        for (var i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+        var src = ctx.createBufferSource();
+        src.buffer = buf;
+        var filt = ctx.createBiquadFilter();
+        filt.type = 'lowpass';
+        filt.frequency.setValueAtTime(spec.from, now);
+        filt.frequency.exponentialRampToValueAtTime(Math.max(20, spec.to), now + spec.duration);
+        src.connect(filt);
+        filt.connect(gain);
+        src.start(now);
+        src.stop(now + spec.duration);
+        return;
+      }
+
+      var o = ctx.createOscillator();
+      o.type = spec.type;
+      o.frequency.setValueAtTime(spec.from, now);
+      o.frequency.exponentialRampToValueAtTime(Math.max(20, spec.to), now + spec.duration);
+      o.connect(gain);
+      o.start(now);
+      o.stop(now + spec.duration);
+    }
+  };
+  return audio;
 }
 /* ==== RENDER:END ==== */
 
@@ -1813,6 +1906,46 @@ test('每种道具都有配色', function () {
   ITEM_TYPES.forEach(function (t) {
     assert(typeof ITEM_COLORS[t] === 'string' && ITEM_COLORS[t].length > 0, t + ' 缺少配色');
   });
+});
+
+test('连击音高：基准 440Hz，每级升半音，8 级后回绕', function () {
+  assertClose(pitchForStreak(0), 440, 1e-9, 'streak 0 → 440Hz');
+  assertClose(pitchForStreak(8), 440, 1e-9, 'streak 8 应回绕到 440Hz');
+  assertClose(pitchForStreak(16), 440, 1e-9, 'streak 16 应回绕到 440Hz（16 % 8 === 0）');
+  assertClose(pitchForStreak(1), 440 * Math.pow(2, 1 / 12), 1e-9, 'streak 1 应升一个半音');
+  assert(pitchForStreak(7) > pitchForStreak(3), '连击越高音越高');
+});
+
+test('音效规格完整且参数合理', function () {
+  ['swallow', 'spit', 'jump', 'crash', 'dash'].forEach(function (name) {
+    var s = SOUND_SPECS[name];
+    assert(s !== undefined, '缺少音效 ' + name);
+    assert(s.duration > 0, name + ' 的 duration 应为正');
+    assert(s.gain > 0 && s.gain <= 1, name + ' 的 gain 应在 (0,1]');
+    assert(typeof s.from === 'number' && typeof s.to === 'number', name + ' 应有起止频率');
+  });
+});
+
+test('没有 AudioContext 时 play 不抛异常', function () {
+  var audio = createAudio(null);
+  assert(audio.ensure() === null, '无构造函数时应返回 null');
+  ['swallow', 'spit', 'jump', 'crash', 'dash'].forEach(function (n) {
+    audio.play(n, 0);   // 不应抛异常
+  });
+});
+
+test('AudioContext 构造失败时不抛异常（自动播放策略）', function () {
+  var audio = createAudio(function () { throw new Error('blocked by autoplay policy'); });
+  assert(audio.ensure() === null, '构造失败应静默降级为 null');
+  audio.play('jump', 0);
+});
+
+test('静音时 play 是空操作，toggleMute 可来回切换', function () {
+  var audio = createAudio(null);
+  assert(audio.muted === false, '默认不静音');
+  assert(audio.toggleMute() === true, '切换后应静音');
+  assert(audio.play('jump', 0) === undefined, '静音时 play 应无返回、不抛异常');
+  assert(audio.toggleMute() === false, '再切换应取消静音');
 });
 /* ==== TESTS:END ==== */
 
