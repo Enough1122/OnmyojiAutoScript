@@ -3296,13 +3296,22 @@ EOF
 | APP 主循环 + 新增 `togglePause` | 暂停没有任何视觉反馈，世界冻结但鹈鹕仍在浮动、无敌仍在闪，玩家分不清「暂停」和「卡死」 | 弹「暂停」遮罩；`step()` 在 paused 时整体早退，clock 与粒子都不推进；`togglePause` 只在 playing ⇄ paused 间切换 |
 | APP 输入 | 按住 ↓ 时 Alt+Tab 切走再回来，ducking 永久卡住（收不到 keyup），速度停在 0.55x | 新增 `window` 的 `blur` 处理器释放蹲下 |
 
+最后一批（测试 99 → 105）：
+
+| 位置 | 问题 | 修法 |
+|---|---|---|
+| `drawEntities` | 被抛射物清掉的障碍当帧已 `dead`，但 `updateEntities` 之后才标记，于是多画一帧「尸体」 | 绘制前 `if (e.dead) continue`；补一条「存活实体照常绘制」防过度过滤 |
+| APP 吐 + `drawProjectiles` | spec §8 要求吐有后坐力，实际只有粒子爆发，整车纹丝不动；且石头与鱼的拖影一样长，看不出穿透属性 | 新增 `recoilOffsetFor(timer)`（`RECOIL_DURATION=0.18`、`RECOIL_DISTANCE=14`），绘制鹈鹕时 `ctx.translate` 施加；石头拖影 34px、鱼 18px |
+| APP 重开 + 新增 `commitBest` | 中途按 R 直接 `startRun`，本局分数被丢弃 —— 破的纪录只在摔车时才写盘 | 抽出纯函数 `commitBest(score, best, storage)`，`commitBestNow()` 在 gameover 与 restart 两处都调 |
+| `run-tests.mjs` + HARNESS 块 | 浏览器与 node 各写一份语义相同的 harness，没有任何机制防止它们以后分叉 | 浏览器那份包进 `HARNESS:BEGIN/END` 哨兵块，`run-tests.mjs` 改为抽同一块；`makeStubCtx` 增加 `args` 数组记录实参 |
+
 ---
 
 ## 完成标准
 
 全部 13 个任务完成后：
 
-- `node tools/run-tests.mjs` 输出 96/96 passed，退出码 0
+- `node tools/run-tests.mjs` 输出 105/105 passed，退出码 0
 - 双击 `projects/pelican-bike/index.html` 可直接游玩
 - spec 第 12 节的 6 条验收标准逐条通过
 - `projects/pelican-bike/pelican-bike.html`（原插画）未被改动

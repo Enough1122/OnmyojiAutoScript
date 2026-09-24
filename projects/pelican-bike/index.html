@@ -31,7 +31,9 @@ canvas { display: block; border-radius: 12px; box-shadow: 0 12px 48px rgba(0,0,0
 <div id="overlay"></div>
 <pre id="out" hidden></pre>
 <script>
-// 浏览器侧 harness —— node 侧由 run-tests.mjs 注入等价实现
+// 浏览器侧 harness。node 侧由 run-tests.mjs 抽出**同一段代码**执行 ——
+// 只有一份实现，两边不可能分叉。
+/* ==== HARNESS:BEGIN ==== */
 var results = [];
 function test(name, fn) {
   try { fn(); results.push({ name: name, ok: true }); }
@@ -41,6 +43,7 @@ function assert(cond, msg) { if (!cond) throw new Error(msg || 'assertion failed
 function assertClose(a, b, tol, msg) {
   if (Math.abs(a - b) > tol) throw new Error((msg || 'not close') + ': ' + a + ' vs ' + b);
 }
+/* ==== HARNESS:END ==== */
 
 /* ==== CORE:BEGIN ==== */
 var POUCH_CAPACITY = 6;
@@ -671,6 +674,24 @@ function togglePause(g) {
   return null;
 }
 
+var RECOIL_DURATION = 0.18;
+var RECOIL_DISTANCE = 14;
+
+// 吐东西时的后坐力位移（负 = 向后退）。起手最大，线性回正。
+function recoilOffsetFor(timer) {
+  if (!(timer > 0)) return 0;
+  var k = Math.min(timer, RECOIL_DURATION) / RECOIL_DURATION;
+  return -RECOIL_DISTANCE * k;
+}
+
+// 把本局分数并进最高分。只在真的刷新纪录时写盘。
+// storage 作为参数传入，便于测试注入会抛异常的假实现。
+function commitBest(score, best, storage) {
+  if (score.points <= best) return { best: best, improved: false };
+  safeSaveBest(storage, score.points);
+  return { best: score.points, improved: true };
+}
+
 // 固定步长累加器（spec §11）。把不定的真实 dt 切成等长的模拟步，
 // 物理因此与显示器刷新率无关（跳跃高度在任何刷新率下都一致）；
 // 单帧步数有上限，避免卡顿后爆发式补步。
@@ -1146,6 +1167,8 @@ function drawEntity(ctx, ent) {
 function drawEntities(ctx, g) {
   for (var i = 0; i < g.entities.length; i++) {
     var e = g.entities[i];
+    // 已被道具清掉的（抛射物在 updateEntities 之后才标记 dead）本帧不该再画
+    if (e.dead) continue;
     if (e.x < -160 || e.x > VIEW_W + 160) continue;
     drawEntity(ctx, e);
   }
@@ -1159,14 +1182,14 @@ function drawProjectiles(ctx, g) {
     ctx.beginPath();
     ctx.arc(p.x, p.y, p.piercing ? 14 : 11, 0, Math.PI * 2);
     ctx.fill();
-    if (p.piercing) {
-      ctx.strokeStyle = 'rgba(255,255,255,0.6)';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(p.x - 34, p.y);
-      ctx.lineTo(p.x - 16, p.y);
-      ctx.stroke();
-    }
+    // 拖影：石头穿透、飞得重，拖得长；鱼轻，拖得短
+    var trail = p.piercing ? 34 : 18;
+    ctx.strokeStyle = p.piercing ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.4)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(p.x - trail, p.y);
+    ctx.lineTo(p.x - 16, p.y);
+    ctx.stroke();
     ctx.restore();
   }
 }
@@ -1270,12 +1293,16 @@ function createAudio(Ctor) {
 // 桩 ctx：记录所有被调用的绘制方法，用于冒烟测试
 function makeStubCtx() {
   var calls = [];
+  var args = [];
   var ctx = {};
   ['save', 'restore', 'beginPath', 'moveTo', 'lineTo', 'closePath', 'fill', 'stroke',
    'arc', 'ellipse', 'rect', 'fillRect', 'strokeRect', 'quadraticCurveTo',
    'bezierCurveTo', 'translate', 'rotate', 'scale', 'clip', 'clearRect', 'fillText',
    'setLineDash'].forEach(function (m) {
-    ctx[m] = function () { calls.push(m); };
+    ctx[m] = function () {
+      calls.push(m);
+      args.push([m].concat(Array.prototype.slice.call(arguments)));
+    };
   });
   ctx.createLinearGradient = function () {
     calls.push('createLinearGradient');
@@ -1286,6 +1313,7 @@ function makeStubCtx() {
     return { addColorStop: function () { calls.push('addColorStop'); } };
   };
   ctx.calls = calls;
+  ctx.args = args;
   ctx.did = function (m) { return calls.indexOf(m) !== -1; };
   return ctx;
 }
@@ -2358,6 +2386,86 @@ test('松开蹲下键会把 ducking 清掉（失焦释放依赖它）', function
   assert(g.ducking === false, '释放后应站起');
   assertClose(currentSpeed(g), speedAt(g.t), 1e-9, '站起后速度应回到 1.0x');
 });
+
+// ===== 搁置项 1：被抛射物打掉的障碍会多画一帧 =====
+test('已标记 dead 的实体不会被绘制', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  g.entities = [{ kind: 'obstacle', type: 'bin', x: 600, bottom: 0, w: 54, h: 70, dead: true }];
+  var ctx = makeStubCtx();
+  drawEntities(ctx, g);
+  assert(ctx.calls.length === 0, 'dead 实体不应产生任何绘制调用，实际 ' + ctx.calls.length + ' 次');
+});
+
+test('存活的实体照常绘制（回归护栏）', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  g.entities = [{ kind: 'obstacle', type: 'bin', x: 600, bottom: 0, w: 54, h: 70 }];
+  var ctx = makeStubCtx();
+  drawEntities(ctx, g);
+  assert(ctx.did('fillRect'), '存活实体应被画出');
+});
+
+// ===== 搁置项 2：吐的后坐力位移 + 鱼的拖影 =====
+test('吐的后坐力位移：起手最大，线性回正，归零后为 0', function () {
+  assert(recoilOffsetFor(0) === 0, '无后坐力时偏移为 0');
+  assert(recoilOffsetFor(-1) === 0, '负值应为 0');
+  assertClose(recoilOffsetFor(RECOIL_DURATION), -RECOIL_DISTANCE, 1e-9, '刚吐出时后坐力最大');
+  assertClose(recoilOffsetFor(RECOIL_DURATION / 2), -RECOIL_DISTANCE / 2, 1e-9, '半程应为一半');
+  assert(recoilOffsetFor(RECOIL_DURATION * 0.1) > recoilOffsetFor(RECOIL_DURATION * 0.9),
+    '随时间回正（负得越少越接近原位）');
+  assertClose(recoilOffsetFor(RECOIL_DURATION * 2), -RECOIL_DISTANCE, 1e-9, '超出时长按最大位移封顶');
+});
+
+test('石头与鱼都有拖影，石头更长', function () {
+  var g = createGame(makeRng(1));
+  startRun(g);
+  g.projectiles = [
+    { item: 'rock', x: 500, y: 200, piercing: true },
+    { item: 'fish', x: 500, y: 200, piercing: false }
+  ];
+  var ctx = makeStubCtx();
+  drawProjectiles(ctx, g);
+  var moves = ctx.args.filter(function (a) { return a[0] === 'moveTo'; });
+  assert(moves.length === 2, '两个抛射物都应有拖影，实际 ' + moves.length + ' 条');
+  var xs = moves.map(function (a) { return a[1]; }).sort(function (a, b) { return a - b; });
+  assertClose(xs[0], 500 - 34, 1e-9, '石头的拖影更长（起点 x=' + xs[0] + '）');
+  assertClose(xs[1], 500 - 18, 1e-9, '鱼的拖影较短（起点 x=' + xs[1] + '）');
+});
+
+// ===== 搁置项 3：中途按 R 会丢掉新纪录 =====
+test('commitBest：只在真的刷新纪录时写盘', function () {
+  var store = {};
+  var fake = {
+    getItem: function (k) { return store[k] === undefined ? null : store[k]; },
+    setItem: function (k, v) { store[k] = String(v); }
+  };
+  var s = { points: 100, streak: 0 };
+
+  var r = commitBest(s, 0, fake);
+  assert(r.improved === true && r.best === 100, '首次应刷新纪录');
+  assert(store[BEST_KEY] === '100', '应写盘');
+
+  store[BEST_KEY] = '已有值';
+  r = commitBest(s, 200, fake);
+  assert(r.improved === false && r.best === 200, '未破纪录不应改动 best');
+  assert(store[BEST_KEY] === '已有值', '未破纪录不应写盘');
+
+  r = commitBest(s, 100, fake);
+  assert(r.improved === false, '打平不算刷新');
+});
+
+// ===== 搁置项 4：两套 harness 的防分叉 =====
+test('harness 自检：断言失败会被记成失败，而不是抛出去', function () {
+  var before = results.length;
+  test('__故意失败__', function () { assert(false, 'expected failure'); });
+  var rec = results[results.length - 1];
+  assert(results.length === before + 1, '应多记录一条');
+  assert(rec.name === '__故意失败__', '应记录用例名');
+  assert(rec.ok === false, '应记为失败');
+  assert(typeof rec.err === 'string' && rec.err.length > 0, '应记录失败原因');
+  results.pop();   // 清掉这条自检记录，别污染计数
+});
 /* ==== TESTS:END ==== */
 
 /* ==== APP:BEGIN ==== */
@@ -2378,6 +2486,11 @@ test('松开蹲下键会把 ducking 清掉（失焦释放依赖它）', function
     setItem: function () {}
   };
   g.best = safeLoadBest(safeStorage);
+
+  // 把本局分数并进最高分。gameover 与中途按 R 都要调 —— 否则破的纪录会丢。
+  function commitBestNow() {
+    g.best = commitBest(g.score, g.best, safeStorage).best;
+  }
 
   // ---- 自适应缩放 ----
   function resize() {
@@ -2409,6 +2522,7 @@ test('松开蹲下键会把 ducking 清掉（失焦释放依赖它）', function
 
   var shake = 0;
   var flash = 0;
+  var recoil = 0;
 
   // ---- 输入 ----
   window.addEventListener('keydown', function (ev) {
@@ -2417,7 +2531,8 @@ test('松开蹲下键会把 ducking 清掉（失焦释放依赖它）', function
     ev.preventDefault();
 
     if (action === 'mute') { audio.toggleMute(); return; }
-    if (action === 'restart') { startRun(g); overlay.hidden = true; return; }
+    // 中途按 R 也要先把本局分数并进最高分，否则破的纪录会丢
+    if (action === 'restart') { commitBestNow(); startRun(g); overlay.hidden = true; return; }
     if (action === 'pause') {
       var next = togglePause(g);
       if (next === 'paused') showOverlay('paused');
@@ -2437,6 +2552,7 @@ test('松开蹲下键会把 ducking 清掉（失焦释放依赖它）', function
       var eff = spit(g);
       if (eff) {
         audio.play('spit');
+        recoil = RECOIL_DURATION;
         burst(PELICAN_X + 70, GROUND_Y - g.height - 70, 8, '#ffffff', 180);
         if (eff.kind === 'dash') { flash = 1; shake = 14; audio.play('dash'); }
         if (eff.kind === 'clear') { flash = 0.8; shake = 10; }
@@ -2489,10 +2605,7 @@ test('松开蹲下键会把 ducking 清掉（失焦释放依赖它）', function
         shake = 20;
       }
       if (g.state === 'gameover') {
-        if (g.score.points > g.best) {
-          g.best = g.score.points;
-          safeSaveBest(safeStorage, g.best);
-        }
+        commitBestNow();
         showOverlay('gameover');
       }
     }
@@ -2500,6 +2613,7 @@ test('松开蹲下键会把 ducking 清掉（失焦释放依赖它）', function
     poolUpdate(particles, dt);
     if (shake > 0) shake = Math.max(0, shake - dt * 60);
     if (flash > 0) flash = Math.max(0, flash - dt * 2.5);
+    if (recoil > 0) recoil = Math.max(0, recoil - dt);
   }
 
   // 绘制一帧：只读状态，不改状态
@@ -2513,8 +2627,11 @@ test('松开蹲下键会把 ducking 清掉（失焦释放依赖它）', function
     drawEntities(ctx, g);
     drawProjectiles(ctx, g);
     drawParticles(ctx, particles);
+    ctx.save();
+    ctx.translate(recoilOffsetFor(recoil), 0);   // 吐的后坐力：整车向后一顿再弹回
     if (g.invuln > 0 && Math.floor(clock * 20) % 2 === 0) ctx.globalAlpha = 0.45;
     drawPelican(ctx, g, clock);
+    ctx.restore();
     ctx.restore();
 
     if (flash > 0) {
