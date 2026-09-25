@@ -41,6 +41,13 @@ cache/
 /.scratch-probe-*
 # worker 平铺到根目录的上游源码副本(agent/xxx.py.121757 形式:PR 号后缀)
 /*.12[0-9][0-9][0-9][0-9]
+# worker 的 base/head 双份 checkout 放在工具目录里(co_<PR> / co_<PR>_base)。
+# 它们是嵌套 .git,git add -A 只会记成 160000 gitlink(一个 commit 指针),
+# 历史里留不下任何内容,clone 后还是空的 —— 属于审阅临时物,出库。
+projects/github-tools/co_*
+projects/github-tools/_pr[0-9]*/
+# worker 的隔离 HERMES_HOME(按会话/进程哈希命名),是运行时目录而非源码
+projects/github-tools/_hermes_home_*/
 .pytest-cache/
 __pycache__/
 *.pyc
