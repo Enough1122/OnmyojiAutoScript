@@ -41,6 +41,37 @@ cache/
 /.scratch-probe-*
 # worker 平铺到根目录的上游源码副本(agent/xxx.py.121757 形式:PR 号后缀)
 /*.12[0-9][0-9][0-9][0-9]
+# 同族平铺探针:短名也是上游源码快照,不是本仓脚本。
+# 只点名下面这些已知名,避免 /probe* 误伤真实探针;
+/*probe[0-9]*.py
+/pr[0-9]*-*.py
+/pr[0-9]*-*.ts
+/pr[0-9]*-*.tsx
+/main_*.py
+/head_*.py
+/head_*.ts
+/cur_*.py
+/hs.py
+/hsc.py
+/ic.py
+/ra.py
+/tf.py
+/tfl.py
+/corrected_*.tsx
+/corr_*.txt
+/control_out.txt
+/codex-*.rs
+/tools_threat_patterns.py
+/hermes_cli_doctor_state.py
+/tts_probe.py
+/base_model_status_label.ts
+/probe_pill*.txt
+/probe_pill_result.json
+/probe_base.txt
+/job-*.zip
+# 空的 head/base checkout 残留(目录形态)
+/pr[0-9]*/
+# 保留:/gh_notif_stats.py 与 /gh_notifications.json 是 inbox 真实产物,勿加规则
 # worker 的 base/head 双份 checkout 放在工具目录里(co_<PR> / co_<PR>_base)。
 # 它们是嵌套 .git,git add -A 只会记成 160000 gitlink(一个 commit 指针),
 # 历史里留不下任何内容,clone 后还是空的 —— 属于审阅临时物,出库。
