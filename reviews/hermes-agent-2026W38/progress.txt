@@ -1199,3 +1199,377 @@
 118223	posted
 118224	silent
 118225	silent
+118226	clean/silent
+118227	clean/silent
+118232	clean/silent
+118238	skip
+118248	skip
+118249	posted
+118252	clean/silent
+118253	clean/silent
+118255	skip
+118258	clean/silent
+118261	clean/silent
+118264	posted
+118266	clean/silent
+118268	clean/silent
+118274	clean/silent
+118278	skip
+118281	skip
+118283	clean/silent
+118290	posted
+118294	deferred
+118296	skip
+118298	clean/silent
+118302	clean/silent
+118306	posted
+118307	clean/silent
+118309	clean/silent
+118314	deferred
+118315	posted
+118317	skip
+118325	skip
+
+113192 follow-up
+122246 follow-up
+122392 follow-up
+122396 follow-up
+121884	posted
+121589	posted
+122097	silent
+122159	silent
+121869	silent
+121569	silent
+121921	silent
+122028	silent
+121552	silent
+122381 follow-up
+122307	silent
+121732	silent
+121711	silent
+121897	silent
+122391	posted
+
+# durable-pool reconciliation after deleg_e162aff4
+121574	silent
+121575	silent
+121586	posted
+121595	silent
+121624	silent
+121641	silent
+121644	silent
+121704	silent
+121713	silent
+121737	silent
+121757	silent
+121773	posted
+121776	posted
+121806	posted
+121830	posted
+121837	clean/silent
+121850	silent
+121855	silent
+121859	silent
+121861	posted
+121904	silent
+121905	silent
+121917	silent
+121919	posted
+121928	posted
+121947	posted
+121971	silent
+121991	silent
+122009	posted
+122036	silent
+122086	posted
+122106	clean/silent
+122111	posted
+122175	silent
+122176	silent
+122196	silent
+122235	silent
+
+# durable-pool current-state reconciliation
+121520	clean/silent
+121521	clean/silent
+121522	clean/silent
+121545	clean/silent
+121557	clean/silent
+121571	clean/silent
+121585	clean/silent
+121590	clean/silent
+121591	clean/silent
+121592	clean/silent
+121599	clean/silent
+121610	clean/silent
+121618	clean/silent
+121631	clean/silent
+121636	clean/silent
+121637	posted
+121642	clean/silent
+121648	posted
+121654	clean/silent
+121655	clean/silent
+121687	clean/silent
+121691	clean/silent
+121695	skip
+121697	clean/silent
+121699	clean/silent
+121703	clean/silent
+121708	skip
+121723	clean/silent
+121724	posted
+121733	posted
+121762	skip
+121765	clean/silent
+121771	clean/silent
+121775	clean/silent
+121778	clean/silent
+121781	clean/silent
+121784	clean/silent
+121785	posted
+121786	clean/silent
+121788	clean/silent
+121792	clean/silent
+121794	clean/silent
+121795	clean/silent
+121803	clean/silent
+121816	clean/silent
+121817	posted
+121818	clean/silent
+121826	clean/silent
+121835	clean/silent
+121844	clean/silent
+121845	clean/silent
+121847	clean/silent
+121853	clean/silent
+121854	clean/silent
+121862	clean/silent
+121892	clean/silent
+121895	clean/silent
+121908	clean/silent
+121909	clean/silent
+121912	posted
+121913	clean/silent
+121914	posted
+121916	clean/silent
+121922	clean/silent
+121924	clean/silent
+121930	clean/silent
+121931	clean/silent
+121939	clean/silent
+121943	clean/silent
+121944	clean/silent
+121952	clean/silent
+121956	clean/silent
+121958	clean/silent
+121967	clean/silent
+121968	clean/silent
+121974	clean/silent
+121975	clean/silent
+121985	clean/silent
+122003	clean/silent
+122031	posted
+122032	clean/silent
+122037	clean/silent
+122038	clean/silent
+122043	clean/silent
+122047	clean/silent
+122049	posted
+122051	clean/silent
+122058	clean/silent
+122060	clean/silent
+122065	clean/silent
+122087	posted
+122089	clean/silent
+122096	clean/silent
+122099	clean/silent
+122108	clean/silent
+122114	clean/silent
+122122	clean/silent
+122128	clean/silent
+122129	corrected
+122141	posted
+122144	clean/silent
+122145	clean/silent
+122147	posted
+122149	clean/silent
+122150	clean/silent
+122152	clean/silent
+122153	clean/silent
+122155	posted
+122156	clean/silent
+122157	clean/silent
+122162	clean/silent
+122163	clean/silent
+122165	clean/silent
+122169	clean/silent
+122170	posted
+122179	clean/silent
+122180	posted
+122184	clean/silent
+122186	posted
+122188	clean/silent
+122189	clean/silent
+122191	clean/silent
+122192	clean/silent
+122193	clean/silent
+122197	posted
+122198	clean/silent
+122201	clean/silent
+122203	clean/silent
+122212	clean/silent
+122213	clean/silent
+122215	posted
+122216	clean/silent
+122217	posted
+122218	posted
+122219	clean/silent
+122224	posted
+122225	clean/silent
+122226	posted
+122229	clean/silent
+122230	clean/silent
+122231	posted
+122232	posted
+122233	clean/silent
+122238	clean/silent
+122243	posted
+122247	clean/silent
+122248	clean/silent
+122249	clean/silent
+122252	posted
+122253	clean/silent
+122259	clean/silent
+122260	clean/silent
+122261	clean/silent
+122263	clean/silent
+122264	clean/silent
+122265	skip
+122267	posted
+122268	posted
+122269	clean/silent
+122270	clean/silent
+122273	clean/silent
+122279	clean/silent
+122280	clean/silent
+122281	clean/silent
+122282	posted
+122283	posted
+122284	clean/silent
+122285	clean/silent
+122287	posted
+122290	clean/silent
+122291	clean/silent
+122293	clean/silent
+122298	clean/silent
+122300	clean/silent
+122302	posted
+122304	clean/silent
+122305	posted
+122306	clean/silent
+122308	posted
+122309	clean/silent
+122313	clean/silent
+122314	clean/silent
+122318	posted
+122319	clean/silent
+122320	clean/silent
+122321	clean/silent
+122323	skip
+122327	clean/silent
+122329	posted
+122330	clean/silent
+122331	clean/silent
+122332	clean/silent
+122333	clean/silent
+122334	posted
+122335	posted
+122336	clean/silent
+122337	posted
+122338	clean/silent
+122340	clean/silent
+122341	clean/silent
+122343	clean/silent
+122344	posted
+122345	clean/silent
+122346	clean/silent
+122348	clean/silent
+122351	posted
+122354	clean/silent
+122355	posted
+122358	clean/silent
+122359	posted
+122360	clean/silent
+122362	clean/silent
+122363	clean/silent
+122364	clean/silent
+122366	clean/silent
+122367	clean/silent
+122368	clean/silent
+122369	posted
+122371	clean/silent
+122372	clean/silent
+122374	clean/silent
+122375	clean/silent
+122376	clean/silent
+122380	clean/silent
+122382	clean/silent
+122383	clean/silent
+122385	clean/silent
+122387	clean/silent
+122388	posted
+122389	clean/silent
+122390	clean/silent
+122393	posted
+122397	posted
+122399	posted
+122403	clean/silent
+122405	clean/silent
+122406	clean/silent
+121819 posted/blocker (worker-47; head da0ff4395f8bbce906bbced050a7c0504e613262; comment 5831582679)
+
+# 2026-09-25 Hermes 更新后恢复与 durable-pool 完整性修复
+# 旧 posted receipt 对应的 PR head 已变化；以下 4 条使用 old-head CAS 原子回队列并写入新 head，旧评论仅保留为语义对照。
+121785 head-drift requeued (old 2c6f77434a6a0e54bea6861901cb3adc98478936 -> current de8d72bc604f3deb8a4965ac4d0d3b6a46fc235f)
+122141 head-drift requeued (old 4ad4f8d977724393d10c3295fb71ed439259bbac -> current c1a2b924d668d8a472996c3055b5677f91aacd04)
+122381 head-drift requeued (old d356a2eeb612bc14184c4f195d3a7c4eac92d81b -> current fbd274b048d54cae785b0bf38b99c68f0ed0e12e)
+122391 head-drift requeued (old 64410d8481e950ee29dad0ba78cd52a98d840ad6 -> current 3719169ad1fb583cae6d0828e2654e8b3f5106dd)
+122391 re-review posted (head 3719169ad1fb583cae6d0828e2654e8b3f5106dd; comment 5831669218)
+# claim 调度器改为同 worker 幂等：已有 running claim 时只续租并返回原 PR；发布入口统一 canonical URL、作者与正文读回。
+122246	clean/silent (worker-48; head 1057a368f2460d50f79c17f4841d22e7ae10a6a6; focused tests 44 passed)
+121785	clean/silent (worker-54; head de8d72bc604f3deb8a4965ac4d0d3b6a46fc235f; current-head re-review; focused tests 8 passed, 4 skipped)
+122236	posted (worker-49; head af893eb62d05923fa2280b2a3e25b1294d96d380; blocker: registry autodetect ignores AUTODETECT opt-out; comment 5831960307)
+122245	posted (worker-48; head 1d4f4a33c62bfe1ee9b3a5ff81721a106c8ba856; nonblocking: reader CI gate has 2 false negatives - tuple-unpack config path bind missed (check_config_yaml_readers.py:122-140) and pm/ absent from DEFAULT_TREES; focused tests 39 passed; comment 5831959088)
+# 2026-09-25 收口快照
+# durable pool + live workers 对齐；固定批旧发布器已全部 retired guard；大 diff 进入 deep；posted receipt 全量读回。
+# active=10 owners=10 lanes=7fast/3deep fresh=10 expired=0；DB=235 clean / 74 posted / 168 queued / 10 running / 5 skip。
+# posted receipts=74/74 canonical current-PR issuecomment URLs, author=Enough1122, non-empty body；head drift=0。
+# 回归：49 tests passed；核心脚本 py_compile 与 targeted diff check 通过。
+
+122139	posted/blocker (worker-54; head 4d09745b3f0184b3c4b4fedda1dd1d71c474d752; chat-messages regression suite 3 failed, 74 passed; https://github.com/NousResearch/hermes-agent/pull/122139#issuecomment-5832044032)
+122014	clean/silent (worker-54; head 43dd88939db730588d9a6d2ffd491d0938234bd8; focused tests 2 passed)
+122138 worker-57 CLEAN head=3fcf93cc9af0e3126097ed62ad3f40bcaa26303a level=deep
+122381	CLEAN on current head c85ec918f37bdf45c64d8f417f827818b7746120 (worker-59; old-head comment 5832169979 remains public history but is not a current posted receipt; scalar-aware normalization and fingerprint regression cover the reported collision)
+121696 clean/silent (worker-52; head c89068e5e2075a795169e0d47f4ae7f37351b7e7; detached hygiene worker registered before shutdown close; focused shutdown/hygiene tests 15 passed)
+121783	posted (worker-49; head 67935812df52b9aec5853b1731a0e547a155b060; docs still claim prune refuses under live holder; comment 5832177835)
+121995	posted/blocker (worker-54; head 1c8aef2bf6e3a12d1697af4dd6fd65c7e88a9ee8; GPT-OSS Responses vocabulary leaks to non-Groq custom endpoints; https://github.com/NousResearch/hermes-agent/pull/121995#issuecomment-5832197152)
+121573 worker-57 POSTED head=9a222dc8f4c6df37adb90a473f3766d582fcf87f level=deep comment=https://github.com/NousResearch/hermes-agent/pull/121573#issuecomment-5832269443
+121576	clean/silent (worker-54; head d0445cf9f8e0d3f65baac3011c5b8aab99bad5b7; focused/neighbor tests 201 passed; dirty only on later main E2E test infra)
+121578	clean/silent (worker-54; head fe4c52bfd1e76df6520c159b5c86c0dd2552e91d; focused recovery/delegation tests 80 passed, 2 skipped; prior timestamp concern already fixed)
+121946	clean/silent (worker-54; head aaa7fff000ac812e98f27903c23cfa03ac6e9bbf; focused FTS/state tests 276 passed, 3 skipped; overlap with #116382 already acknowledged)
+122104	clean/silent (worker-54; head 2f0e8478af3c0803f462d0824317a88171442e86; plugin handler/rewire/ledger tests 47 passed)
+122073 worker-57 POSTED head=b087bdee74c615d60eeeb88e0c8c6cdedc4c4191 level=deep comment=https://github.com/NousResearch/hermes-agent/pull/122073#issuecomment-5832442826
+
+# 2026-09-25 噪声 review 纠错：以下评论只有测试/CI/rebase 状态，无实质技术 finding，已删除并读回 GitHub API 404。
+121587	clean/silent (coordinator; head 2d23c96f87a71fe747ce729b648be1e8811e0956; removed non-substantive comment 5832313537)
+121620	clean/silent (coordinator; head b521b5bc0c48014ccd5c565f9fde4cfebad29708; removed non-substantive comment 5832445396)
+121834	clean/silent (coordinator; head 862a21f47c39c39a0cb6e71c2283b8a7e254c29c; removed non-substantive comment 5832372065)
+
+# 2026-09-25 当前 head/噪声纠错：旧 posted 结论不沿用到新 head；已提交 formal review 无法物理删除时不追加噪声纠正。
+121995	running/re-review (worker-64; old posted head 1c8aef2bf6e3a12d1697af4dd6fd65c7e88a9ee8; current head d995aac1a5b373215100a7bde319a21a6f9a9fd3; old receipt 5832197152 retained as public history)
+122181	clean/silent (coordinator; head 71e72620f7f458f05924ed8841f5363c4bfaa7c9; removed issue comment 5832485626; submitted formal review 5317677716 remains because GitHub DELETE returns HTTP 422 for non-pending reviews)
+
+# 2026-09-25 posted/corrected 全量实时审计：旧快照 89/89 通过 canonical URL、Enough1122、正文非空与当前 PR 校验；随后 head 漂移项已逐一 CAS 回队，当前 receipt 由 durable DB 持续复审。
+122232	queued/re-review (coordinator; old posted head 3a1534958cd737acf43bcc74b7e8a3abd6866a9b; current head a3271750608ca4e02e5205311a09b906e16d33d5; old receipt 5827590192 retained as public history and excluded from current posted metrics)
+122246	queued/re-review (coordinator; reviewed head 1057a368f2460d50f79c17f4841d22e7ae10a6a6; current head 25168fe0af5a317da4f70e6ac7fa892487ad7180; old receipt 5832163697 retained as public history)

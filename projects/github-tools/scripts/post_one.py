@@ -4,8 +4,10 @@
 Reads the review body from C:\\Users\\admin\\AppData\\Local\\Temp\\opencode\\campaign\\<N>.md
 Guarantees:
   - SOP header present (prefixes it if the draft omitted it)
-  - pre-post dedupe: skip if Enough1122 already left an 'AI code review' comment
+  - pre-post dedupe: skip only if Enough1122 already posted the exact same review body
   - POST as issue comment
+  - read the created comment back and require Enough1122 as author
+  - require the canonical current-PR issuecomment URL and identical body
 Prints one of: POSTED <url> | SKIP_DUPE | SKIP_STALE | ERR <msg>
 
 Sleep between posts is OFF by default (2026-09-21: 用户定"先别考虑限流,触发了再说").
@@ -51,27 +53,36 @@ def post(n, sleep_secs=0.0):
         body = HEADER + '\n\n' + body
         open(path, 'w', encoding='utf-8').write(body)
 
-    # liveness re-check: PR must still be open, non-draft, and still unreviewed
+    # Liveness re-check: PR must still be open and non-draft. Other reviewers' comments
+    # are context for semantic de-duplication, not a skip condition (2026-09-25 policy).
     pr = g('%s/repos/%s/pulls/%d' % (BASE, REPO, n))
     if pr.get('state') != 'open' or pr.get('draft'):
         return 'SKIP_STALE %d state=%s draft=%s' % (n, pr.get('state'), pr.get('draft'))
 
     cs = g('%s/repos/%s/issues/%d/comments?per_page=100' % (BASE, REPO, n))
-    if any(c['user']['login'] == 'Enough1122' and 'AI code review' in (c.get('body') or '') for c in cs):
-        return 'SKIP_DUPE %d (my AI review already present)' % n
-    if len(cs):
-        return 'SKIP_STALE %d (someone commented: %d)' % (n, len(cs))
-
-    rvs = g('%s/repos/%s/pulls/%d/reviews?per_page=100' % (BASE, REPO, n))
-    if len(rvs):
-        return 'SKIP_STALE %d (someone reviewed: %d)' % (n, len(rvs))
-    rc = g('%s/repos/%s/pulls/%d/comments?per_page=100' % (BASE, REPO, n))
-    if len(rc):
-        return 'SKIP_STALE %d (inline review comments: %d)' % (n, len(rc))
+    if any(
+        c['user']['login'] == 'Enough1122'
+        and 'AI code review' in (c.get('body') or '')
+        and (c.get('body') or '').strip() == body
+        for c in cs
+    ):
+        return 'SKIP_DUPE %d (exact AI review already present)' % n
 
     data = json.dumps({'body': body}).encode('utf-8')
     req = Request('%s/repos/%s/issues/%d/comments' % (BASE, REPO, n), data=data, headers=H, method='POST')
     r = json.loads(urlopen(req, timeout=60).read())
+    comment_id = r.get('id')
+    if not comment_id:
+        return 'ERR %d post response missing comment id' % n
+    receipt = g('%s/repos/%s/issues/comments/%s' % (BASE, REPO, comment_id))
+    if (receipt.get('user') or {}).get('login') != 'Enough1122':
+        return 'ERR %d read-back author is not Enough1122' % n
+    expected_url = ('https://github.com/%s/pull/%d#issuecomment-%s'
+                    % (REPO, n, comment_id))
+    if r.get('html_url') != expected_url or receipt.get('html_url') != expected_url:
+        return 'ERR %d read-back URL is not the canonical issuecomment URL' % n
+    if (receipt.get('body') or '').strip() != body:
+        return 'ERR %d read-back body mismatch' % n
     if sleep_secs:
         time.sleep(sleep_secs)
     return 'POSTED %d %s' % (n, r['html_url'])

@@ -74,14 +74,14 @@ python D:\Hermes\scripts\inbox_auto_sweep.py
 
 ### 2.1 选候口径（默认战役口径）
 
-- `open + ≤15 文件 + 无 issue 评论 + 无 review + 无 inline 评论 + 非 draft + diff <100KB`（2026-09-17 放宽自 ≤8/<60KB；size 以 additions+deletions 近似，拉 diff 时复核真值）。
-- **超限不丢**：>15 文件或 ≥100KB 的零关注 PR → 由 `count_candidates.py` 扫描时记入 `_campaign_state.json` 的 `deferred` 列表（number+files+size，滚动覆盖为本次扫描结果）——断点继续往前，但 backlog 留底，有胃口时点名补审；大改动常是高风险变更，不审也要看得见。
-- 断点续打（2026-09-17 明确）：审阅**只往前走**——PR 编号全局递增，比 frontier 大的就是新 PR。frontier 的**权威来源是本地 `drafts/_campaign_state.json`**（每批收尾更新，含 posted / silent-clean / skip 的最大编号）；`find_next_new_prs.py`（按 GitHub 已评论最大编号反推）只作兜底校验——静默跳过的 PR 在 GitHub 上无痕迹，只靠它会把 clean PR 重复审一遍。新候选 = frontier 之后仍 open 的 PR，按 §2.2 活检规则筛选。不要重复评已处理 PR。
-- 跳过：已有关注 / 已关 / 404 / 活检中途有人评论（发前重检）。
+- `open + 非 draft` 是基本候选条件（2026-09-25：已有 issue comment / formal review / inline comment **不再过滤候选**；它们必须先读作观点对照）。默认战役优先 `fast` lane 的 ≤15 文件且增删行数 ≤250 PR；更大/高改动 PR 不丢弃，进入 durable task pool 的 `deep` lane，由 worker 按风险处理。
+- **超限/高改动不丢**：>15 文件或增删行数 >250 的 PR 保留在 `review_pool.db`，由 `deep` lane 处理；不要用 `deferred` 隐藏。连续多个独立 GitHub 端点持续 403/429 才暂停。
+- 断点续打（2026-09-17 明确）：普通新 PR 只从 `frontier` 之后取；但 head 漂移、错误 deferred、退出 worker 的未完成项必须继续留在 durable pool，不能因编号低于 frontier 被漏掉。新候选 = frontier 之后仍 open 的 PR，另加 pool 中 `resume:`/head 漂移重审项，按 §2.2 活检规则筛选。不要重复评已处理 PR。
+- 跳过：已关闭 / 404 / draft / 我方已有完全重复的结论。**已有他人或我方 comment/review/inline 不构成跳过**：先读已有内容并做语义去重；若新发现是独立 bug、反证、遗漏边界或作者回复后状态变化，继续发布。
 
 ### 2.2 单条审阅步骤
 
-1. **活检**：`GET /pulls/{N}` 确认 open & 非 draft；`GET /issues/{N}/comments`、`GET /pulls/{N}/reviews`、`GET /pulls/{N}/comments` 任一非空 → SKIP_STALE。
+1. **活检与观点对照**：`GET /pulls/{N}` 确认 open & 非 draft；读取 `GET /issues/{N}/comments`、`GET /pulls/{N}/reviews`、`GET /pulls/{N}/comments` 全部已有观点。attention 非空不触发 SKIP；只在我方结论与既有结论实质重复（同根因、同证据、同修复建议）时静默，否则有实质新发现就发布。
 2. **拉 diff**：存 `drafts/_campaign/{N}.diff`，逐文件读全（不是只看 title）。
 3. **写评语**到 `C:\Users\admin\AppData\Local\Temp\opencode\campaign\{N}.md`，**必须**以 `> AI code review — automated review for reference; please use your judgment.` 开头。结构：
    ```md
@@ -94,69 +94,38 @@ python D:\Hermes\scripts\inbox_auto_sweep.py
    - 只报 diff 里真实存在的行号；不确定的写“建议确认”而非断言。
    - 常见抓点：并发/竞态、幂等、鉴权/allowlist、路径穿越、secret 落盘、代理透传、超时/重试上限、测试钉错半侧、死代码、文档与实现不符、重叠 PR 冲突风险。
    - **发布门槛（克制发声，2026-09-17 起）**：草稿写完自检——**无实质问题（仅 LGTM/纯吹毛求疵）→ 不发帖**（记 SKIP_CLEAN），草稿转归档；有 ≥1 个实质问题（blocker 或有价值的非阻塞发现）才走第 4 步发布。
-4. **去重与发布**：`python scripts/post_one.py {N}`（自动补 header + 发前 liveness 重检 + Enough1122 去重 + POST issue comment + sleep 8）。批量首选用 `post_one.py`；老 PR 首评可用 `post_review.py`；已评 PR 的追评用 `post_followup.py`。输出 `POSTED/SKIP_DUPE/SKIP_STALE/ERR` 如实记录。注意：`post_one.py` 目前**没有** SKIP_CLEAN 判定，发布门槛由 agent 在写稿阶段把关，无问题草稿不要传给它（脚本加门槛前如此）。
-5. **归档与断点落盘（每批必做）**：评语另存 `reviews/hermes-agent-YYYYWww/rb/{N}.md`，编号记入 `progress.txt`（含静默跳过的 PR，标 `clean/silent`），并**必须**更新 `drafts/_campaign_state.json`：silent-clean 编号追加进 `reviewed_clean` 列表、`frontier` = 本批处理过的最大 PR 编号（不论 posted / silent-clean / skip）、posted 编号追加进 `posted` 列表。批次中途退出也要先落盘再退；下次战役直接从 `frontier+1` 起。
+4. **语义去重与发布**：`python scripts/post_one.py {N}` 自动补 header、确认 open/non-draft，并拦截**完全相同的我方评论**；已有他人或我方 review 本身不拦截。发布前完成语义去重：结论实质重复则不发；独立新问题、反证、遗漏或状态变化可发为补充/追评。`POSTED` 后必须从 URL 取 `issuecomment-<id>`，用 `gh api repos/NousResearch/hermes-agent/issues/comments/<id> --jq '.user.login'` 读回确认 `Enough1122`；不通过就 `requeue`，禁止把第三方 URL 记成我方 `posted`。旧批次才使用 `post_batch.py`。
+5. **增量归档与断点落盘（每条必做）**：评语另存 `reviews/hermes-agent-YYYYWww/rb/{N}.md`，编号记入 `progress.txt`（含静默项，标 `clean/silent`）。durable DB 是并发与断点权威；`_campaign_state.json` 只保留历史集合并记录已确认终态的 frontier，不能覆盖 DB 中 queued/running 项。
 
-### 2.3 并行打法（2026-09-20 起：预检 → 审阅 → verdict 文件 → 只核 blocker）
+### 2.3 并行打法（持续 durable worker pool）
 
 **流水线（按序执行，别跳步）：**
 
 1. **拉 diff**：`python scripts/diffs_batch115.py drafts/_batch{NN}_list.json drafts/_batch{NN}_final.json`
-   （≥100KB 的自动记 OVER，收尾时补进 `_campaign_state.json` 的 `deferred`）。
+   （超大/高改动项进入 durable `deep` lane；不再只记 deferred）。
 2. **机械预检（脚本，派单前一次跑完）**：
    `python scripts/preflight_batch.py batch{NN}`
    产出 `drafts/_preflight_batch{NN}.json`：每条 PR 的
    `apply_ok`（hunk 是否基于旧版 main）、`mergeable_state`、**配对预警**
-   （共享文件的疑似堆叠/互斥对）。派单时把这三项直接写进 chunk 简报——
+   （共享文件的疑似堆叠/互斥对）。派单时把这两项直接写进 worker 简报——
    - `apply_ok=false` → 子代理按"机械 rebase"快审（不必深读语义）；
    - 配对预警 → 两个 PR 的草稿都要写明"只能落一个"，避免重复深读。
    `--no-mergeable` 可跳过 gh api（限流时）。
    **pre-image 来源（2026-09-21 起）**：脚本用 `git show upstream/main:<path>` 取文件内容（工作树兜底），
    并打印 `base=<ref>@<sha>`。派单前先 `git -C D:\\Hermes\\repos\\hermes-agent-fix fetch upstream`——
    工作树可能停在某条 PR 分支上，旧版脚本从工作树取文件会**误报 apply-fail**（#117301 反例）。
-3. **一 PR 一代理、整批一次铺满（2026-09-21 起：吞吐优先）**：
-   - 并发上限 `delegation.max_concurrent_children` 由 10 提到 **20**。改配置认准真 home
-     `C:\Users\admin\AppData\Local\hermes`；shell 里若残留 `HERMES_HOME=/tmp/...` 会把配置写进测试 home
-     （2026-09-21 踩过）——**改前先 `echo $HERMES_HOME` + `hermes config get`，改后读回确认**。
-   - **一次 `delegate_task` 调用 = 一个完成单元**：12 个 task 也只回来一条汇总。所以波浪墙钟 ≈
-     单个代理耗时（实测 ~10 分钟），**批越大越划算**——把当下全部 eligible 一次铺完，绝不拆小波
-     （小波 = 干等最慢的那个）。真正的时间税是"小波 + 波浪间空转"，不是并发不够。
-   - 子代理简报模板加四句时间盒：**≤12 分钟**、静态证据优先（diff + `git show upstream/main:<file>`
-     能坐实的结论**不跑测试**）、只有结论依赖运行时才跑单文件测试（≤1 次）、改动 <120 行且读完干净 →
-     直接 CLEAN 收、不为找问题而深挖。
-   - 实测口径（2026-09-21 01:00-01:30）：eligible 到达 ≈ **23 条/小时**；12 路一波并行 ≈ 60-70 条/小时。
-     队列不降反升时先查"是不是又在派小波"。**prep（diff+预检）只要 9 秒**（12 条实测），不是瓶颈。
-4. **verdict 文件汇报（不再靠聊天框）**：每个 chunk 完工写
-   `drafts/_verdict_batch{NN}_chunk{K}.json`：
-   ```json
-   {"chunk": "chunk3", "verdicts": [
-     {"n": 116571, "v": "CLEAN", "level": null, "note": "一句话"},
-     {"n": 116578, "v": "DRAFT", "level": "nonblocking", "note": "...", "evidence": ""},
-     {"n": 116676, "v": "DRAFT", "level": "blocker", "note": "...", "evidence": "file:line"},
-     {"n": 116701, "v": "SKIP_STALE", "level": null, "note": "原因"}]}
-   ```
-   `v=DRAFT` 表示草稿已写到 `Temp/opencode/campaign/{N}.md`。
-5. **收集与校验**：`python scripts/collect_verdicts.py batch{NN} 10`
-   —— 检查 10 行齐全、草稿存在且首行合规、**草稿引用文件与 diff 头比对防错配**，
-   输出 `_batch{NN}_collect.json`（clean/skip 种子 + blocker 清单 + 问题清单）。
-   报 `WAIT` 就等下一轮（这是设计行为，别当失败重派）。
-6. **核验（只保 blocker）**：blocker 候选按组给 1–2 个核验代理，要求真实复现
-   （`git apply --check`、临时副本跑语义、构造攻击形态）并给 CONFIRMED/REFUTED/PARTIAL；
-   非阻塞草稿由主流程抽查（约 30%）+ 全量过一遍 diff 文件头。
-7. **发帖**：`python scripts/post_batch.py <n1> <n2> ... --workers=4` —— **并发、无 sleep**
-   （2026-09-21 用户定："先别考虑限流的事情，触发了再说，提高效率"；403/429 真出现再退避）。
-   单发仍可用 `post_one.py`（其间隔由 `POST_SLEEP` 环境变量控制，默认 0）。
-   发帖可与下一批的审阅重叠（子代理在跑时主流程发上一批的帖）。
-8. **归档**：`python scripts/archive_batch.py drafts/_batch{NN}_status.json drafts/_batch{NN}_list.json`
-   （状态值 posted/clean/skip/deferred；frontier 只在批次内构成连续前缀时才前进）。
+3. **并发 worker 自取（2026-09-25 当前默认）**：把全部 open、非 draft 候选预载进 durable task pool（`review_pool.db`），按当前 `delegation.max_concurrent_children`（通常 10）启动 worker。worker 按 lane 领取：约 7 路 `fast`、3 路 `deep`；`fast` 优先 `changed_files<=15` 且增删行数 `<=250`，`deep` 优先更大或高改动任务，head 漂移/错误 deferred/resume 任务优先，lane 空时安全回退到任意 queued。每个 worker 原子 claim 一个 PR；`claim` 对同一 worker 幂等，已有未结 running claim 时只续租并返回原 PR，不得把重入响应当成下一条。完成审阅/语义去重/发布或静默落盘后立即再 claim，直到队列为空；不再拆 2–3 条小波，也不反复等用户确认。已关闭、draft、完全重复结论或过期失联项才标 skip/deferred。主流程用 `python scripts/review_pool.py <db> metrics` 联合 `delegate_task list` 巡检，目标是 active worker 数 = fresh claim 数、每 worker 恰好 1 条 fresh claim、expired claim=0；worker 退出时先回收其未完成 claim，再立即补位，健康任务不抢占。
+4. **单条审阅与证据**：worker 每次只处理 `claim` 返回的一条 PR。活检 open/non-draft 与 exact head，读取 issue comments、formal reviews、inline comments 和完整 diff；优先静态证据，只有结论依赖运行时才跑一次目标测试。所有引用使用 post-image `file:line`。
+5. **实时发布**：有实质问题才写 `drafts/_pending/<pr>.md` 并运行 `python scripts/post_one.py <pr>`；输出 `POSTED` 后用 `gh api repos/NousResearch/hermes-agent/issues/comments/<id>` 读回，确认作者 `Enough1122` 且 URL 属于当前 PR。完全相同的我方正文才跳过；独立新问题可继续发。
+6. **写 durable result**：CLEAN 写 `result <pr> clean <worker>`；有效问题评论写 `result <pr> posted <worker> <canonical-url>`；已公开但被当前 head/作者反证推翻的意见，必须先发布并读回明确撤回/纠正，再写 `result <pr> corrected <worker> <canonical-url>`，并删除本地未发布旧草稿。`corrected` 仍强制 receipt 校验，但统计上不得计入 posted。`review_pool.py` 会在改变状态前再次校验 URL 和作者 receipt，并用 `claim_started_at` 拒绝早于本次 claim 的旧评论；owner mismatch 时不得发布或写 result。当前 head 重审为 CLEAN 时，旧 head 评论只能留作公开历史，禁止重新挂成当前 `posted` receipt。
+7. **异常与重试**：单个 codeload/raw/content endpoint 403/429 时切到已落盘 diff、`gh pr diff`、另一 file endpoint 或单文件 `gh api`；多个独立端点持续失败才停止。处理中每 5 分钟执行一次 owner 校验 heartbeat；worker 退出后由统筹 `release` 回队列并立即补位。
+8. **增量归档与继续**：每条完成后把终态追加到 `progress.txt`；可用 `_verdict_<worker>_<pr>.json` 留审计证据。durable DB 是并发与断点权威，`_campaign_state.json` 的 frontier 只约束新候选，head 漂移、错误 deferred 与 `resume:` 项不受编号限制。完成一条立即再次 `claim`，不设固定 chunk、波次或条数上限；`post_batch.py` 仅用于兼容旧批次。
 
-**子代理 prompt 要点（模板化，别每次重写）：**
-- 只审列出的 N 个 PR；读 `drafts/_campaign/{N}.diff` 逐文件读全；先核对 diff 文件头编号（防错配）。
-- 活检一行命令；`git apply --check` 结果以预检 JSON 为准（不必重跑）。
-- 行号一律用 **diff post-image**（补丁打到临时副本后量的行号）——main 侧行号会让 PR 作者找错位置。
-- 草稿首行固定声明；正文英文；只报真实行号，不确定写"建议确认"。
-- **503/限流自查重试**（sleep 60×n，最多 3 次），不要因一次网关故障把整轮丢掉。
-- 完工写 verdict JSON（见上），聊天里只回一句"chunk K done"。
+**子代理 prompt 要点：**
+- 只处理本次 claim 返回的 PR；claim 幂等，已有 running claim 时返回并续租原 PR，不得把它误当新任务。
+- 先核对 exact head 和 diff 文件头；处理期间每 5 分钟 heartbeat。
+- CLEAN 静默；DRAFT 必须有复现路径、实际影响和 post-image `file:line` 证据。
+- 写完 result 立即领取下一条；不修改上游仓库代码。
 
 **成本经验（2026-09-20 五批实测）：** 核验全覆盖 ≈ 与审阅同价，收益集中在 blocker；非阻塞核验多数只修行号。报告走聊天框会延迟/截断/复读，走 verdict 文件后消失。
 
@@ -165,12 +134,12 @@ python D:\Hermes\scripts\inbox_auto_sweep.py
 
 1. **实证优先**：任何“已修复/已落地”结论必须有当前 head 的 file:line 证据；没拉到 diff 就写“未核验”。
 2. **只报问题**：主动 review 无实质问题一律静默跳过（本地归档，不发帖）；回复仅限 §1.2 复审前提的 @ 触发场景；宁可少发，不刷存在感。
-3. **不复评**：发前必查 Enough1122 是否已有 AI review；有则 SKIP_DUPE。
-4. **收件箱归零**：每批结束 unread 必须 0；API 连续失败则静默退出等下一轮，不硬标。
+3. **不复评完全相同正文**：发前必查 Enough1122 是否已有与草稿**完全相同**的 AI review；仅有同结论或已有不同 review 不构成拦截，仍按 §2.2 做语义去重。
+4. **收件箱归零**：每次 inbox 收口时 unread 必须为 0；API 连续失败则保留状态，等下一轮重试，不硬标完成。
 5. **凭证不入库**：`.env*`、token、key 永不写进仓库文件。
 6. **先 scan 后清**：`scan_pending_mentions` 先于任何 sweep / 标 Done；清理前确认线程内无未回 @，防止把"有人在等"的线程当纯告知类埋掉（sweep 脚本加防护前尤其如此）。
-7. **断点必落盘**：每批结束把 `frontier`（本批处理过的最大 PR 号，含 silent-clean / skip / deferred）写进 `_campaign_state.json` 与 `progress.txt`；下批从 `frontier+1` 继续，只审编号更大的新 PR，绝不回头。超限 PR（>15 文件 / ≥100KB）记 `deferred`，断点照常前进。
-8. **汇报走文件**：子代理的 verdict 一律写 `drafts/_verdict_batch{NN}_chunk{K}.json`（§2.3 第 4 步），聊天框只回一句确认。报告截断/延迟/复读是 2026-09-20 前的主要时间税，不要回退到聊天汇报。
+7. **断点必落盘**：每条完成即写 durable result 和 `progress.txt`。`_campaign_state.json` 仅汇总历史终态；queued/running/head 漂移项始终以 `review_pool.db` 为准，不能被 frontier 或 deferred 列表隐藏。
+8. **汇报走文件**：verdict、草稿和 result 逐条落盘，聊天框只作控制面；报告截断/延迟/复读是旧批模式的主要时间税，不恢复固定 chunk 汇报。
 9. **机械检查前置**：`apply_ok` / `mergeable_state` / 配对预警由 `preflight_batch.py` 在派单前一次跑完（§2.3 第 2 步），不让 10 个子代理各跑一遍。
-10. **通道边界（2026-09-21 用户定，硬规则）**：批量审阅**只跑 Hermes 自己的通道**。禁止转 `claude` CLI（走公司代理→公司模型，**公司侧有审计**）或走公司 provider 的 `opencode2` 调用——开源贡献不是公司工作，用公司资源干这个=审计风险。用户提"Claude/OpenCode 很快"只是在说速度，**不是改派授权**；要提速就优化 Hermes 侧（一 PR 一代理 / 整批铺满 / 并发上限 / 子代理时间盒），不动执行方。
+10. **通道边界（2026-09-21 用户定，硬规则）**：批量审阅**只跑 Hermes 自己的通道**。禁止转 `claude` CLI（走公司代理→公司模型，**公司侧有审计**）或走公司 provider 的 `opencode2` 调用——开源贡献不是公司工作，用公司资源干这个=审计风险。用户提"Claude/OpenCode 很快"只是在说速度，**不是改派授权**；要提速就优化 Hermes 侧（一 PR 一 claim / 并发上限 / 持续 worker），不动执行方。
 11. **换执行方/通道先确认（2026-09-21 用户定）**：凡是**改变执行方、工具或通道**（claude/opencode/公司资源/外部服务）或**动用户配置**的动作，先给用户 ≤2 选项的短确认再动手；本战役流水线内的日常动作（扫候选 / 派子代理 / 复审 / 发帖 / 归档 / 清 inbox）照旧**直接干不问**。

@@ -134,30 +134,71 @@ def build_report():
                  + " · ".join(f"{la}日 {base[la][0]:+.2f}%/{base[la][1]:.0f}%" for la in (1, 3, 5)))
 
     # 优化建议:按 (信号,方向) 分组,每组只归一类(避免同一信号既高置信又低效)
+    #
+    # 2026-09-25 修正分类规则。旧规则是"任意一个持有期达标就整条信号晋级"
+    # (any(胜率>=60% 且 超额>0)),于是三个高度重叠的窗口里挑最好的那个当结论:
+    #   MA5/10金叉 1日50%❌ 3日40%❌ 5日60%✅ -> 只靠5日晋级"高置信"
+    #   MACD金叉  1日67%✅ 3日56%🟡 5日44%❌ -> 只靠1日晋级"高置信"
+    # 同一套代码上周还说 MACD金叉/KDJ金叉低效,这周换窗口就翻案 —— 分类跟着
+    # 窗口噪声走,报告就失去了稳定性。现在要求跨周期一致:
+    #   高置信     三个周期超额全为正 且 中位超额>0.3pt
+    #   边际有效   三个周期全为正但中位超额<=0.3pt -> 方向对但幅度不够,降权
+    #   短周期有效 仅1日达标(3/5日超额不达标) -> 只适合短持有,别外推
+    #   证据不一致 周期之间自相矛盾 -> 不下单边结论
+    #   低效       三个周期超额全不为正
+    # EPS=0.05pt: 小于 5bp 的超额视为噪声(否则 ±0.0x% 的正负号会左右分类)
     from collections import defaultdict
+    from statistics import median
+
+    EPS = 0.05
+    MEDIAN_EXCESS = 0.3
     groups = defaultdict(list)
     for r in rows:
         groups[(r[0], r[1])].append(r)
 
     lines.append("")
     lines.append("**优化建议:**")
-    good, bad, thin = [], [], []
+    good, weak, short, mixed, bad, thin = [], [], [], [], [], []
     for (name, dname), rs in groups.items():
         label = f"{name}({dname})"
         max_n = max(x[4] for x in rs)
         if max_n < MIN_N:
             thin.append((label, max_n))
             continue
-        if any(x[3] / x[4] >= 0.6 and x[5] > 0 and x[6] > 0 for x in rs):
+        pos = [x for x in rs if x[6] > EPS]
+        by_la = {x[2]: x for x in rs}
+        d1 = by_la.get(1)
+        med = median(x[6] for x in rs)
+        if len(pos) == len(rs) and med > MEDIAN_EXCESS:
             good.append((label, max_n))
-        elif all(x[3] / x[4] < 0.5 or x[6] <= 0 for x in rs):
+        elif not pos:
             bad.append((label, max_n))
+        elif len(pos) == len(rs):          # 全正但幅度不足 -> 与"短周期有效"区分开
+            weak.append((label, max_n))
+        elif d1 and d1[3] / d1[4] >= 0.6 and d1[6] > EPS:
+            short.append((label, max_n))
+        else:
+            mixed.append((label, max_n))
     if good:
         good.sort(key=lambda x: -x[1])
-        lines.append("· 高置信信号: " + "、".join(l for l, _ in good[:6]) + " —— 保留并优先采信")
+        lines.append("· 高置信信号(3 周期超额一致为正且中位超额>0.3pt): "
+                     + "、".join(f"{l}(n={n})" for l, n in good[:6]) + " —— 保留并优先采信")
     else:
-        lines.append(f"· 暂无高置信信号(门槛: 样本≥{MIN_N} 且 胜率≥60% 且 超额>0)")
+        lines.append(f"· 暂无高置信信号(门槛: 样本≥{MIN_N} 且 1/3/5 日超额全正且中位>0.3pt)")
+    if weak:
+        weak.sort(key=lambda x: -x[1])
+        lines.append("· 边际有效(3 周期全正但中位超额≤0.3pt): "
+                     + "、".join(f"{l}(n={n})" for l, n in weak[:6]) + " —— 方向对但幅度不够,降权观察")
+    if short:
+        short.sort(key=lambda x: -x[1])
+        lines.append("· 短周期有效(仅 1 日达标,3/5 日不达标): "
+                     + "、".join(f"{l}(n={n})" for l, n in short[:6]) + " —— 只适合短持有,别外推到中长线")
+    if mixed:
+        mixed.sort(key=lambda x: -x[1])
+        lines.append("· 证据不一致(周期之间自相矛盾): "
+                     + "、".join(f"{l}(n={n})" for l, n in mixed[:6]) + " —— 不下单边结论")
     if bad:
+        bad.sort(key=lambda x: -x[1])
         lines.append("· 低效信号: " + "、".join(f"{l}(n={n})" for l, n in bad[:6]) + " —— 建议降权或忽略")
     if thin:
         lines.append(f"· 样本不足(最大样本 <{MIN_N}): "

@@ -23,6 +23,24 @@ projects/github-tools/drafts/
 # ---- 3. 缓存、临时与运行时产物 ----
 tmp/
 cache/
+# 2026-09-26:PR 审阅/验证 worker 的临时 checkout 农场。
+# 这些目录里含嵌套 .git 且部分 worktree 未 checkout commit,
+# `git add -A` 会以 "does not have a commit checked out" (exit 128) 整批失败,
+# 曾导致 23:00 自动备份静默空跑。一律锚定仓库根,不吞深层同名目录。
+# 注意:以下不写结尾 "/",因为 worker 既落整目录也平铺单文件
+# (cache-review-pr121614-live-pr.json / review-pr122061-guards.py 等);
+# 前导 "/" 保证只锚定仓库根,深层 projects/cache-review-*/ 不受影响。
+/cache-review-*
+/review-pr*
+/verify12*
+/tmp-pr*
+/review-cache-*
+/cache-wt-*
+/cache-scratch-*
+/.scratch-tag-probe
+/.scratch-probe-*
+# worker 平铺到根目录的上游源码副本(agent/xxx.py.121757 形式:PR 号后缀)
+/*.12[0-9][0-9][0-9][0-9]
 .pytest-cache/
 __pycache__/
 *.pyc

@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 """post_followup.py <number> — post a SECOND (follow-up) AI comment on a PR.
 
-Unlike post_review.py (which enforces one-AI-review-per-PR), this posts the
-body from Temp/opencode/campaign/{n}.md as an additional comment on the issue
-thread. Dedupe is content-level: if the most recent comment by Enough1122 has
-the exact same body, it is skipped.
+Unlike post_review.py (which skips only the exact authored AI body), this posts
+a follow-up comment after semantic review. Dedupe is content-level; after POST it
+reads the comment back and requires Enough1122 as author before printing POSTED.
 
 Exit codes: 0 posted | 2 skipped-dup | 3 no md | 4 http error
 """
@@ -48,6 +47,25 @@ def main():
         r = json.loads(urlopen(req, timeout=60).read())
     except Exception as e:
         print('HTTP-ERR %d %s' % (n, str(e)[:80]))
+        sys.exit(4)
+    comment_id = r.get('id')
+    if not comment_id:
+        print('HTTP-ERR %d POST response missing comment id' % n)
+        sys.exit(4)
+    try:
+        receipt = g('https://api.github.com/repos/%s/issues/comments/%s' % (REPO, comment_id))
+    except Exception as e:
+        print('HTTP-ERR %d receipt read-back %s' % (n, str(e)[:80]))
+        sys.exit(4)
+    if (receipt.get('user') or {}).get('login') != ME:
+        print('HTTP-ERR %d read-back author is not %s' % (n, ME))
+        sys.exit(4)
+    expected_url = 'https://github.com/%s/pull/%d#issuecomment-%s' % (REPO, n, comment_id)
+    if r.get('html_url') != expected_url or receipt.get('html_url') != expected_url:
+        print('HTTP-ERR %d read-back URL is not the canonical issuecomment URL' % n)
+        sys.exit(4)
+    if (receipt.get('body') or '').strip() != body:
+        print('HTTP-ERR %d read-back body mismatch' % n)
         sys.exit(4)
     print('POSTED %d %s' % (n, r.get('html_url', '')))
     time.sleep(8)

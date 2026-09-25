@@ -1,19 +1,12 @@
 # -*- coding: utf-8 -*-
 """count_candidates.py — 统计战役待审候选（对 GitHub 只读，不发帖）。
 
-以本地 drafts/_campaign_state.json 的 frontier 为断点（见 PROMPT-inbox-pr.md §2.1），
-列出编号 > frontier 的全部 open PR，并按战役口径逐条活检：
-    非 draft + 零 issue 评论 + 零 inline 评论 + 零 review + <=15 文件 + diff(+) <100KB
-超限（>15 文件或 >=100KB）但零关注的 PR 记入 deferred，并滚动覆盖
-_campaign_state.json 的 deferred 列表（backlog 留底，断点不遗忘，见 §2.1）。
-输出合格数、排除原因分布与逐条明细（JSON 快照）。
+以本地 drafts/_campaign_state.json 的 frontier 为断点，列出编号 > frontier 的
+全部 open PR。基本候选条件只有 open、非 draft；已有评论/review 只作语义对照，
+大 diff 进入 deep lane，不能被筛掉或自动 deferred。
 
-用法:
-    python count_candidates.py            # 读 _campaign_state.json 的 frontier
-    python count_candidates.py 112810     # 显式指定 frontier
-
-写入 drafts/_candidates_snapshot.json；deferred 同步进 _campaign_state.json。
-注意：size 用 additions+deletions 近似，真正 <100KB 判定在拉 diff 时复核。
+输出合格数、lane 分布、排除原因与逐条明细（JSON 快照），并保留 state 中已有的
+deferred 历史；本脚本不再把大任务写成新的 deferred。
 """
 import json
 import re
@@ -33,7 +26,7 @@ REPO = 'NousResearch/hermes-agent'
 STATE = r'D:\Hermes\projects\github-tools\drafts\_campaign_state.json'
 OUT = r'D:\Hermes\projects\github-tools\drafts\_candidates_snapshot.json'
 FILES_MAX = 15
-SIZE_MAX = 100000
+LINES_MAX = 250
 
 
 def get(url, retries=3):
@@ -90,19 +83,16 @@ def main():
         rv, _ = get(BASE + f'/repos/{REPO}/pulls/{n}/reviews')
         n_reviews = len(rv) if isinstance(rv, list) else 0
         size = (d.get('additions') or 0) + (d.get('deletions') or 0)
-        zero_attention = (d.get('comments', 0) == 0 and d.get('review_comments', 0) == 0
-                          and n_reviews == 0)
         files = d.get('changed_files') or 0
-        over_limit = files > FILES_MAX or size >= SIZE_MAX
+        lane = 'fast' if files <= FILES_MAX and size <= LINES_MAX else 'deep'
         return {'n': n, 'draft': bool(d.get('draft')),
                 'comments': d.get('comments', 0),
                 'review_comments': d.get('review_comments', 0),
                 'reviews': n_reviews, 'files': files,
-                'size': size, 'created': (d.get('created_at') or '')[:10],
+                'size': size, 'lane': lane, 'created': (d.get('created_at') or '')[:10],
                 'title': (d.get('title') or '')[:70],
-                'eligible': (not d.get('draft') and zero_attention
-                             and files <= FILES_MAX and size < SIZE_MAX),
-                'deferred': (not d.get('draft') and zero_attention and over_limit)}
+                'eligible': not d.get('draft'),
+                'deferred': False}
 
     results = []
     with ThreadPoolExecutor(max_workers=6) as ex:
@@ -111,37 +101,33 @@ def main():
             time.sleep(0.05)
 
     elig = [r for r in results if r['eligible']]
-    deferred = [{'n': r['n'], 'files': r['files'], 'size': r['size'],
-                 'created': r['created'], 'title': r['title']}
-                for r in results if r['deferred']]
+    fast = [r for r in elig if r['lane'] == 'fast']
+    deep = [r for r in elig if r['lane'] == 'deep']
+    deferred = []
     json.dump({'frontier': frontier, 'open_above': len(cands),
-               'eligible': len(elig), 'deferred': deferred, 'rows': results},
+               'eligible': len(elig), 'fast': len(fast), 'deep': len(deep),
+               'deferred': deferred, 'rows': results},
               open(OUT, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
 
-    # deferred 滚动覆盖进 campaign state（backlog 留底）
+    # 保留历史 deferred；大任务现在进入 deep lane，不再覆盖或追加到 deferred。
     try:
         st = json.load(open(STATE, encoding='utf-8'))
-        st['deferred'] = deferred
+        st.setdefault('deferred', [])
         json.dump(st, open(STATE, 'w', encoding='utf-8'),
                   ensure_ascii=False, indent=1)
     except FileNotFoundError:
-        print('NOTE: campaign state 不存在，deferred 仅写入快照')
+        print('NOTE: campaign state 不存在，快照仍已写入')
 
     n_draft = sum(1 for r in results if r['draft'])
     n_att = sum(1 for r in results if not r['draft']
                 and (r['comments'] or r['review_comments'] or r['reviews']))
-    n_def = len(deferred)
-    print('eligible: %d' % len(elig))
-    print('excluded: draft=%d, has-attention=%d, deferred(over-limit)=%d'
-          % (n_draft, n_att, n_def))
+    print('eligible: %d (fast=%d, deep=%d)' % (len(elig), len(fast), len(deep)))
+    print('excluded: draft=%d; existing-attention kept for semantic dedupe=%d'
+          % (n_draft, n_att))
     if elig:
         print('eligible range: #%d .. #%d  created %s .. %s'
               % (min(r['n'] for r in elig), max(r['n'] for r in elig),
                  min(r['created'] for r in elig), max(r['created'] for r in elig)))
-    if deferred:
-        top = sorted(deferred, key=lambda r: -r['size'])[:5]
-        print('deferred top-5 by size: '
-              + ', '.join('#%d(%dKB,%df)' % (r['n'], r['size'] // 1024, r['files']) for r in top))
     print('snapshot: ' + OUT)
 
 

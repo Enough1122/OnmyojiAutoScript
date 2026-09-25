@@ -72,6 +72,12 @@ def diff_files(n):
     return files
 
 
+def missing_diff_result(n):
+    """Return a retryable preflight result when no cached diff exists yet."""
+    return {'files': [], 'apply_ok': None, 'apply_err': 'diff-not-cached',
+            'mergeable_state': '', 'pairs': []}
+
+
 def apply_check(n, files):
     """临时树 + git apply --check。返回 (ok, err)。"""
     if not files:
@@ -135,19 +141,12 @@ def main():
     print('preflight %s: %d PRs (base=%s @%s)' % (tag, len(nums), BASE_REF, BASE_SHA), flush=True)
 
     filemap = {n: diff_files(n) for n in nums}
-    try:
-        deferred_ns = {x.get('n') for x in
-                       json.load(open(os.path.join(DRAFTS, '_campaign_state.json'),
-                                      encoding='utf-8')).get('deferred', [])}
-    except Exception:
-        deferred_ns = set()
     results = {}
     for n in nums:
         if not filemap[n]:
-            reason = 'deferred(no-diff)' if n in deferred_ns else 'no-diff??'
-            results[n] = {'files': [], 'apply_ok': None, 'apply_err': reason,
-                          'mergeable_state': '', 'pairs': []}
-            print('  #%d %s' % (n, reason), flush=True)
+            result = missing_diff_result(n)
+            results[n] = result
+            print('  #%d diff-not-cached (retry after fetch)' % n, flush=True)
             continue
         ok, err = apply_check(n, filemap[n])
         results[n] = {'files': [b for _, b in filemap[n]],

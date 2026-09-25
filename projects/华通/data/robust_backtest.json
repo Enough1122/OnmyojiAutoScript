@@ -1,0 +1,2856 @@
+{
+  "as_of": "2026-09-24",
+  "sample_start": "2023-08-21",
+  "sample_size": 750,
+  "cost_model": {
+    "buy": 0.0012000000000000001,
+    "sell": 0.0017000000000000001,
+    "commission": 0.0002,
+    "stamp_duty_sell": 0.0005,
+    "slippage_bps_each_side": 10
+  },
+  "rows": [
+    {
+      "name": "MA5/10金叉",
+      "side": 1,
+      "hold_days": 1,
+      "train_n": 21,
+      "train_mean": -0.00459204183232602,
+      "validation_n": 6,
+      "validation_mean": -0.017656114254309147,
+      "holdout_n": 7,
+      "holdout_mean": 0.008664480115408086,
+      "holdout_audit": "通过",
+      "all_n": 36,
+      "stability": {
+        "label": "多数为负",
+        "positive_folds": 1,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 9,
+            "n": 9,
+            "mean": -0.0151097993560571,
+            "median": -0.015280338815942485,
+            "hit_rate": 0.1111111111111111
+          },
+          {
+            "start": 9,
+            "end": 19,
+            "n": 10,
+            "mean": 0.0027815668920691317,
+            "median": -0.0013193279105884193,
+            "hit_rate": 0.5
+          },
+          {
+            "start": 19,
+            "end": 29,
+            "n": 10,
+            "mean": -0.007855483364762583,
+            "median": -0.009146043597041909,
+            "hit_rate": 0.4
+          }
+        ]
+      },
+      "full_stability": {
+        "label": "多数为负",
+        "positive_folds": 1,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 12,
+            "n": 12,
+            "mean": -0.014773784306018214,
+            "median": -0.01226290928980428,
+            "hit_rate": 0.16666666666666666
+          },
+          {
+            "start": 12,
+            "end": 24,
+            "n": 12,
+            "mean": 0.011016013387746151,
+            "median": 0.013531761245747398,
+            "hit_rate": 0.6666666666666666
+          },
+          {
+            "start": 24,
+            "end": 36,
+            "n": 12,
+            "mean": -0.006748562258693923,
+            "median": -0.005238242056924913,
+            "hit_rate": 0.3333333333333333
+          }
+        ]
+      },
+      "cost_sensitivity": [
+        {
+          "cost": "低",
+          "n": 29,
+          "mean_return": -0.004250083991490524,
+          "hit_rate": 0.3793103448275862,
+          "median_return": -0.005393683271409877
+        },
+        {
+          "cost": "基准",
+          "n": 29,
+          "mean_return": -0.006438874445912015,
+          "hit_rate": 0.3448275862068966,
+          "median_return": -0.007579959942854875
+        },
+        {
+          "cost": "高",
+          "n": 29,
+          "mean_return": -0.008622860611198546,
+          "hit_rate": 0.3103448275862069,
+          "median_return": -0.009761437842797038
+        }
+      ],
+      "grade": "不利"
+    },
+    {
+      "name": "MA5/10金叉",
+      "side": 1,
+      "hold_days": 3,
+      "train_n": 20,
+      "train_mean": 0.009057750377171481,
+      "validation_n": 6,
+      "validation_mean": 0.02059418681701347,
+      "holdout_n": 7,
+      "holdout_mean": -0.002123661827558489,
+      "holdout_audit": "未通过",
+      "all_n": 36,
+      "stability": {
+        "label": "多数为正",
+        "positive_folds": 2,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 9,
+            "n": 9,
+            "mean": -0.019446164050802794,
+            "median": -0.03268451886813706,
+            "hit_rate": 0.4444444444444444
+          },
+          {
+            "start": 9,
+            "end": 19,
+            "n": 10,
+            "mean": 0.033920702657898594,
+            "median": 0.003093783195695865,
+            "hit_rate": 0.6
+          },
+          {
+            "start": 19,
+            "end": 29,
+            "n": 10,
+            "mean": 0.02469011062699824,
+            "median": 0.028082259515455288,
+            "hit_rate": 0.8
+          }
+        ]
+      },
+      "full_stability": {
+        "label": "多数为负",
+        "positive_folds": 1,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 12,
+            "n": 12,
+            "mean": -0.022569490581260048,
+            "median": -0.0289011938067405,
+            "hit_rate": 0.3333333333333333
+          },
+          {
+            "start": 12,
+            "end": 24,
+            "n": 12,
+            "mean": 0.05617169501560343,
+            "median": 0.03598302454310032,
+            "hit_rate": 0.9166666666666666
+          },
+          {
+            "start": 24,
+            "end": 36,
+            "n": 12,
+            "mean": -0.0005832858011072343,
+            "median": -0.001183876471928469,
+            "hit_rate": 0.5
+          }
+        ]
+      },
+      "cost_sensitivity": [
+        {
+          "cost": "低",
+          "n": 29,
+          "mean_return": 0.016409812489612517,
+          "hit_rate": 0.6206896551724138,
+          "median_return": 0.006385629458798503
+        },
+        {
+          "cost": "基准",
+          "n": 29,
+          "mean_return": 0.014175608841094593,
+          "hit_rate": 0.6206896551724138,
+          "median_return": 0.004173460294821796
+        },
+        {
+          "cost": "高",
+          "n": 29,
+          "mean_return": 0.011946309161475249,
+          "hit_rate": 0.5172413793103449,
+          "median_return": 0.001966146735116414
+        }
+      ],
+      "grade": "观察·稳定性不足"
+    },
+    {
+      "name": "MA5/10金叉",
+      "side": 1,
+      "hold_days": 5,
+      "train_n": 20,
+      "train_mean": 0.01347745109875519,
+      "validation_n": 6,
+      "validation_mean": 0.013236485240163909,
+      "holdout_n": 7,
+      "holdout_mean": 0.013702008794256077,
+      "holdout_audit": "通过",
+      "all_n": 36,
+      "stability": {
+        "label": "多数为正",
+        "positive_folds": 2,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 9,
+            "n": 9,
+            "mean": -0.02093401156275507,
+            "median": -0.020965448529116526,
+            "hit_rate": 0.3333333333333333
+          },
+          {
+            "start": 9,
+            "end": 18,
+            "n": 9,
+            "mean": 0.04820552641058703,
+            "median": 0.005342298186608918,
+            "hit_rate": 0.6666666666666666
+          },
+          {
+            "start": 18,
+            "end": 28,
+            "n": 10,
+            "mean": 0.02884644811370074,
+            "median": 0.04111972901603511,
+            "hit_rate": 0.6
+          }
+        ]
+      },
+      "full_stability": {
+        "label": "多数为负",
+        "positive_folds": 1,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 12,
+            "n": 12,
+            "mean": -0.021009329244382646,
+            "median": -0.023041658637230233,
+            "hit_rate": 0.3333333333333333
+          },
+          {
+            "start": 12,
+            "end": 24,
+            "n": 12,
+            "mean": 0.07429467664887933,
+            "median": 0.06547843938253761,
+            "hit_rate": 0.8333333333333334
+          },
+          {
+            "start": 24,
+            "end": 36,
+            "n": 12,
+            "mean": -0.000607891597781555,
+            "median": 0.0008494422766855969,
+            "hit_rate": 0.5
+          }
+        ]
+      },
+      "cost_sensitivity": [
+        {
+          "cost": "低",
+          "n": 28,
+          "mean_return": 0.021313128744312664,
+          "hit_rate": 0.5714285714285714,
+          "median_return": 0.005009226916749876
+        },
+        {
+          "cost": "基准",
+          "n": 28,
+          "mean_return": 0.019068146955981965,
+          "hit_rate": 0.5357142857142857,
+          "median_return": 0.00280008326821346
+        },
+        {
+          "cost": "高",
+          "n": 28,
+          "mean_return": 0.01682809279404518,
+          "hit_rate": 0.5,
+          "median_return": 0.0005957885830881193
+        }
+      ],
+      "grade": "观察·稳定性不足"
+    },
+    {
+      "name": "MA5/10死叉",
+      "side": -1,
+      "hold_days": 1,
+      "train_n": 20,
+      "train_mean": -0.004061310117135486,
+      "validation_n": 6,
+      "validation_mean": 0.012919804488806176,
+      "holdout_n": 7,
+      "holdout_mean": -0.002445034181517866,
+      "holdout_audit": "未通过",
+      "all_n": 36,
+      "stability": {
+        "label": "多数为负",
+        "positive_folds": 1,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 9,
+            "n": 9,
+            "mean": 0.013036410087974524,
+            "median": 0.010955557899177272,
+            "hit_rate": 0.6666666666666666
+          },
+          {
+            "start": 9,
+            "end": 18,
+            "n": 9,
+            "mean": -0.017670546313544394,
+            "median": -0.012077032168799705,
+            "hit_rate": 0.2222222222222222
+          },
+          {
+            "start": 18,
+            "end": 28,
+            "n": 10,
+            "mean": -0.0005023390640787149,
+            "median": 0.004196200608755175,
+            "hit_rate": 0.5
+          }
+        ]
+      },
+      "full_stability": {
+        "label": "多数为正",
+        "positive_folds": 2,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 12,
+            "n": 12,
+            "mean": 0.010089605510047327,
+            "median": 0.006741496979603391,
+            "hit_rate": 0.5833333333333334
+          },
+          {
+            "start": 12,
+            "end": 24,
+            "n": 12,
+            "mean": -0.01669477151079984,
+            "median": -0.009964800272979711,
+            "hit_rate": 0.25
+          },
+          {
+            "start": 24,
+            "end": 36,
+            "n": 12,
+            "mean": 2.7204770729645036e-06,
+            "median": 0.0022800825259879157,
+            "hit_rate": 0.5
+          }
+        ]
+      },
+      "cost_sensitivity": [
+        {
+          "cost": "低",
+          "n": 28,
+          "mean_return": -0.0005689505953898562,
+          "hit_rate": 0.5,
+          "median_return": -6.700778168640073e-05
+        },
+        {
+          "cost": "基准",
+          "n": 28,
+          "mean_return": -0.0016689505953898563,
+          "hit_rate": 0.4642857142857143,
+          "median_return": -0.0011670077816864008
+        },
+        {
+          "cost": "高",
+          "n": 28,
+          "mean_return": -0.0027689505953898555,
+          "hit_rate": 0.4642857142857143,
+          "median_return": -0.0022670077816864006
+        }
+      ],
+      "grade": "反转规则"
+    },
+    {
+      "name": "MA5/10死叉",
+      "side": -1,
+      "hold_days": 3,
+      "train_n": 20,
+      "train_mean": -0.02129733227848738,
+      "validation_n": 6,
+      "validation_mean": -0.016026179904996867,
+      "holdout_n": 7,
+      "holdout_mean": -0.004264432428198593,
+      "holdout_audit": "未通过",
+      "all_n": 36,
+      "stability": {
+        "label": "多数为负",
+        "positive_folds": 0,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 9,
+            "n": 9,
+            "mean": -0.0009133880639512142,
+            "median": -0.0059185192997259425,
+            "hit_rate": 0.4444444444444444
+          },
+          {
+            "start": 9,
+            "end": 18,
+            "n": 9,
+            "mean": -0.033588515037830315,
+            "median": -0.029372085783466027,
+            "hit_rate": 0.2222222222222222
+          },
+          {
+            "start": 18,
+            "end": 28,
+            "n": 10,
+            "mean": -0.03348479030345082,
+            "median": -0.0441394354211971,
+            "hit_rate": 0.1
+          }
+        ]
+      },
+      "full_stability": {
+        "label": "多数为负",
+        "positive_folds": 0,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 12,
+            "n": 12,
+            "mean": -0.003125829396784836,
+            "median": -0.005411310274662649,
+            "hit_rate": 0.4166666666666667
+          },
+          {
+            "start": 12,
+            "end": 24,
+            "n": 12,
+            "mean": -0.03962652583980954,
+            "median": -0.05521528450814014,
+            "hit_rate": 0.16666666666666666
+          },
+          {
+            "start": 24,
+            "end": 36,
+            "n": 12,
+            "mean": -0.014139747008325433,
+            "median": -0.022028948634507627,
+            "hit_rate": 0.16666666666666666
+          }
+        ]
+      },
+      "cost_sensitivity": [
+        {
+          "cost": "低",
+          "n": 28,
+          "mean_return": -0.021948751105376498,
+          "hit_rate": 0.25,
+          "median_return": -0.02636404115675146
+        },
+        {
+          "cost": "基准",
+          "n": 28,
+          "mean_return": -0.0230487511053765,
+          "hit_rate": 0.25,
+          "median_return": -0.02746404115675146
+        },
+        {
+          "cost": "高",
+          "n": 28,
+          "mean_return": -0.024148751105376492,
+          "hit_rate": 0.25,
+          "median_return": -0.02856404115675146
+        }
+      ],
+      "grade": "不利"
+    },
+    {
+      "name": "MA5/10死叉",
+      "side": -1,
+      "hold_days": 5,
+      "train_n": 20,
+      "train_mean": -0.023424113367242302,
+      "validation_n": 6,
+      "validation_mean": -0.007341248228941208,
+      "holdout_n": 7,
+      "holdout_mean": 0.037433466711763334,
+      "holdout_audit": "通过",
+      "all_n": 36,
+      "stability": {
+        "label": "多数为负",
+        "positive_folds": 1,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 9,
+            "n": 9,
+            "mean": 0.006838353400060715,
+            "median": -0.008128801028607989,
+            "hit_rate": 0.4444444444444444
+          },
+          {
+            "start": 9,
+            "end": 18,
+            "n": 9,
+            "mean": -0.035489588687966346,
+            "median": -0.025103543965228924,
+            "hit_rate": 0.4444444444444444
+          },
+          {
+            "start": 18,
+            "end": 28,
+            "n": 10,
+            "mean": -0.04478010161720305,
+            "median": -0.06303666949574335,
+            "hit_rate": 0.2
+          }
+        ]
+      },
+      "full_stability": {
+        "label": "多数为负",
+        "positive_folds": 1,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 12,
+            "n": 12,
+            "mean": -0.004495287532056761,
+            "median": -0.016616172496918456,
+            "hit_rate": 0.4166666666666667
+          },
+          {
+            "start": 12,
+            "end": 24,
+            "n": 12,
+            "mean": -0.0438051715522867,
+            "median": -0.0751501064248988,
+            "hit_rate": 0.3333333333333333
+          },
+          {
+            "start": 24,
+            "end": 36,
+            "n": 12,
+            "mean": 0.013207241197992303,
+            "median": 0.011930410011652105,
+            "hit_rate": 0.5833333333333334
+          }
+        ]
+      },
+      "cost_sensitivity": [
+        {
+          "cost": "低",
+          "n": 28,
+          "mean_return": -0.024102219062970755,
+          "hit_rate": 0.35714285714285715,
+          "median_return": -0.02703202423818436
+        },
+        {
+          "cost": "基准",
+          "n": 28,
+          "mean_return": -0.02520221906297076,
+          "hit_rate": 0.35714285714285715,
+          "median_return": -0.02813202423818436
+        },
+        {
+          "cost": "高",
+          "n": 28,
+          "mean_return": -0.026302219062970752,
+          "hit_rate": 0.35714285714285715,
+          "median_return": -0.029232024238184356
+        }
+      ],
+      "grade": "不利"
+    },
+    {
+      "name": "MACD金叉",
+      "side": 1,
+      "hold_days": 1,
+      "train_n": 14,
+      "train_mean": 0.0074047200741736196,
+      "validation_n": 5,
+      "validation_mean": -0.020396426680620028,
+      "holdout_n": 5,
+      "holdout_mean": 0.02790350473839063,
+      "holdout_audit": "通过",
+      "all_n": 25,
+      "stability": {
+        "label": "多数为负",
+        "positive_folds": 1,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 6,
+            "n": 6,
+            "mean": -0.0005871660553189625,
+            "median": -0.0013907804744847652,
+            "hit_rate": 0.5
+          },
+          {
+            "start": 6,
+            "end": 13,
+            "n": 7,
+            "mean": 0.012256010810119209,
+            "median": 0.012533736983895372,
+            "hit_rate": 0.5714285714285714
+          },
+          {
+            "start": 13,
+            "end": 20,
+            "n": 7,
+            "mean": -0.011668158144104093,
+            "median": -0.012654603204494852,
+            "hit_rate": 0.2857142857142857
+          }
+        ]
+      },
+      "full_stability": {
+        "label": "全折为正",
+        "positive_folds": 3,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 8,
+            "n": 8,
+            "mean": 0.004959428001847524,
+            "median": 0.006324350102960397,
+            "hit_rate": 0.625
+          },
+          {
+            "start": 8,
+            "end": 16,
+            "n": 8,
+            "mean": 0.005216719347132623,
+            "median": -0.0009993350744976204,
+            "hit_rate": 0.375
+          },
+          {
+            "start": 16,
+            "end": 25,
+            "n": 9,
+            "mean": 0.006522257470033778,
+            "median": 0.01839267880026685,
+            "hit_rate": 0.5555555555555556
+          }
+        ]
+      },
+      "cost_sensitivity": [
+        {
+          "cost": "低",
+          "n": 20,
+          "mean_return": 0.002232638956247207,
+          "hit_rate": 0.55,
+          "median_return": 0.0012014385499033997
+        },
+        {
+          "cost": "基准",
+          "n": 20,
+          "mean_return": 2.9598616509601827e-05,
+          "hit_rate": 0.45,
+          "median_return": -0.0009993350744976204
+        },
+        {
+          "cost": "高",
+          "n": 20,
+          "mean_return": -0.0021686061562843527,
+          "hit_rate": 0.4,
+          "median_return": -0.003195278107285371
+        }
+      ],
+      "grade": "不稳定"
+    },
+    {
+      "name": "MACD金叉",
+      "side": 1,
+      "hold_days": 3,
+      "train_n": 13,
+      "train_mean": 0.021288677938627158,
+      "validation_n": 5,
+      "validation_mean": -0.017895331698061102,
+      "holdout_n": 5,
+      "holdout_mean": 0.03424448376609486,
+      "holdout_audit": "通过",
+      "all_n": 25,
+      "stability": {
+        "label": "多数为负",
+        "positive_folds": 1,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 6,
+            "n": 6,
+            "mean": -0.0187177641514229,
+            "median": -0.016936716210745217,
+            "hit_rate": 0.3333333333333333
+          },
+          {
+            "start": 6,
+            "end": 13,
+            "n": 7,
+            "mean": 0.05557991401581292,
+            "median": 0.04493335324847458,
+            "hit_rate": 0.8571428571428571
+          },
+          {
+            "start": 13,
+            "end": 20,
+            "n": 7,
+            "mean": -0.0063023353970883865,
+            "median": 0.009696622797357835,
+            "hit_rate": 0.5714285714285714
+          }
+        ]
+      },
+      "full_stability": {
+        "label": "全折为正",
+        "positive_folds": 3,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 8,
+            "n": 8,
+            "mean": 0.01715899598834003,
+            "median": 0.014623591920013279,
+            "hit_rate": 0.5
+          },
+          {
+            "start": 8,
+            "end": 16,
+            "n": 8,
+            "mean": 0.02168913266571043,
+            "median": 0.0226801553553434,
+            "hit_rate": 0.75
+          },
+          {
+            "start": 16,
+            "end": 25,
+            "n": 9,
+            "mean": 0.010341539446733883,
+            "median": 0.009696622797357835,
+            "hit_rate": 0.6666666666666666
+          }
+        ]
+      },
+      "cost_sensitivity": [
+        {
+          "cost": "低",
+          "n": 20,
+          "mean_return": 0.013860423023285856,
+          "hit_rate": 0.65,
+          "median_return": 0.01991554472356616
+        },
+        {
+          "cost": "基准",
+          "n": 20,
+          "mean_return": 0.011631823271126718,
+          "hit_rate": 0.6,
+          "median_return": 0.017673635010376887
+        },
+        {
+          "cost": "高",
+          "n": 20,
+          "mean_return": 0.00940811518758466,
+          "hit_rate": 0.6,
+          "median_return": 0.015436646180524982
+        }
+      ],
+      "grade": "不稳定"
+    },
+    {
+      "name": "MACD金叉",
+      "side": 1,
+      "hold_days": 5,
+      "train_n": 13,
+      "train_mean": 0.02936926797657086,
+      "validation_n": 5,
+      "validation_mean": -0.04195318802092855,
+      "holdout_n": 5,
+      "holdout_mean": 0.005617475175010789,
+      "holdout_audit": "通过",
+      "all_n": 25,
+      "stability": {
+        "label": "多数为负",
+        "positive_folds": 1,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 6,
+            "n": 6,
+            "mean": -0.03388858209803262,
+            "median": -0.060041962941497884,
+            "hit_rate": 0.3333333333333333
+          },
+          {
+            "start": 6,
+            "end": 13,
+            "n": 7,
+            "mean": 0.08359028232623099,
+            "median": 0.06078108164059093,
+            "hit_rate": 0.7142857142857143
+          },
+          {
+            "start": 13,
+            "end": 20,
+            "n": 7,
+            "mean": -0.016615429918979765,
+            "median": -0.03451491358139969,
+            "hit_rate": 0.42857142857142855
+          }
+        ]
+      },
+      "full_stability": {
+        "label": "多数为正",
+        "positive_folds": 2,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 8,
+            "n": 8,
+            "mean": 0.01988508127015537,
+            "median": -0.02167565342846678,
+            "hit_rate": 0.5
+          },
+          {
+            "start": 8,
+            "end": 16,
+            "n": 8,
+            "mean": 0.03520785632807037,
+            "median": 0.035258595461129305,
+            "hit_rate": 0.625
+          },
+          {
+            "start": 16,
+            "end": 25,
+            "n": 9,
+            "mean": -0.016351516738687684,
+            "median": -0.011590249983052026,
+            "hit_rate": 0.3333333333333333
+          }
+        ]
+      },
+      "cost_sensitivity": [
+        {
+          "cost": "低",
+          "n": 20,
+          "mean_return": 0.015506842513812352,
+          "hit_rate": 0.5,
+          "median_return": -0.002608568903716635
+        },
+        {
+          "cost": "基准",
+          "n": 20,
+          "mean_return": 0.013274623713128143,
+          "hit_rate": 0.5,
+          "median_return": -0.0048009676261349665
+        },
+        {
+          "cost": "高",
+          "n": 20,
+          "mean_return": 0.01104730452469745,
+          "hit_rate": 0.5,
+          "median_return": -0.006988554139444825
+        }
+      ],
+      "grade": "不稳定"
+    },
+    {
+      "name": "MACD死叉",
+      "side": -1,
+      "hold_days": 1,
+      "train_n": 13,
+      "train_mean": -0.004238961100856027,
+      "validation_n": 6,
+      "validation_mean": 0.034855208712474155,
+      "holdout_n": 5,
+      "holdout_mean": -0.007754022941318715,
+      "holdout_audit": "未通过",
+      "all_n": 25,
+      "stability": {
+        "label": "多数为正",
+        "positive_folds": 2,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 6,
+            "n": 6,
+            "mean": 0.009484379777511041,
+            "median": 0.0006283969699725014,
+            "hit_rate": 0.5
+          },
+          {
+            "start": 6,
+            "end": 13,
+            "n": 7,
+            "mean": -0.016001824710884942,
+            "median": -0.016371030357747306,
+            "hit_rate": 0.2857142857142857
+          },
+          {
+            "start": 13,
+            "end": 20,
+            "n": 7,
+            "mean": 0.02324344113958023,
+            "median": 0.01613746917790252,
+            "hit_rate": 0.8571428571428571
+          }
+        ]
+      },
+      "full_stability": {
+        "label": "多数为负",
+        "positive_folds": 1,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 8,
+            "n": 8,
+            "mean": -0.002406331624651946,
+            "median": -0.0155660586043583,
+            "hit_rate": 0.375
+          },
+          {
+            "start": 8,
+            "end": 16,
+            "n": 8,
+            "mean": -0.004915558645373138,
+            "median": -0.0035533336349574327,
+            "hit_rate": 0.5
+          },
+          {
+            "start": 16,
+            "end": 25,
+            "n": 9,
+            "mean": 0.014155844568837818,
+            "median": 0.009026416780883152,
+            "hit_rate": 0.5555555555555556
+          }
+        ]
+      },
+      "cost_sensitivity": [
+        {
+          "cost": "低",
+          "n": 20,
+          "mean_return": 0.0064798796832966615,
+          "hit_rate": 0.55,
+          "median_return": 0.008391128866424725
+        },
+        {
+          "cost": "基准",
+          "n": 20,
+          "mean_return": 0.005379879683296662,
+          "hit_rate": 0.55,
+          "median_return": 0.0072911288664247245
+        },
+        {
+          "cost": "高",
+          "n": 20,
+          "mean_return": 0.004279879683296664,
+          "hit_rate": 0.55,
+          "median_return": 0.006191128866424724
+        }
+      ],
+      "grade": "反转规则"
+    },
+    {
+      "name": "MACD死叉",
+      "side": -1,
+      "hold_days": 3,
+      "train_n": 12,
+      "train_mean": -0.03454051992744158,
+      "validation_n": 5,
+      "validation_mean": 0.007381249093177111,
+      "holdout_n": 5,
+      "holdout_mean": 0.018038812865004916,
+      "holdout_audit": "通过",
+      "all_n": 24,
+      "stability": {
+        "label": "多数为负",
+        "positive_folds": 0,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 6,
+            "n": 6,
+            "mean": -0.008325470306626339,
+            "median": -0.00676631099496524,
+            "hit_rate": 0.5
+          },
+          {
+            "start": 6,
+            "end": 12,
+            "n": 6,
+            "mean": -0.06075556954825682,
+            "median": -0.05130655593869412,
+            "hit_rate": 0.16666666666666666
+          },
+          {
+            "start": 12,
+            "end": 19,
+            "n": 7,
+            "mean": -0.014126272598424472,
+            "median": -0.03370251823094269,
+            "hit_rate": 0.42857142857142855
+          }
+        ]
+      },
+      "full_stability": {
+        "label": "多数为负",
+        "positive_folds": 1,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 8,
+            "n": 8,
+            "mean": -0.02688191006526138,
+            "median": -0.021722630370079897,
+            "hit_rate": 0.375
+          },
+          {
+            "start": 8,
+            "end": 16,
+            "n": 8,
+            "mean": -0.033083063579752665,
+            "median": -0.04987685552841977,
+            "hit_rate": 0.375
+          },
+          {
+            "start": 16,
+            "end": 24,
+            "n": 8,
+            "mean": 0.007067963270858338,
+            "median": -0.006776008957786371,
+            "hit_rate": 0.375
+          }
+        ]
+      },
+      "cost_sensitivity": [
+        {
+          "cost": "低",
+          "n": 19,
+          "mean_return": -0.025919481437803697,
+          "hit_rate": 0.3684210526315789,
+          "median_return": -0.03049040185984715
+        },
+        {
+          "cost": "基准",
+          "n": 19,
+          "mean_return": -0.027019481437803698,
+          "hit_rate": 0.3684210526315789,
+          "median_return": -0.03159040185984715
+        },
+        {
+          "cost": "高",
+          "n": 19,
+          "mean_return": -0.028119481437803694,
+          "hit_rate": 0.3684210526315789,
+          "median_return": -0.032690401859847146
+        }
+      ],
+      "grade": "反转规则"
+    },
+    {
+      "name": "MACD死叉",
+      "side": -1,
+      "hold_days": 5,
+      "train_n": 12,
+      "train_mean": -0.04107869503458118,
+      "validation_n": 5,
+      "validation_mean": -0.0008865477143894643,
+      "holdout_n": 5,
+      "holdout_mean": 0.019650243075595743,
+      "holdout_audit": "通过",
+      "all_n": 24,
+      "stability": {
+        "label": "多数为负",
+        "positive_folds": 0,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 6,
+            "n": 6,
+            "mean": -0.02193091894119271,
+            "median": -0.061300420338811196,
+            "hit_rate": 0.3333333333333333
+          },
+          {
+            "start": 6,
+            "end": 12,
+            "n": 6,
+            "mean": -0.060226471127969645,
+            "median": -0.05770008087095732,
+            "hit_rate": 0.5
+          },
+          {
+            "start": 12,
+            "end": 19,
+            "n": 7,
+            "mean": -0.026532088463214896,
+            "median": -0.03043774961314579,
+            "hit_rate": 0.2857142857142857
+          }
+        ]
+      },
+      "full_stability": {
+        "label": "多数为负",
+        "positive_folds": 1,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 8,
+            "n": 8,
+            "mean": -0.035553442125991985,
+            "median": -0.061300420338811196,
+            "hit_rate": 0.375
+          },
+          {
+            "start": 8,
+            "end": 16,
+            "n": 8,
+            "mean": -0.04714998889209264,
+            "median": -0.06350071823875811,
+            "hit_rate": 0.375
+          },
+          {
+            "start": 16,
+            "end": 24,
+            "n": 8,
+            "mean": 0.01015121298314716,
+            "median": 0.01453179006709946,
+            "hit_rate": 0.625
+          }
+        ]
+      },
+      "cost_sensitivity": [
+        {
+          "cost": "低",
+          "n": 19,
+          "mean_return": -0.034619418929340964,
+          "hit_rate": 0.3684210526315789,
+          "median_return": -0.03012963509808071
+        },
+        {
+          "cost": "基准",
+          "n": 19,
+          "mean_return": -0.03571941892934097,
+          "hit_rate": 0.3684210526315789,
+          "median_return": -0.03122963509808071
+        },
+        {
+          "cost": "高",
+          "n": 19,
+          "mean_return": -0.03681941892934096,
+          "hit_rate": 0.3684210526315789,
+          "median_return": -0.032329635098080706
+        }
+      ],
+      "grade": "不利"
+    },
+    {
+      "name": "RSI超卖(<30)",
+      "side": 1,
+      "hold_days": 1,
+      "train_n": 6,
+      "train_mean": 0.005288875752496092,
+      "validation_n": 0,
+      "validation_mean": null,
+      "holdout_n": 2,
+      "holdout_mean": 0.025411786881740617,
+      "holdout_audit": "样本不足",
+      "all_n": 8,
+      "stability": {
+        "label": "样本不足",
+        "positive_folds": 0,
+        "total_folds": 0,
+        "folds": []
+      },
+      "full_stability": {
+        "label": "多数为负",
+        "positive_folds": 1,
+        "total_folds": 2,
+        "folds": [
+          {
+            "start": 2,
+            "end": 5,
+            "n": 3,
+            "mean": -0.0027476411138015466,
+            "median": -0.019744231450561256,
+            "hit_rate": 0.3333333333333333
+          },
+          {
+            "start": 5,
+            "end": 8,
+            "n": 3,
+            "mean": 0.021743955069698433,
+            "median": 0.014408291445614063,
+            "hit_rate": 1.0
+          }
+        ]
+      },
+      "cost_sensitivity": [
+        {
+          "cost": "低",
+          "n": 6,
+          "mean_return": 0.007503502148990815,
+          "hit_rate": 0.5,
+          "median_return": -0.00047087233932791017
+        },
+        {
+          "cost": "基准",
+          "n": 6,
+          "mean_return": 0.005288875752496092,
+          "hit_rate": 0.5,
+          "median_return": -0.0026679700024735964
+        },
+        {
+          "cost": "高",
+          "n": 6,
+          "mean_return": 0.0030791103537787987,
+          "hit_rate": 0.5,
+          "median_return": -0.004860245142563335
+        }
+      ],
+      "grade": "样本不足"
+    },
+    {
+      "name": "RSI超卖(<30)",
+      "side": 1,
+      "hold_days": 3,
+      "train_n": 4,
+      "train_mean": -0.01276951327432646,
+      "validation_n": 0,
+      "validation_mean": null,
+      "holdout_n": 2,
+      "holdout_mean": 0.004987972250217687,
+      "holdout_audit": "样本不足",
+      "all_n": 6,
+      "stability": {
+        "label": "样本不足",
+        "positive_folds": 0,
+        "total_folds": 0,
+        "folds": []
+      },
+      "full_stability": {
+        "label": "样本不足",
+        "positive_folds": 0,
+        "total_folds": 0,
+        "folds": []
+      },
+      "cost_sensitivity": [
+        {
+          "cost": "低",
+          "n": 4,
+          "mean_return": -0.010594669059830975,
+          "hit_rate": 0.5,
+          "median_return": -0.008185739106310985
+        },
+        {
+          "cost": "基准",
+          "n": 4,
+          "mean_return": -0.01276951327432646,
+          "hit_rate": 0.5,
+          "median_return": -0.01036587846851661
+        },
+        {
+          "cost": "高",
+          "n": 4,
+          "mean_return": -0.014939583811008988,
+          "hit_rate": 0.5,
+          "median_return": -0.01254123253031636
+        }
+      ],
+      "grade": "样本不足"
+    },
+    {
+      "name": "RSI超卖(<30)",
+      "side": 1,
+      "hold_days": 5,
+      "train_n": 4,
+      "train_mean": -0.0008235372431946442,
+      "validation_n": 0,
+      "validation_mean": null,
+      "holdout_n": 2,
+      "holdout_mean": 0.0278727421442016,
+      "holdout_audit": "样本不足",
+      "all_n": 6,
+      "stability": {
+        "label": "样本不足",
+        "positive_folds": 0,
+        "total_folds": 0,
+        "folds": []
+      },
+      "full_stability": {
+        "label": "样本不足",
+        "positive_folds": 0,
+        "total_folds": 0,
+        "folds": []
+      },
+      "cost_sensitivity": [
+        {
+          "cost": "低",
+          "n": 4,
+          "mean_return": 0.0013776236594574554,
+          "hit_rate": 0.75,
+          "median_return": 0.0160533490478435
+        },
+        {
+          "cost": "基准",
+          "n": 4,
+          "mean_return": -0.0008235372431946442,
+          "hit_rate": 0.75,
+          "median_return": 0.01381992895327433
+        },
+        {
+          "cost": "高",
+          "n": 4,
+          "mean_return": -0.003019866704176477,
+          "hit_rate": 0.75,
+          "median_return": 0.011591411107740868
+        }
+      ],
+      "grade": "样本不足"
+    },
+    {
+      "name": "RSI超买(>70)",
+      "side": -1,
+      "hold_days": 1,
+      "train_n": 9,
+      "train_mean": -2.232521205106009e-05,
+      "validation_n": 5,
+      "validation_mean": -0.017028166157975477,
+      "holdout_n": 1,
+      "holdout_mean": 0.01702659176029956,
+      "holdout_audit": "样本不足",
+      "all_n": 16,
+      "stability": {
+        "label": "多数为负",
+        "positive_folds": 1,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 5,
+            "n": 5,
+            "mean": 0.01960499429991801,
+            "median": 0.03465855125157317,
+            "hit_rate": 0.8
+          },
+          {
+            "start": 5,
+            "end": 10,
+            "n": 5,
+            "mean": -0.025224092155641177,
+            "median": -0.02789456237015627,
+            "hit_rate": 0.0
+          },
+          {
+            "start": 10,
+            "end": 15,
+            "n": 5,
+            "mean": -0.017028166157975477,
+            "median": -0.025388177445983838,
+            "hit_rate": 0.2
+          }
+        ]
+      },
+      "full_stability": {
+        "label": "多数为负",
+        "positive_folds": 1,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 5,
+            "n": 5,
+            "mean": 0.01960499429991801,
+            "median": 0.03465855125157317,
+            "hit_rate": 0.8
+          },
+          {
+            "start": 5,
+            "end": 10,
+            "n": 5,
+            "mean": -0.025224092155641177,
+            "median": -0.02789456237015627,
+            "hit_rate": 0.0
+          },
+          {
+            "start": 10,
+            "end": 16,
+            "n": 6,
+            "mean": -0.011352373171596304,
+            "median": -0.02209694537711445,
+            "hit_rate": 0.3333333333333333
+          }
+        ]
+      },
+      "cost_sensitivity": [
+        {
+          "cost": "低",
+          "n": 15,
+          "mean_return": -0.006449088004566214,
+          "hit_rate": 0.3333333333333333,
+          "median_return": -0.024288177445983838
+        },
+        {
+          "cost": "基准",
+          "n": 15,
+          "mean_return": -0.007549088004566213,
+          "hit_rate": 0.3333333333333333,
+          "median_return": -0.025388177445983838
+        },
+        {
+          "cost": "高",
+          "n": 15,
+          "mean_return": -0.008649088004566211,
+          "hit_rate": 0.3333333333333333,
+          "median_return": -0.02648817744598384
+        }
+      ],
+      "grade": "不利"
+    },
+    {
+      "name": "RSI超买(>70)",
+      "side": -1,
+      "hold_days": 3,
+      "train_n": 8,
+      "train_mean": 0.018681400857319858,
+      "validation_n": 5,
+      "validation_mean": -0.017852743198337906,
+      "holdout_n": 1,
+      "holdout_mean": 0.03263208489388262,
+      "holdout_audit": "样本不足",
+      "all_n": 16,
+      "stability": {
+        "label": "多数为负",
+        "positive_folds": 1,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 5,
+            "n": 5,
+            "mean": 0.03515480271639305,
+            "median": 0.08080594322472381,
+            "hit_rate": 0.8
+          },
+          {
+            "start": 5,
+            "end": 10,
+            "n": 5,
+            "mean": -0.02305894538205907,
+            "median": -0.015121317526003618,
+            "hit_rate": 0.2
+          },
+          {
+            "start": 10,
+            "end": 15,
+            "n": 5,
+            "mean": -0.017852743198337906,
+            "median": 0.0016000577510107208,
+            "hit_rate": 0.6
+          }
+        ]
+      },
+      "full_stability": {
+        "label": "多数为负",
+        "positive_folds": 1,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 5,
+            "n": 5,
+            "mean": 0.03515480271639305,
+            "median": 0.08080594322472381,
+            "hit_rate": 0.8
+          },
+          {
+            "start": 5,
+            "end": 10,
+            "n": 5,
+            "mean": -0.02305894538205907,
+            "median": -0.015121317526003618,
+            "hit_rate": 0.2
+          },
+          {
+            "start": 10,
+            "end": 16,
+            "n": 6,
+            "mean": -0.009438605182967819,
+            "median": 0.00699634237239858,
+            "hit_rate": 0.6666666666666666
+          }
+        ]
+      },
+      "cost_sensitivity": [
+        {
+          "cost": "低",
+          "n": 15,
+          "mean_return": -0.0008189619546679738,
+          "hit_rate": 0.5333333333333333,
+          "median_return": 0.0015092596498628601
+        },
+        {
+          "cost": "基准",
+          "n": 15,
+          "mean_return": -0.0019189619546679762,
+          "hit_rate": 0.5333333333333333,
+          "median_return": 0.00040925964986286006
+        },
+        {
+          "cost": "高",
+          "n": 15,
+          "mean_return": -0.003018961954667972,
+          "hit_rate": 0.4666666666666667,
+          "median_return": -0.0006907403501371398
+        }
+      ],
+      "grade": "不稳定"
+    },
+    {
+      "name": "RSI超买(>70)",
+      "side": -1,
+      "hold_days": 5,
+      "train_n": 7,
+      "train_mean": -0.005540983226182127,
+      "validation_n": 4,
+      "validation_mean": -0.04430116100365163,
+      "holdout_n": 1,
+      "holdout_mean": 0.07195792759051181,
+      "holdout_audit": "样本不足",
+      "all_n": 14,
+      "stability": {
+        "label": "多数为负",
+        "positive_folds": 1,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 4,
+            "n": 4,
+            "mean": 0.02689766119404888,
+            "median": 0.028021949080979526,
+            "hit_rate": 0.75
+          },
+          {
+            "start": 4,
+            "end": 8,
+            "n": 4,
+            "mean": -0.040186714458520754,
+            "median": -0.04399477622345734,
+            "hit_rate": 0.0
+          },
+          {
+            "start": 8,
+            "end": 13,
+            "n": 5,
+            "mean": -0.06558853425861635,
+            "median": -0.05037585182740686,
+            "hit_rate": 0.2
+          }
+        ]
+      },
+      "full_stability": {
+        "label": "多数为负",
+        "positive_folds": 1,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 4,
+            "n": 4,
+            "mean": 0.02689766119404888,
+            "median": 0.028021949080979526,
+            "hit_rate": 0.75
+          },
+          {
+            "start": 4,
+            "end": 9,
+            "n": 5,
+            "mean": -0.062296977022511656,
+            "median": -0.05202994072251418,
+            "hit_rate": 0.0
+          },
+          {
+            "start": 9,
+            "end": 14,
+            "n": 5,
+            "mean": -0.021049343284818944,
+            "median": -0.007076081325448645,
+            "hit_rate": 0.4
+          }
+        ]
+      },
+      "cost_sensitivity": [
+        {
+          "cost": "低",
+          "n": 13,
+          "mean_return": -0.02821529879622841,
+          "hit_rate": 0.3076923076923077,
+          "median_return": -0.03485961172440051
+        },
+        {
+          "cost": "基准",
+          "n": 13,
+          "mean_return": -0.029315298796228406,
+          "hit_rate": 0.3076923076923077,
+          "median_return": -0.03595961172440051
+        },
+        {
+          "cost": "高",
+          "n": 13,
+          "mean_return": -0.030415298796228403,
+          "hit_rate": 0.15384615384615385,
+          "median_return": -0.037059611724400504
+        }
+      ],
+      "grade": "样本不足"
+    },
+    {
+      "name": "KDJ低位金叉(K<50)",
+      "side": 1,
+      "hold_days": 1,
+      "train_n": 23,
+      "train_mean": -0.003385568997473327,
+      "validation_n": 6,
+      "validation_mean": 0.0011374692036620708,
+      "holdout_n": 8,
+      "holdout_mean": -0.015453741071810467,
+      "holdout_audit": "未通过",
+      "all_n": 38,
+      "stability": {
+        "label": "多数为正",
+        "positive_folds": 2,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 10,
+            "n": 10,
+            "mean": -0.007839746118153001,
+            "median": -0.016057380031232915,
+            "hit_rate": 0.3
+          },
+          {
+            "start": 10,
+            "end": 20,
+            "n": 10,
+            "mean": 0.0007360010317022825,
+            "median": -0.0011984911283052235,
+            "hit_rate": 0.5
+          },
+          {
+            "start": 20,
+            "end": 30,
+            "n": 10,
+            "mean": 9.631211107186121e-06,
+            "median": 0.007595298926292515,
+            "hit_rate": 0.7
+          }
+        ]
+      },
+      "full_stability": {
+        "label": "多数为负",
+        "positive_folds": 1,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 12,
+            "n": 12,
+            "mean": -0.009420657859987183,
+            "median": -0.017325216569158086,
+            "hit_rate": 0.25
+          },
+          {
+            "start": 12,
+            "end": 25,
+            "n": 13,
+            "mean": 0.0011058900114034192,
+            "median": 0.0037486172873788526,
+            "hit_rate": 0.6153846153846154
+          },
+          {
+            "start": 25,
+            "end": 38,
+            "n": 13,
+            "mean": -0.007376903319716717,
+            "median": -0.008917316851563939,
+            "hit_rate": 0.38461538461538464
+          }
+        ]
+      },
+      "cost_sensitivity": [
+        {
+          "cost": "低",
+          "n": 30,
+          "mean_return": -0.00016693887588319355,
+          "hit_rate": 0.5,
+          "median_return": 0.0008027015452933273
+        },
+        {
+          "cost": "基准",
+          "n": 30,
+          "mean_return": -0.002364704625114511,
+          "hit_rate": 0.5,
+          "median_return": -0.001397195602258039
+        },
+        {
+          "cost": "高",
+          "n": 30,
+          "mean_return": -0.004557646384873137,
+          "hit_rate": 0.4666666666666667,
+          "median_return": -0.0035922640820205687
+        }
+      ],
+      "grade": "反转规则"
+    },
+    {
+      "name": "KDJ低位金叉(K<50)",
+      "side": 1,
+      "hold_days": 3,
+      "train_n": 21,
+      "train_mean": 0.008772219001542262,
+      "validation_n": 6,
+      "validation_mean": -0.013181946970831138,
+      "holdout_n": 8,
+      "holdout_mean": -0.006611963505168614,
+      "holdout_audit": "未通过",
+      "all_n": 36,
+      "stability": {
+        "label": "多数为负",
+        "positive_folds": 1,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 9,
+            "n": 9,
+            "mean": -0.0014520825792328064,
+            "median": -0.010777207639313557,
+            "hit_rate": 0.2222222222222222
+          },
+          {
+            "start": 9,
+            "end": 18,
+            "n": 9,
+            "mean": 0.02113410454581836,
+            "median": 0.024329573677728034,
+            "hit_rate": 0.6666666666666666
+          },
+          {
+            "start": 18,
+            "end": 28,
+            "n": 10,
+            "mean": -0.011889010934581357,
+            "median": -0.017960155990175142,
+            "hit_rate": 0.4
+          }
+        ]
+      },
+      "full_stability": {
+        "label": "多数为负",
+        "positive_folds": 1,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 12,
+            "n": 12,
+            "mean": -0.0004944598126777148,
+            "median": -0.009676807448386948,
+            "hit_rate": 0.25
+          },
+          {
+            "start": 12,
+            "end": 24,
+            "n": 12,
+            "mean": 0.008806943785603519,
+            "median": 0.014553444262757509,
+            "hit_rate": 0.6666666666666666
+          },
+          {
+            "start": 24,
+            "end": 36,
+            "n": 12,
+            "mean": -0.00786645228025018,
+            "median": -0.014558734227153924,
+            "hit_rate": 0.4166666666666667
+          }
+        ]
+      },
+      "cost_sensitivity": [
+        {
+          "cost": "低",
+          "n": 28,
+          "mean_return": 0.0042878468291408355,
+          "hit_rate": 0.4642857142857143,
+          "median_return": -0.005050644688049
+        },
+        {
+          "cost": "基准",
+          "n": 28,
+          "mean_return": 0.0020802888697663002,
+          "hit_rate": 0.42857142857142855,
+          "median_return": -0.007237675403822641
+        },
+        {
+          "cost": "高",
+          "n": 28,
+          "mean_return": -0.00012242360670811477,
+          "hit_rate": 0.42857142857142855,
+          "median_return": -0.009419905693002495
+        }
+      ],
+      "grade": "不稳定"
+    },
+    {
+      "name": "KDJ低位金叉(K<50)",
+      "side": 1,
+      "hold_days": 5,
+      "train_n": 20,
+      "train_mean": 0.005244413139826975,
+      "validation_n": 6,
+      "validation_mean": 0.004098378536975496,
+      "holdout_n": 7,
+      "holdout_mean": 0.0016270024919826178,
+      "holdout_audit": "通过",
+      "all_n": 34,
+      "stability": {
+        "label": "多数为负",
+        "positive_folds": 1,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 9,
+            "n": 9,
+            "mean": -0.018361617369046217,
+            "median": -0.03244908717718953,
+            "hit_rate": 0.3333333333333333
+          },
+          {
+            "start": 9,
+            "end": 18,
+            "n": 9,
+            "mean": 0.030558260783859998,
+            "median": 0.007575051924667786,
+            "hit_rate": 0.6666666666666666
+          },
+          {
+            "start": 18,
+            "end": 27,
+            "n": 9,
+            "mean": -0.002629961360202598,
+            "median": -0.0012264273436336515,
+            "hit_rate": 0.4444444444444444
+          }
+        ]
+      },
+      "full_stability": {
+        "label": "多数为负",
+        "positive_folds": 1,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 11,
+            "n": 11,
+            "mean": -0.021136736370075567,
+            "median": -0.03244908717718953,
+            "hit_rate": 0.2727272727272727
+          },
+          {
+            "start": 11,
+            "end": 22,
+            "n": 11,
+            "mean": 0.034691419475725134,
+            "median": 0.031059809231112068,
+            "hit_rate": 0.7272727272727273
+          },
+          {
+            "start": 22,
+            "end": 34,
+            "n": 12,
+            "mean": -0.00430102985223052,
+            "median": -0.007541264048874841,
+            "hit_rate": 0.3333333333333333
+          }
+        ]
+      },
+      "cost_sensitivity": [
+        {
+          "cost": "低",
+          "n": 27,
+          "mean_return": 0.0053988942071544884,
+          "hit_rate": 0.5185185185185185,
+          "median_return": 0.0009738460021451179
+        },
+        {
+          "cost": "基准",
+          "n": 27,
+          "mean_return": 0.0031888940182037283,
+          "hit_rate": 0.48148148148148145,
+          "median_return": -0.0012264273436336515
+        },
+        {
+          "cost": "高",
+          "n": 27,
+          "mean_return": 0.0009837446727288441,
+          "hit_rate": 0.48148148148148145,
+          "median_return": -0.003421871195886661
+        }
+      ],
+      "grade": "观察·稳定性不足"
+    },
+    {
+      "name": "KDJ高位死叉(K>50)",
+      "side": -1,
+      "hold_days": 1,
+      "train_n": 21,
+      "train_mean": 0.0032425135733397457,
+      "validation_n": 10,
+      "validation_mean": -0.016200052548528576,
+      "holdout_n": 5,
+      "holdout_mean": 0.015256161025719483,
+      "holdout_audit": "通过",
+      "all_n": 38,
+      "stability": {
+        "label": "多数为负",
+        "positive_folds": 1,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 10,
+            "n": 10,
+            "mean": 0.009404069557247253,
+            "median": -0.0017000000000000001,
+            "hit_rate": 0.4
+          },
+          {
+            "start": 10,
+            "end": 21,
+            "n": 11,
+            "mean": -0.0023589009574852605,
+            "median": -0.00501089283743502,
+            "hit_rate": 0.45454545454545453
+          },
+          {
+            "start": 21,
+            "end": 32,
+            "n": 11,
+            "mean": -0.013657029775046615,
+            "median": -0.010758426853203239,
+            "hit_rate": 0.36363636363636365
+          }
+        ]
+      },
+      "full_stability": {
+        "label": "多数为正",
+        "positive_folds": 2,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 12,
+            "n": 12,
+            "mean": 0.01293395418552916,
+            "median": 0.003618017443097178,
+            "hit_rate": 0.5
+          },
+          {
+            "start": 12,
+            "end": 25,
+            "n": 13,
+            "mean": -0.013956723458536721,
+            "median": -0.014973357422018961,
+            "hit_rate": 0.3076923076923077
+          },
+          {
+            "start": 25,
+            "end": 38,
+            "n": 13,
+            "mean": 0.00038405592578717246,
+            "median": 0.006023598166932577,
+            "hit_rate": 0.5384615384615384
+          }
+        ]
+      },
+      "cost_sensitivity": [
+        {
+          "cost": "低",
+          "n": 32,
+          "mean_return": -0.0014667044526680665,
+          "hit_rate": 0.40625,
+          "median_return": -0.003523773748634839
+        },
+        {
+          "cost": "基准",
+          "n": 32,
+          "mean_return": -0.0025667044526680657,
+          "hit_rate": 0.40625,
+          "median_return": -0.004623773748634839
+        },
+        {
+          "cost": "高",
+          "n": 32,
+          "mean_return": -0.0036667044526680647,
+          "hit_rate": 0.40625,
+          "median_return": -0.00572377374863484
+        }
+      ],
+      "grade": "不稳定"
+    },
+    {
+      "name": "KDJ高位死叉(K>50)",
+      "side": -1,
+      "hold_days": 3,
+      "train_n": 20,
+      "train_mean": -0.010386714921522473,
+      "validation_n": 9,
+      "validation_mean": -0.026075813302898612,
+      "holdout_n": 5,
+      "holdout_mean": 0.012626971624517591,
+      "holdout_audit": "通过",
+      "all_n": 36,
+      "stability": {
+        "label": "多数为负",
+        "positive_folds": 1,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 10,
+            "n": 10,
+            "mean": 0.021024801269101355,
+            "median": 0.010688897896044415,
+            "hit_rate": 0.7
+          },
+          {
+            "start": 10,
+            "end": 20,
+            "n": 10,
+            "mean": -0.0417982311121463,
+            "median": -0.05589627070251044,
+            "hit_rate": 0.3
+          },
+          {
+            "start": 20,
+            "end": 30,
+            "n": 10,
+            "mean": -0.02479307751201785,
+            "median": -0.00784293206987937,
+            "hit_rate": 0.4
+          }
+        ]
+      },
+      "full_stability": {
+        "label": "多数为正",
+        "positive_folds": 2,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 12,
+            "n": 12,
+            "mean": 0.01293552900488234,
+            "median": 0.00780739449789767,
+            "hit_rate": 0.6666666666666666
+          },
+          {
+            "start": 12,
+            "end": 24,
+            "n": 12,
+            "mean": -0.052969073893593004,
+            "median": -0.05589627070251044,
+            "hit_rate": 0.16666666666666666
+          },
+          {
+            "start": 24,
+            "end": 36,
+            "n": 12,
+            "mean": 0.00669859618711519,
+            "median": 0.013324573577247568,
+            "hit_rate": 0.6666666666666666
+          }
+        ]
+      },
+      "cost_sensitivity": [
+        {
+          "cost": "低",
+          "n": 30,
+          "mean_return": -0.01408883578502093,
+          "hit_rate": 0.4666666666666667,
+          "median_return": -0.0018876530954951669
+        },
+        {
+          "cost": "基准",
+          "n": 30,
+          "mean_return": -0.015188835785020931,
+          "hit_rate": 0.4666666666666667,
+          "median_return": -0.002987653095495167
+        },
+        {
+          "cost": "高",
+          "n": 30,
+          "mean_return": -0.016288835785020928,
+          "hit_rate": 0.4,
+          "median_return": -0.0040876530954951674
+        }
+      ],
+      "grade": "不利"
+    },
+    {
+      "name": "KDJ高位死叉(K>50)",
+      "side": -1,
+      "hold_days": 5,
+      "train_n": 17,
+      "train_mean": -0.031058580936215,
+      "validation_n": 8,
+      "validation_mean": -0.03926327695418657,
+      "holdout_n": 5,
+      "holdout_mean": 0.01763664097305052,
+      "holdout_audit": "通过",
+      "all_n": 33,
+      "stability": {
+        "label": "多数为负",
+        "positive_folds": 1,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 9,
+            "n": 9,
+            "mean": 0.007059881447468568,
+            "median": -0.0017000000000000001,
+            "hit_rate": 0.4444444444444444
+          },
+          {
+            "start": 9,
+            "end": 18,
+            "n": 9,
+            "mean": -0.07318622846400608,
+            "median": -0.11255056491153279,
+            "hit_rate": 0.3333333333333333
+          },
+          {
+            "start": 18,
+            "end": 27,
+            "n": 9,
+            "mean": -0.027429058040210102,
+            "median": 0.010835948676351327,
+            "hit_rate": 0.5555555555555556
+          }
+        ]
+      },
+      "full_stability": {
+        "label": "多数为负",
+        "positive_folds": 1,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 11,
+            "n": 11,
+            "mean": -0.002724458850753077,
+            "median": -0.0017000000000000001,
+            "hit_rate": 0.45454545454545453
+          },
+          {
+            "start": 11,
+            "end": 22,
+            "n": 11,
+            "mean": -0.0695904380281349,
+            "median": -0.06714124723318246,
+            "hit_rate": 0.36363636363636365
+          },
+          {
+            "start": 22,
+            "end": 33,
+            "n": 11,
+            "mean": 0.005832516106083276,
+            "median": 0.022509252144623994,
+            "hit_rate": 0.6363636363636364
+          }
+        ]
+      },
+      "cost_sensitivity": [
+        {
+          "cost": "低",
+          "n": 27,
+          "mean_return": -0.03008513501891586,
+          "hit_rate": 0.4444444444444444,
+          "median_return": -0.0006000000000000001
+        },
+        {
+          "cost": "基准",
+          "n": 27,
+          "mean_return": -0.031185135018915865,
+          "hit_rate": 0.4444444444444444,
+          "median_return": -0.0017000000000000001
+        },
+        {
+          "cost": "高",
+          "n": 27,
+          "mean_return": -0.03228513501891586,
+          "hit_rate": 0.4444444444444444,
+          "median_return": -0.0028
+        }
+      ],
+      "grade": "不利"
+    },
+    {
+      "name": "触及布林下轨",
+      "side": 1,
+      "hold_days": 1,
+      "train_n": 13,
+      "train_mean": 0.0012094743492087228,
+      "validation_n": 2,
+      "validation_mean": -0.02514732249586782,
+      "holdout_n": 6,
+      "holdout_mean": -0.02136466918725466,
+      "holdout_audit": "未通过",
+      "all_n": 21,
+      "stability": {
+        "label": "多数为负",
+        "positive_folds": 1,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 5,
+            "n": 5,
+            "mean": 0.00043535967177656956,
+            "median": 0.01782896898695574,
+            "hit_rate": 0.6
+          },
+          {
+            "start": 5,
+            "end": 10,
+            "n": 5,
+            "mean": -0.005538482398650934,
+            "median": -0.002896524170994952,
+            "hit_rate": 0.4
+          },
+          {
+            "start": 10,
+            "end": 15,
+            "n": 5,
+            "mean": -0.0018111729635300832,
+            "median": 0.00018456932084420785,
+            "hit_rate": 0.6
+          }
+        ]
+      },
+      "full_stability": {
+        "label": "多数为负",
+        "positive_folds": 1,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 7,
+            "n": 7,
+            "mean": 0.003607572598851821,
+            "median": 0.011691675914286659,
+            "hit_rate": 0.7142857142857143
+          },
+          {
+            "start": 7,
+            "end": 14,
+            "n": 7,
+            "mean": -0.008572722280689884,
+            "median": -0.002896524170994952,
+            "hit_rate": 0.2857142857142857
+          },
+          {
+            "start": 14,
+            "end": 21,
+            "n": 7,
+            "mean": -0.018286206543240535,
+            "median": -0.014113237229505193,
+            "hit_rate": 0.2857142857142857
+          }
+        ]
+      },
+      "cost_sensitivity": [
+        {
+          "cost": "低",
+          "n": 15,
+          "mean_return": -0.00010686743590677672,
+          "hit_rate": 0.5333333333333333,
+          "median_return": 0.002387951057190252
+        },
+        {
+          "cost": "基准",
+          "n": 15,
+          "mean_return": -0.002304765230134816,
+          "hit_rate": 0.5333333333333333,
+          "median_return": 0.00018456932084420785
+        },
+        {
+          "cost": "高",
+          "n": 15,
+          "mean_return": -0.004497838745057758,
+          "hit_rate": 0.4666666666666667,
+          "median_return": -0.0020139760992089473
+        }
+      ],
+      "grade": "样本不足"
+    },
+    {
+      "name": "触及布林下轨",
+      "side": 1,
+      "hold_days": 3,
+      "train_n": 12,
+      "train_mean": 0.005306396970984968,
+      "validation_n": 2,
+      "validation_mean": 0.028774483858543864,
+      "holdout_n": 6,
+      "holdout_mean": -0.028608634921489313,
+      "holdout_audit": "未通过",
+      "all_n": 20,
+      "stability": {
+        "label": "多数为正",
+        "positive_folds": 2,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 4,
+            "n": 4,
+            "mean": -0.01425413094099881,
+            "median": -0.012489283388064931,
+            "hit_rate": 0.25
+          },
+          {
+            "start": 4,
+            "end": 9,
+            "n": 5,
+            "mean": 0.008633346863148627,
+            "median": 0.005672110682877873,
+            "hit_rate": 0.6
+          },
+          {
+            "start": 9,
+            "end": 14,
+            "n": 5,
+            "mean": 0.02701510416343189,
+            "median": 0.020519786366982817,
+            "hit_rate": 0.8
+          }
+        ]
+      },
+      "full_stability": {
+        "label": "多数为正",
+        "positive_folds": 2,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 6,
+            "n": 6,
+            "mean": 8.05921055971696e-05,
+            "median": -0.012489283388064931,
+            "hit_rate": 0.3333333333333333
+          },
+          {
+            "start": 6,
+            "end": 13,
+            "n": 7,
+            "mean": 0.014317484624048788,
+            "median": 0.01434843390283791,
+            "hit_rate": 0.7142857142857143
+          },
+          {
+            "start": 13,
+            "end": 20,
+            "n": 7,
+            "mean": -0.02159028902313615,
+            "median": -0.012377698267625692,
+            "hit_rate": 0.2857142857142857
+          }
+        ]
+      },
+      "cost_sensitivity": [
+        {
+          "cost": "低",
+          "n": 14,
+          "mean_return": 0.010881031466207256,
+          "hit_rate": 0.5714285714285714,
+          "median_return": 0.012235299808532218
+        },
+        {
+          "cost": "基准",
+          "n": 14,
+          "mean_return": 0.008658980812064811,
+          "hit_rate": 0.5714285714285714,
+          "median_return": 0.010010272292857891
+        },
+        {
+          "cost": "高",
+          "n": 14,
+          "mean_return": 0.006441807451586298,
+          "hit_rate": 0.5714285714285714,
+          "median_return": 0.007790128604914348
+        }
+      ],
+      "grade": "样本不足"
+    },
+    {
+      "name": "触及布林下轨",
+      "side": 1,
+      "hold_days": 5,
+      "train_n": 11,
+      "train_mean": -0.00571567840445801,
+      "validation_n": 2,
+      "validation_mean": 0.06192044857398471,
+      "holdout_n": 5,
+      "holdout_mean": -0.012819880868796329,
+      "holdout_audit": "未通过",
+      "all_n": 18,
+      "stability": {
+        "label": "多数为正",
+        "positive_folds": 2,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 4,
+            "n": 4,
+            "mean": -0.00353747735924001,
+            "median": 0.01130703680032663,
+            "hit_rate": 0.75
+          },
+          {
+            "start": 4,
+            "end": 8,
+            "n": 4,
+            "mean": 0.009395564452370164,
+            "median": 0.011201739933277721,
+            "hit_rate": 0.5
+          },
+          {
+            "start": 8,
+            "end": 13,
+            "n": 5,
+            "mean": 0.00750721726528214,
+            "median": 0.05071450258700705,
+            "hit_rate": 0.6
+          }
+        ]
+      },
+      "full_stability": {
+        "label": "多数为正",
+        "positive_folds": 2,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 6,
+            "n": 6,
+            "mean": 0.00017147808432752912,
+            "median": 0.01130703680032663,
+            "hit_rate": 0.6666666666666666
+          },
+          {
+            "start": 6,
+            "end": 12,
+            "n": 6,
+            "mean": 0.0015375106009931823,
+            "median": 0.011201739933277721,
+            "hit_rate": 0.5
+          },
+          {
+            "start": 12,
+            "end": 18,
+            "n": 6,
+            "mean": -0.0022308169594957663,
+            "median": 0.007571203412248095,
+            "hit_rate": 0.5
+          }
+        ]
+      },
+      "cost_sensitivity": [
+        {
+          "cost": "低",
+          "n": 13,
+          "mean_return": 0.006903186415073464,
+          "hit_rate": 0.6153846153846154,
+          "median_return": 0.021138716578169126
+        },
+        {
+          "cost": "基准",
+          "n": 13,
+          "mean_return": 0.004689879592225486,
+          "hit_rate": 0.6153846153846154,
+          "median_return": 0.01889411817092479
+        },
+        {
+          "cost": "高",
+          "n": 13,
+          "mean_return": 0.0024814308707548425,
+          "hit_rate": 0.6153846153846154,
+          "median_return": 0.016654446548571178
+        }
+      ],
+      "grade": "样本不足"
+    },
+    {
+      "name": "触及布林上轨",
+      "side": -1,
+      "hold_days": 1,
+      "train_n": 17,
+      "train_mean": -0.012857721797293078,
+      "validation_n": 7,
+      "validation_mean": -0.017139972744126927,
+      "holdout_n": 1,
+      "holdout_mean": -0.07322682255845955,
+      "holdout_audit": "样本不足",
+      "all_n": 26,
+      "stability": {
+        "label": "多数为负",
+        "positive_folds": 0,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 8,
+            "n": 8,
+            "mean": -0.008823036387447976,
+            "median": -0.0033770667357290937,
+            "hit_rate": 0.5
+          },
+          {
+            "start": 8,
+            "end": 16,
+            "n": 8,
+            "mean": -0.014263382365408118,
+            "median": -0.002064171576302308,
+            "hit_rate": 0.375
+          },
+          {
+            "start": 16,
+            "end": 25,
+            "n": 9,
+            "mean": -0.017481126461641586,
+            "median": -0.021222960699431158,
+            "hit_rate": 0.3333333333333333
+          }
+        ]
+      },
+      "full_stability": {
+        "label": "多数为负",
+        "positive_folds": 0,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 8,
+            "n": 8,
+            "mean": -0.008823036387447976,
+            "median": -0.0033770667357290937,
+            "hit_rate": 0.5
+          },
+          {
+            "start": 8,
+            "end": 17,
+            "n": 9,
+            "mean": -0.016444108828266503,
+            "median": -0.0036956096587507856,
+            "hit_rate": 0.3333333333333333
+          },
+          {
+            "start": 17,
+            "end": 26,
+            "n": 9,
+            "mean": -0.021851893353566697,
+            "median": -0.021222960699431158,
+            "hit_rate": 0.3333333333333333
+          }
+        ]
+      },
+      "cost_sensitivity": [
+        {
+          "cost": "低",
+          "n": 25,
+          "mean_return": -0.012580859527104922,
+          "hit_rate": 0.44,
+          "median_return": -0.0025956096587507853
+        },
+        {
+          "cost": "基准",
+          "n": 25,
+          "mean_return": -0.013680859527104922,
+          "hit_rate": 0.4,
+          "median_return": -0.0036956096587507856
+        },
+        {
+          "cost": "高",
+          "n": 25,
+          "mean_return": -0.014780859527104919,
+          "hit_rate": 0.32,
+          "median_return": -0.004795609658750786
+        }
+      ],
+      "grade": "不利"
+    },
+    {
+      "name": "触及布林上轨",
+      "side": -1,
+      "hold_days": 3,
+      "train_n": 13,
+      "train_mean": -0.03980746601260239,
+      "validation_n": 6,
+      "validation_mean": -0.05285684679666935,
+      "holdout_n": 1,
+      "holdout_mean": -0.10348817056396162,
+      "holdout_audit": "样本不足",
+      "all_n": 21,
+      "stability": {
+        "label": "多数为负",
+        "positive_folds": 0,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 6,
+            "n": 6,
+            "mean": -0.06413773778780335,
+            "median": -0.021070449454846117,
+            "hit_rate": 0.16666666666666666
+          },
+          {
+            "start": 6,
+            "end": 13,
+            "n": 7,
+            "mean": -0.018952947348144424,
+            "median": -0.02161767361572183,
+            "hit_rate": 0.42857142857142855
+          },
+          {
+            "start": 13,
+            "end": 20,
+            "n": 7,
+            "mean": -0.04324813816337233,
+            "median": -0.05400862086309229,
+            "hit_rate": 0.2857142857142857
+          }
+        ]
+      },
+      "full_stability": {
+        "label": "多数为负",
+        "positive_folds": 0,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 7,
+            "n": 7,
+            "mean": -0.059603064249726764,
+            "median": -0.021519423034573847,
+            "hit_rate": 0.14285714285714285
+          },
+          {
+            "start": 7,
+            "end": 14,
+            "n": 7,
+            "mean": -0.022040604182690857,
+            "median": -0.02161767361572183,
+            "hit_rate": 0.42857142857142855
+          },
+          {
+            "start": 14,
+            "end": 21,
+            "n": 7,
+            "mean": -0.050316645263496516,
+            "median": -0.05891327347944705,
+            "hit_rate": 0.2857142857142857
+          }
+        ]
+      },
+      "cost_sensitivity": [
+        {
+          "cost": "低",
+          "n": 20,
+          "mean_return": -0.03991170126537187,
+          "hit_rate": 0.3,
+          "median_return": -0.025566918082393374
+        },
+        {
+          "cost": "基准",
+          "n": 20,
+          "mean_return": -0.04101170126537187,
+          "hit_rate": 0.3,
+          "median_return": -0.026666918082393375
+        },
+        {
+          "cost": "高",
+          "n": 20,
+          "mean_return": -0.042111701265371865,
+          "hit_rate": 0.3,
+          "median_return": -0.02776691808239337
+        }
+      ],
+      "grade": "不利"
+    },
+    {
+      "name": "触及布林上轨",
+      "side": -1,
+      "hold_days": 5,
+      "train_n": 11,
+      "train_mean": -0.04409168448111325,
+      "validation_n": 6,
+      "validation_mean": -0.0398188454701998,
+      "holdout_n": 1,
+      "holdout_mean": -0.06015942228335632,
+      "holdout_audit": "样本不足",
+      "all_n": 19,
+      "stability": {
+        "label": "多数为负",
+        "positive_folds": 0,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 6,
+            "n": 6,
+            "mean": -0.05004669601607467,
+            "median": -0.038571027897005145,
+            "hit_rate": 0.3333333333333333
+          },
+          {
+            "start": 6,
+            "end": 12,
+            "n": 6,
+            "mean": -0.03811293731548512,
+            "median": -0.04606192123356508,
+            "hit_rate": 0.16666666666666666
+          },
+          {
+            "start": 12,
+            "end": 18,
+            "n": 6,
+            "mean": -0.06189167878582966,
+            "median": -0.054088958831901096,
+            "hit_rate": 0.3333333333333333
+          }
+        ]
+      },
+      "full_stability": {
+        "label": "多数为负",
+        "positive_folds": 0,
+        "total_folds": 3,
+        "folds": [
+          {
+            "start": 0,
+            "end": 6,
+            "n": 6,
+            "mean": -0.05004669601607467,
+            "median": -0.038571027897005145,
+            "hit_rate": 0.3333333333333333
+          },
+          {
+            "start": 6,
+            "end": 12,
+            "n": 6,
+            "mean": -0.03811293731548512,
+            "median": -0.04606192123356508,
+            "hit_rate": 0.16666666666666666
+          },
+          {
+            "start": 12,
+            "end": 19,
+            "n": 7,
+            "mean": -0.061644213571190605,
+            "median": -0.06015942228335632,
+            "hit_rate": 0.2857142857142857
+          }
+        ]
+      },
+      "cost_sensitivity": [
+        {
+          "cost": "低",
+          "n": 18,
+          "mean_return": -0.048917104039129806,
+          "hit_rate": 0.2777777777777778,
+          "median_return": -0.044961921233565086
+        },
+        {
+          "cost": "基准",
+          "n": 18,
+          "mean_return": -0.05001710403912982,
+          "hit_rate": 0.2777777777777778,
+          "median_return": -0.04606192123356508
+        },
+        {
+          "cost": "高",
+          "n": 18,
+          "mean_return": -0.05111710403912981,
+          "hit_rate": 0.2777777777777778,
+          "median_return": -0.04716192123356508
+        }
+      ],
+      "grade": "不利"
+    }
+  ],
+  "candidates": [],
+  "observations": [],
+  "holdout_passed_observations": [],
+  "holdout_failed_observations": [],
+  "report": "🔬 世纪华通(002602) 稳健回测/策略研究\n样本：2023-08-21 ~ 2026-09-24（750根日K）\n执行：收盘确认→次日开盘；成本为研究假设：买入0.12%/卖出0.17%（非账户实际费率）。\n买入栏是买入后净收益；卖出栏是卖出后持币相对继续持有的超额。\n\n**一、独立事件回测**\n| 规则 | 方向 | 持有 | n | 胜率 | 均值 | 中位数 |\n|---|---|---:|---:|---:|---:|---:|\n| MA5/10金叉 | 买 | 1日 | 36 | 39% | -0.35% | -0.29% |\n| MA5/10金叉 | 买 | 3日 | 36 | 58% | +1.10% | +0.31% |\n| MA5/10金叉 | 买 | 5日 | 36 | 56% | +1.76% | +0.36% |\n| MA5/10金叉 | 买 | 10日 | 30 | 57% | +3.59% | +0.63% |\n| MA5/10死叉 | 卖 | 1日 | 36 | 44% | -0.22% | -0.17% |\n| MA5/10死叉 | 卖 | 3日 | 36 | 25% | -1.90% | -2.54% |\n| MA5/10死叉 | 卖 | 5日 | 36 | 44% | -1.17% | -0.82% |\n| MA5/10死叉 | 卖 | 10日 | 30 | 40% | -4.40% | -2.98% |\n| MACD金叉 | 买 | 1日 | 25 | 52% | +0.56% | +0.01% |\n| MACD金叉 | 买 | 3日 | 25 | 64% | +1.62% | +1.85% |\n| MACD金叉 | 买 | 5日 | 25 | 48% | +1.17% | -1.00% |\n| MACD金叉 | 买 | 10日 | 22 | 55% | +2.67% | +1.28% |\n| MACD死叉 | 卖 | 1日 | 25 | 48% | +0.28% | -0.30% |\n| MACD死叉 | 卖 | 3日 | 24 | 38% | -1.76% | -2.15% |\n| MACD死叉 | 卖 | 5日 | 24 | 46% | -2.42% | -1.93% |\n| MACD死叉 | 卖 | 10日 | 23 | 26% | -6.16% | -5.47% |\n| RSI超卖(<30) | 买 | 1日 | 8 | 62% | +1.03% | +1.37% |\n| RSI超卖(<30) | 买 | 3日 | 6 | 50% | -0.69% | +0.50% |\n| RSI超卖(<30) | 买 | 5日 | 6 | 67% | +0.87% | +1.38% |\n| RSI超卖(<30) | 买 | 10日 | 6 | 67% | +3.39% | +5.54% |\n| RSI超买(>70) | 卖 | 1日 | 16 | 38% | -0.60% | -2.21% |\n| RSI超买(>70) | 卖 | 3日 | 16 | 56% | +0.02% | +0.10% |\n| RSI超买(>70) | 卖 | 5日 | 14 | 36% | -2.21% | -2.52% |\n| RSI超买(>70) | 卖 | 10日 | 12 | 50% | -2.84% | -0.29% |\n| KDJ低位金叉(K<50) | 买 | 1日 | 38 | 42% | -0.51% | -0.72% |\n| KDJ低位金叉(K<50) | 买 | 3日 | 36 | 44% | +0.01% | -0.72% |\n| KDJ低位金叉(K<50) | 买 | 5日 | 34 | 44% | +0.29% | -0.61% |\n| KDJ低位金叉(K<50) | 买 | 10日 | 29 | 45% | +0.55% | -0.62% |\n| KDJ高位死叉(K>50) | 卖 | 1日 | 38 | 45% | -0.06% | -0.30% |\n| KDJ高位死叉(K>50) | 卖 | 3日 | 36 | 50% | -1.11% | -0.10% |\n| KDJ高位死叉(K>50) | 卖 | 5日 | 33 | 48% | -2.22% | -0.17% |\n| KDJ高位死叉(K>50) | 卖 | 10日 | 27 | 52% | -3.08% | +0.08% |\n| 触及布林下轨 | 买 | 1日 | 21 | 43% | -0.78% | -0.29% |\n| 触及布林下轨 | 买 | 3日 | 20 | 45% | -0.25% | -0.87% |\n| 触及布林下轨 | 买 | 5日 | 18 | 56% | -0.02% | +1.13% |\n| 触及布林下轨 | 买 | 10日 | 16 | 56% | +1.55% | +1.22% |\n| 触及布林上轨 | 卖 | 1日 | 26 | 38% | -1.60% | -0.53% |\n| 触及布林上轨 | 卖 | 3日 | 21 | 29% | -4.40% | -3.17% |\n| 触及布林上轨 | 卖 | 5日 | 19 | 26% | -5.06% | -4.82% |\n| 触及布林上轨 | 卖 | 10日 | 16 | 38% | -5.00% | -5.07% |\n\n**二、训练/验证/最终留出检验**\n按信号日期前60%训练、中间20%验证、后20%最终留出；训练/验证之间及验证/留出之间各留10个交易日。\n同一持有期内只保留首个可执行事件，避免重叠持仓被重复计样本。\n| 规则 | 持有 | 训练 n/均值 | 验证 n/均值 | 留出 n/均值 | 判定 |\n|---|---:|---:|---:|---:|---|\n| MA5/10金叉 | 1日 | 21 / -0.46% | 6 / -1.77% | 7 / +0.87% (通过) | 不利 |\n| MA5/10金叉 | 3日 | 20 / +0.91% | 6 / +2.06% | 7 / -0.21% (未通过) | 观察·稳定性不足 |\n| MA5/10金叉 | 5日 | 20 / +1.35% | 6 / +1.32% | 7 / +1.37% (通过) | 观察·稳定性不足 |\n| MA5/10死叉 | 1日 | 20 / -0.41% | 6 / +1.29% | 7 / -0.24% (未通过) | 反转规则 |\n| MA5/10死叉 | 3日 | 20 / -2.13% | 6 / -1.60% | 7 / -0.43% (未通过) | 不利 |\n| MA5/10死叉 | 5日 | 20 / -2.34% | 6 / -0.73% | 7 / +3.74% (通过) | 不利 |\n| MACD金叉 | 1日 | 14 / +0.74% | 5 / -2.04% | 5 / +2.79% (通过) | 不稳定 |\n| MACD金叉 | 3日 | 13 / +2.13% | 5 / -1.79% | 5 / +3.42% (通过) | 不稳定 |\n| MACD金叉 | 5日 | 13 / +2.94% | 5 / -4.20% | 5 / +0.56% (通过) | 不稳定 |\n| MACD死叉 | 1日 | 13 / -0.42% | 6 / +3.49% | 5 / -0.78% (未通过) | 反转规则 |\n| MACD死叉 | 3日 | 12 / -3.45% | 5 / +0.74% | 5 / +1.80% (通过) | 反转规则 |\n| MACD死叉 | 5日 | 12 / -4.11% | 5 / -0.09% | 5 / +1.97% (通过) | 不利 |\n| RSI超卖(<30) | 1日 | 6 / +0.53% | 0 / — | 2 / +2.54% (样本不足) | 样本不足 |\n| RSI超卖(<30) | 3日 | 4 / -1.28% | 0 / — | 2 / +0.50% (样本不足) | 样本不足 |\n| RSI超卖(<30) | 5日 | 4 / -0.08% | 0 / — | 2 / +2.79% (样本不足) | 样本不足 |\n| RSI超买(>70) | 1日 | 9 / -0.00% | 5 / -1.70% | 1 / +1.70% (样本不足) | 不利 |\n| RSI超买(>70) | 3日 | 8 / +1.87% | 5 / -1.79% | 1 / +3.26% (样本不足) | 不稳定 |\n| RSI超买(>70) | 5日 | 7 / -0.55% | 4 / -4.43% | 1 / +7.20% (样本不足) | 样本不足 |\n| KDJ低位金叉(K<50) | 1日 | 23 / -0.34% | 6 / +0.11% | 8 / -1.55% (未通过) | 反转规则 |\n| KDJ低位金叉(K<50) | 3日 | 21 / +0.88% | 6 / -1.32% | 8 / -0.66% (未通过) | 不稳定 |\n| KDJ低位金叉(K<50) | 5日 | 20 / +0.52% | 6 / +0.41% | 7 / +0.16% (通过) | 观察·稳定性不足 |\n| KDJ高位死叉(K>50) | 1日 | 21 / +0.32% | 10 / -1.62% | 5 / +1.53% (通过) | 不稳定 |\n| KDJ高位死叉(K>50) | 3日 | 20 / -1.04% | 9 / -2.61% | 5 / +1.26% (通过) | 不利 |\n| KDJ高位死叉(K>50) | 5日 | 17 / -3.11% | 8 / -3.93% | 5 / +1.76% (通过) | 不利 |\n| 触及布林下轨 | 1日 | 13 / +0.12% | 2 / -2.51% | 6 / -2.14% (未通过) | 样本不足 |\n| 触及布林下轨 | 3日 | 12 / +0.53% | 2 / +2.88% | 6 / -2.86% (未通过) | 样本不足 |\n| 触及布林下轨 | 5日 | 11 / -0.57% | 2 / +6.19% | 5 / -1.28% (未通过) | 样本不足 |\n| 触及布林上轨 | 1日 | 17 / -1.29% | 7 / -1.71% | 1 / -7.32% (样本不足) | 不利 |\n| 触及布林上轨 | 3日 | 13 / -3.98% | 6 / -5.29% | 1 / -10.35% (样本不足) | 不利 |\n| 触及布林上轨 | 5日 | 11 / -4.41% | 6 / -3.98% | 1 / -6.02% (样本不足) | 不利 |\n\n**三、筛选结论**\n· 本轮没有研究观察规则同时通过验证、滚动折和成本敏感性门槛；最终留出只作独立审计。\n· 研究观察门槛：训练/验证均正、验证>0.3%；最终留出仅单独标记通过/未通过，滚动折和成本敏感性只使用留出前事件。\n· 研究观察不是生产候选；最终留出只作一次性核验，未用于挑选规则或持有期。\n· 同一持有期内只保留首个事件，避免重叠持仓被重复计样本。\n· 买入栏是买入后净收益；卖出栏是卖出后持币相对继续持有的超额，不假设无限卖空。\n· 本回测只评估技术信号，基本面、公告和游戏出海数据另行接入。\n· 限制：当前百分比成本模型未实现账户最低佣金，也未模拟停牌、涨跌停、成交量/整手/资金容量。"
+}

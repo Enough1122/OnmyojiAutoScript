@@ -1,3 +1,16 @@
+"""RETIRED legacy fixed-batch PR publisher.
+
+The durable queue and receipt-gated publishers are the only supported path:
+D:/Hermes/projects/github-tools/scripts/review_pool.py
+
+This historical script is intentionally disabled so it cannot publish against
+its frozen PR list or re-enable the old size/attention skip rules.
+"""
+raise SystemExit(
+    "RETIRED: use the durable queue via "
+    "D:/Hermes/projects/github-tools/scripts/review_pool.py"
+)
+
 import pathlib, json, urllib.request, urllib.error, time, re, os, sys
 
 TOKEN_PATH = r"C:\Users\admin\AppData\Local\hermes\.env"

@@ -1,0 +1,121 @@
+{
+ "rows": [
+  {
+   "id": "gemini-2.5",
+   "parts": {
+    "name": "Gemini 2.5",
+    "tag": ""
+   },
+   "name": "Gemini 2.5",
+   "pill": "Gemini 2.5"
+  },
+  {
+   "id": "gemini-2.5-flash",
+   "parts": {
+    "name": "Gemini 2.5 flash",
+    "tag": ""
+   },
+   "name": "Gemini 2.5 flash",
+   "pill": "Gemini 2.5 flash"
+  },
+  {
+   "id": "gemini-2.5-flash-preview",
+   "parts": {
+    "name": "Gemini 2.5 flash",
+    "tag": "Preview"
+   },
+   "name": "Gemini 2.5 flash",
+   "pill": "Gemini 2.5 flash"
+  },
+  {
+   "id": "deepseek-v4.1",
+   "parts": {
+    "name": "Deepseek V4.1",
+    "tag": ""
+   },
+   "name": "Deepseek V4.1",
+   "pill": "Deepseek V4.1"
+  },
+  {
+   "id": "deepseek-v4.1-flash",
+   "parts": {
+    "name": "Deepseek V4.1 Flash",
+    "tag": ""
+   },
+   "name": "Deepseek V4.1 Flash",
+   "pill": "Deepseek V4.1 Flash"
+  },
+  {
+   "id": "deepseek-flash",
+   "parts": {
+    "name": "DeepSeek V4.1 Flash",
+    "tag": ""
+   },
+   "name": "DeepSeek V4.1 Flash",
+   "pill": "DeepSeek V4.1 Flash"
+  },
+  {
+   "id": "qwen3.8-flash",
+   "parts": {
+    "name": "Qwen3.8 Flash",
+    "tag": ""
+   },
+   "name": "Qwen3.8 Flash",
+   "pill": "Qwen3.8 Flash"
+  },
+  {
+   "id": "qwen3.8",
+   "parts": {
+    "name": "Qwen3.8",
+    "tag": ""
+   },
+   "name": "Qwen3.8",
+   "pill": "Qwen3.8"
+  },
+  {
+   "id": "anthropic/claude-opus-4.8",
+   "parts": {
+    "name": "Opus 4.8",
+    "tag": ""
+   },
+   "name": "Opus 4.8",
+   "pill": "Opus 4.8"
+  },
+  {
+   "id": "anthropic/claude-opus-4.8-fast",
+   "parts": {
+    "name": "Opus 4.8",
+    "tag": "Fast"
+   },
+   "name": "Opus 4.8",
+   "pill": "Opus 4.8 · Fast"
+  },
+  {
+   "id": "qwen3.6-vl-plus",
+   "parts": {
+    "name": "Qwen3.6 Vl Plus",
+    "tag": ""
+   },
+   "name": "Qwen3.6 Vl Plus",
+   "pill": "Qwen3.6 Vl Plus"
+  },
+  {
+   "id": "zai/glm-5.2-air",
+   "parts": {
+    "name": "Glm 5.2 Air",
+    "tag": ""
+   },
+   "name": "Glm 5.2 Air",
+   "pill": "Glm 5.2 Air"
+  }
+ ],
+ "collisions": [
+  [
+   "Gemini 2.5 flash",
+   [
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-preview"
+   ]
+  ]
+ ]
+}

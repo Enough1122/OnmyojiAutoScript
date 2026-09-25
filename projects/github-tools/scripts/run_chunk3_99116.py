@@ -1,3 +1,13 @@
+"""RETIRED legacy fixed-batch PR publisher.
+
+Use the durable queue instead:
+D:/Hermes/projects/github-tools/scripts/review_pool.py
+"""
+raise SystemExit(
+    "RETIRED: use the durable queue via "
+    "D:/Hermes/projects/github-tools/scripts/review_pool.py"
+)
+
 import pathlib, json, urllib.request, urllib.error, time, re
 
 TOKEN_PATH = r"C:\Users\admin\AppData\Local\hermes\.env"

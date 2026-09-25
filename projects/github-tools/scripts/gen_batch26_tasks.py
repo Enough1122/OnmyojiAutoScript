@@ -25,7 +25,8 @@ for n_str, info in todo.items():
         '- 草稿(仅 v=DRAFT 时): C:\\Users\\admin\\AppData\\Local\\Temp\\opencode\\campaign\\%d.md\n'
         '- 预检(已跑,勿重跑): %s\n'
         '- 活检:先 gh api repos/NousResearch/hermes-agent/pulls/%d 确认仍 open 且非 draft;'
-        '已关/已有他人 review 或 issue 评论 → SKIP_STALE(note 写原因)\n'
+        '已有他人或我方 comment/review/inline 时必须先读作观点对照，attention 非空不跳过；'
+        '仅结论实质重复时静默，有独立新问题/反证/遗漏则照发\n'
         % (n, n, n, n, n, pre, n)))
 json.dump(tasks, open(OUT, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
 print('tasks:', len(tasks), 'total chars:', sum(len(t) for t in tasks))

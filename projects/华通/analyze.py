@@ -144,14 +144,17 @@ def generate_signal(klines, price_mode="off"):
     dif, dea, hist = macd(closes)
     metrics["dif"], metrics["dea"], metrics["hist"] = (dif[-1], dea[-1], hist[-1]) if dif else (None, None, None)
     if dif:
+        # MACD 交叉与红绿柱翻正是同一波动的重复表达；交叉计分，柱体只解释。
         if cross_up(dif, dea):
-            score += 1; reasons.append("MACD 金叉")
+            score += 1
+            reasons.append("MACD 金叉")
         if cross_down(dif, dea):
-            score -= 1; reasons.append("MACD 死叉")
+            score -= 1
+            reasons.append("MACD 死叉")
         if hist[-1] > 0 and hist[-2] <= 0:
-            score += 1; reasons.append("MACD 红柱翻正")
+            reasons.append("MACD 红柱翻正")
         if hist[-1] < 0 and hist[-2] >= 0:
-            score -= 1; reasons.append("MACD 绿柱翻负")
+            reasons.append("MACD 绿柱翻负")
         if dif[-1] > 0:
             score += 0.5 if hist[-1] > hist[-2] else 0
         else:

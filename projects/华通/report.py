@@ -10,8 +10,9 @@
   三段任一失败都静默降级,不阻断报告 —— 宁可少一段,不可整份消失。
 """
 import datetime
+from robust_backtest import research_state
 from stock_data import get_realtime, get_daily_kline, NAME, cross_check
-from analyze import generate_signal, direction_label
+from analyze import generate_signal
 from fundamentals import snapshot as fund_snapshot
 from news import line as news_line
 from corp_actions import line as corp_actions_line
@@ -52,37 +53,77 @@ def build_advice(d, price, m, inv):
 
     if d in ("+2", "+1"):
         if inv.get("bull_intact"):
-            return f"{loc};多头成立 —— 回踩 MA10({ma10:.2f}) 不破可持,跌破即失效离场。"
-        return (f"{loc};⚠️ 价格已在 MA10({ma10:.2f}) 下方 —— 多头信号按规则不成立,"
-                f"等站回 MA10 上方再谈。")
+            return f"{loc};技术面呈多头观察状态 —— 仅记录，不构成交易指令。"
+        return (f"{loc};⚠️ 技术面多头观察与价格位置冲突（现价在 MA10({ma10:.2f}) 下方），"
+                "仅记录，不构成交易指令。")
     if d in ("+0.5", "0"):
-        return (f"{loc};多空抵消/纠缠,方向未定 —— 等 MA5({ma5:.2f}) 与 MA10({ma10:.2f}) "
-                f"给出方向再动,别猜。")
-    return (f"{loc};反弹到 MA10({ma10:.2f})/MA20({ma20:.2f}) 是压力位,"
-            f"站不回 MA10 之前按弱势处理。")
+        return (f"{loc};多空抵消/纠缠，方向未定 —— 仅记录观察，不构成交易指令。")
+    return (f"{loc};技术面呈弱势观察状态，MA10({ma10:.2f})/MA20({ma20:.2f}) 是观察位，"
+            "不构成交易指令。")
 
 
 def signal_tag(d, price, m):
-    """方向标签 + 位置冲突标注。
-
-    评分是历史信号(过去趋势的残影),价格位置是当下事实,两者可以冲突。
-    冲突本身就是最有价值的信息 —— 不隐藏、也不强行对齐:两个"对齐"方案
-    (gate/add)都已被 compare_signals.py 的历史检验否掉(多头命中率反而下降)。"""
-    label = direction_label(d)
+    """方向标签只描述技术观察坐标，不输出买卖指令。"""
+    label = {
+        "+2": "🟢 技术偏多",
+        "+1": "🟢 技术偏多",
+        "+0.5": "🟡 技术略偏多",
+        "0": "⚪ 技术中性",
+        "-0.5": "🟠 技术略偏空",
+        "-1": "🔴 技术偏空",
+        "-2": "🔴 技术偏空",
+    }.get(d, "⚪ 技术中性")
     ma10 = m["ma10"]
     if d in ("+2", "+1") and price < ma10:
-        return f"{label} ⚠️已破 MA10"
+        return f"{label} ⚠️已破 MA10·非交易指令"
     if d in ("-2", "-1") and price > ma10:
-        return f"{label} ⚠️已上 MA10"
-    return label
+        return f"{label} ⚠️已上 MA10·非交易指令"
+    return f"{label}·观察·非交易指令"
+
+
+def research_digest(research_bars):
+    """从结构化研究状态生成小时报摘要；不解析 Markdown，也不回退旧快照。"""
+    try:
+        state = research_state(research_bars)
+        observations = state.get("holdout_failed_observations", [])
+        as_of = state.get("as_of") or (research_bars[-1]["date"] if research_bars else "未知")
+        sample_size = state.get("sample_size", len(research_bars))
+        if observations:
+            details = []
+            for row in observations:
+                detail = f"{row.get('name', '未命名')}/{row.get('hold_days', '?')}日（留出未通过）"
+                details.append(detail)
+            return (
+                f"📊 稳健回测({as_of}, {sample_size}根K): 研究观察留出未通过："
+                f"{'、'.join(details)}；仅作影子观察，不等于生产信号，不自动下单；"
+                "成本为研究假设，非账户实际费率。"
+            )
+        if state.get("observations"):
+            passed = "、".join(
+                f"{row.get('name', '未命名')}/{row.get('hold_days', '?')}日（留出通过）"
+                for row in state["observations"]
+            )
+            return (
+                f"📊 稳健回测({as_of}, {sample_size}根K): 研究观察：{passed}；"
+                "仅作影子观察，不等于生产信号，不自动下单；"
+                "成本为研究假设，非账户实际费率。"
+            )
+        return (
+            f"📊 稳健回测({as_of}, {sample_size}根K): 本轮研究观察名单为空；"
+            "技术评分不等于生产信号，仅作观察，不自动下单。"
+        )
+    except Exception:
+        return "📊 稳健回测暂不可用；本轮不引用旧快照，技术评分仅作观察。"
 
 
 def build_report():
     rt = get_realtime()
-    ks = get_daily_kline(120)
-    sig = generate_signal(ks)
-    m = sig["metrics"]
+    research_bars = get_daily_kline(750)
     state = session_state()
+    # 盘中/午休的最后一根日K可能仍在形成；正式技术信号只用上一根完整日K。
+    signal_bars = research_bars[-121:-1] if state in ("open", "break") and len(research_bars) > 1 else research_bars[-120:]
+    sig = generate_signal(signal_bars)
+    m = sig["metrics"]
 
     price = rt["price"]
     pct = rt["change_pct"]
@@ -138,8 +179,7 @@ def build_report():
         pass
 
     lines.append(f"💡 {advice}")
-    lines.append("📊 信号历史检验(2026-09-20 实测·190个交易日):多头后5日命中54%/均值-0.29%(n=37)、"
-                 "空头55%/-0.03%(n=50) —— 都不显著;信号是坐标,不是买卖依据。")
+    lines.append(research_digest(research_bars))
     lines.append("⚠️ 自动化分析仅供参考，不构成投资建议。")
     return "\n".join(lines)
 

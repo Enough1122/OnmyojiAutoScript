@@ -1,0 +1,1391 @@
+﻿2026-09-25T04:18:21.2941540Z Current runner version: '2.337.0'
+2026-09-25T04:18:21.2962810Z ##[group]Runner Image Provisioner
+2026-09-25T04:18:21.2963680Z Hosted Compute Agent
+2026-09-25T04:18:21.2964080Z Version: 20260828.587
+2026-09-25T04:18:21.2965220Z Commit: abac92662cab4cc7352de4f9f9d2e2419aad9c29
+2026-09-25T04:18:21.2965980Z Build Date: 2026-08-28T16:44:25Z
+2026-09-25T04:18:21.2966450Z Worker ID: {1d9e8b36-b8a2-4054-99ee-66d6d588ece0}
+2026-09-25T04:18:21.2966940Z Azure Region: westus
+2026-09-25T04:18:21.2967320Z ##[endgroup]
+2026-09-25T04:18:21.2968580Z ##[group]Operating System
+2026-09-25T04:18:21.2969220Z macOS
+2026-09-25T04:18:21.2969640Z 26.6.2
+2026-09-25T04:18:21.2970020Z 25G83
+2026-09-25T04:18:21.2970370Z ##[endgroup]
+2026-09-25T04:18:21.2970740Z ##[group]Runner Image
+2026-09-25T04:18:21.2971140Z Image: macos-26-arm64
+2026-09-25T04:18:21.2972140Z Version: 20260907.0351.1
+2026-09-25T04:18:21.2973240Z Included Software: https://github.com/actions/runner-images/blob/macos-26-arm64/20260907.0351/images/macos/macos-26-arm64-Readme.md
+2026-09-25T04:18:21.2974520Z Image Release: https://github.com/actions/runner-images/releases/tag/macos-26-arm64%2F20260907.0351
+2026-09-25T04:18:21.2975230Z ##[endgroup]
+2026-09-25T04:18:21.2976100Z ##[group]GITHUB_TOKEN Permissions
+2026-09-25T04:18:21.2977630Z Contents: read
+2026-09-25T04:18:21.2978010Z Metadata: read
+2026-09-25T04:18:21.2978380Z ##[endgroup]
+2026-09-25T04:18:21.2980130Z Secret source: Actions
+2026-09-25T04:18:21.2980770Z Cache mode: write
+2026-09-25T04:18:21.2981470Z Prepare workflow directory
+2026-09-25T04:18:21.3288500Z Prepare all required actions
+2026-09-25T04:18:21.3327460Z Getting action download info
+2026-09-25T04:18:21.6263150Z Download action repository 'actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd' (SHA:de0fac2e4500dabe0009e67214ff5f5447ce83dd)
+2026-09-25T04:18:22.0648350Z Uses: NousResearch/hermes-agent/.github/workflows/tests-os.yml@refs/pull/122200/merge (91510e491112951231adc9a828eb9c36cc6e9de1)
+2026-09-25T04:18:22.0652210Z ##[group] Inputs
+2026-09-25T04:18:22.0653590Z   desktop_updater: false
+2026-09-25T04:18:22.0654070Z ##[endgroup]
+2026-09-25T04:18:22.0654540Z Complete job name: OS-specific tests / macOS-only tests
+2026-09-25T04:18:22.1344840Z ##[group]Run actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+2026-09-25T04:18:22.1345730Z with:
+2026-09-25T04:18:22.1346150Z   repository: NousResearch/hermes-agent
+2026-09-25T04:18:22.1349220Z   token: ***
+2026-09-25T04:18:22.1349650Z   ssh-strict: true
+2026-09-25T04:18:22.1352080Z   ssh-user: git
+2026-09-25T04:18:22.1352540Z   persist-credentials: true
+2026-09-25T04:18:22.1353220Z   clean: true
+2026-09-25T04:18:22.1354020Z   sparse-checkout-cone-mode: true
+2026-09-25T04:18:22.1355030Z   fetch-depth: 1
+2026-09-25T04:18:22.1355510Z   fetch-tags: false
+2026-09-25T04:18:22.1356460Z   show-progress: true
+2026-09-25T04:18:22.1356840Z   lfs: false
+2026-09-25T04:18:22.1357200Z   submodules: false
+2026-09-25T04:18:22.1357630Z   set-safe-directory: true
+2026-09-25T04:18:22.1358540Z ##[endgroup]
+2026-09-25T04:18:22.6096030Z Syncing repository: NousResearch/hermes-agent
+2026-09-25T04:18:22.6097550Z ##[group]Getting Git version info
+2026-09-25T04:18:22.6098240Z Working directory is '/Users/runner/work/hermes-agent/hermes-agent'
+2026-09-25T04:18:22.6102370Z [command]/opt/homebrew/bin/git version
+2026-09-25T04:18:22.6679760Z git version 2.55.0
+2026-09-25T04:18:22.6696350Z ##[endgroup]
+2026-09-25T04:18:22.6704220Z Copying '/Users/runner/.gitconfig' to '/Users/runner/work/_temp/9883f791-3fab-4e23-a83c-284430d43244/.gitconfig'
+2026-09-25T04:18:22.6718410Z Temporarily overriding HOME='/Users/runner/work/_temp/9883f791-3fab-4e23-a83c-284430d43244' before making global git config changes
+2026-09-25T04:18:22.6719830Z Adding repository directory to the temporary git global config as a safe directory
+2026-09-25T04:18:22.6728410Z [command]/opt/homebrew/bin/git config --global --add safe.directory /Users/runner/work/hermes-agent/hermes-agent
+2026-09-25T04:18:22.6872490Z Deleting the contents of '/Users/runner/work/hermes-agent/hermes-agent'
+2026-09-25T04:18:22.6877520Z ##[group]Initializing the repository
+2026-09-25T04:18:22.6880910Z [command]/opt/homebrew/bin/git init /Users/runner/work/hermes-agent/hermes-agent
+2026-09-25T04:18:22.7141990Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-09-25T04:18:22.7143290Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-09-25T04:18:22.7144250Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-09-25T04:18:22.7144910Z hint: call:
+2026-09-25T04:18:22.7145300Z hint:
+2026-09-25T04:18:22.7145730Z hint: 	git config --global init.defaultBranch <name>
+2026-09-25T04:18:22.7146240Z hint:
+2026-09-25T04:18:22.7146750Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-09-25T04:18:22.7147510Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-09-25T04:18:22.7148130Z hint:
+2026-09-25T04:18:22.7148520Z hint: 	git branch -m <name>
+2026-09-25T04:18:22.7149160Z hint:
+2026-09-25T04:18:22.7149810Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-09-25T04:18:22.7150670Z Initialized empty Git repository in /Users/runner/work/hermes-agent/hermes-agent/.git/
+2026-09-25T04:18:22.7159950Z [command]/opt/homebrew/bin/git remote add origin https://github.com/NousResearch/hermes-agent
+2026-09-25T04:18:22.7244310Z ##[endgroup]
+2026-09-25T04:18:22.7245030Z ##[group]Disabling automatic garbage collection
+2026-09-25T04:18:22.7251920Z [command]/opt/homebrew/bin/git config --local gc.auto 0
+2026-09-25T04:18:22.7323720Z ##[endgroup]
+2026-09-25T04:18:22.7325480Z ##[group]Setting up auth
+2026-09-25T04:18:22.7326750Z Removing SSH command configuration
+2026-09-25T04:18:22.7328720Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-09-25T04:18:22.7408850Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-09-25T04:18:22.8467830Z Removing HTTP extra header
+2026-09-25T04:18:22.8472400Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-09-25T04:18:22.8557550Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-09-25T04:18:22.9938230Z Removing includeIf entries pointing to credentials config files
+2026-09-25T04:18:23.0042290Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-09-25T04:18:23.0290210Z [command]/opt/homebrew/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-09-25T04:18:23.1348160Z [command]/opt/homebrew/bin/git config --file /Users/runner/work/_temp/git-credentials-c605e683-e4ae-43ae-8bb0-1baa0f05134f.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-09-25T04:18:23.1528380Z [command]/opt/homebrew/bin/git config --local includeIf.gitdir:/Users/runner/work/hermes-agent/hermes-agent/.git.path /Users/runner/work/_temp/git-credentials-c605e683-e4ae-43ae-8bb0-1baa0f05134f.config
+2026-09-25T04:18:23.1616970Z [command]/opt/homebrew/bin/git config --local includeIf.gitdir:/Users/runner/work/hermes-agent/hermes-agent/.git/worktrees/*.path /Users/runner/work/_temp/git-credentials-c605e683-e4ae-43ae-8bb0-1baa0f05134f.config
+2026-09-25T04:18:23.1762700Z [command]/opt/homebrew/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-c605e683-e4ae-43ae-8bb0-1baa0f05134f.config
+2026-09-25T04:18:23.1806080Z [command]/opt/homebrew/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-c605e683-e4ae-43ae-8bb0-1baa0f05134f.config
+2026-09-25T04:18:23.2046830Z ##[endgroup]
+2026-09-25T04:18:23.2048700Z ##[group]Fetching the repository
+2026-09-25T04:18:23.2067140Z [command]/opt/homebrew/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +91510e491112951231adc9a828eb9c36cc6e9de1:refs/remotes/pull/122200/merge
+2026-09-25T04:18:35.4980180Z From https://github.com/NousResearch/hermes-agent
+2026-09-25T04:18:35.4984110Z  * [new ref]           91510e491112951231adc9a828eb9c36cc6e9de1 -> pull/122200/merge
+2026-09-25T04:18:35.5055550Z ##[endgroup]
+2026-09-25T04:18:35.5057690Z ##[group]Determining the checkout info
+2026-09-25T04:18:35.5058590Z ##[endgroup]
+2026-09-25T04:18:35.5099430Z [command]/opt/homebrew/bin/git sparse-checkout disable
+2026-09-25T04:18:35.5253490Z [command]/opt/homebrew/bin/git config --local --unset-all extensions.worktreeConfig
+2026-09-25T04:18:35.5366950Z ##[group]Checking out the ref
+2026-09-25T04:18:35.5371850Z [command]/opt/homebrew/bin/git checkout --progress --force refs/remotes/pull/122200/merge
+2026-09-25T04:18:36.6498430Z Updating files:  31% (5014/16078)
+2026-09-25T04:18:36.6737910Z Updating files:  32% (5145/16078)
+2026-09-25T04:18:36.7091200Z Updating files:  33% (5306/16078)
+2026-09-25T04:18:36.7365890Z Updating files:  34% (5467/16078)
+2026-09-25T04:18:36.7889570Z Updating files:  35% (5628/16078)
+2026-09-25T04:18:36.8307380Z Updating files:  36% (5789/16078)
+2026-09-25T04:18:36.8671310Z Updating files:  37% (5949/16078)
+2026-09-25T04:18:36.9135640Z Updating files:  38% (6110/16078)
+2026-09-25T04:18:36.9462520Z Updating files:  39% (6271/16078)
+2026-09-25T04:18:36.9878570Z Updating files:  40% (6432/16078)
+2026-09-25T04:18:37.0159120Z Updating files:  41% (6592/16078)
+2026-09-25T04:18:37.0488400Z Updating files:  42% (6753/16078)
+2026-09-25T04:18:37.0834990Z Updating files:  43% (6914/16078)
+2026-09-25T04:18:37.1394870Z Updating files:  44% (7075/16078)
+2026-09-25T04:18:37.1787580Z Updating files:  45% (7236/16078)
+2026-09-25T04:18:37.2023560Z Updating files:  46% (7396/16078)
+2026-09-25T04:18:37.2243100Z Updating files:  47% (7557/16078)
+2026-09-25T04:18:37.2912710Z Updating files:  48% (7718/16078)
+2026-09-25T04:18:37.3233730Z Updating files:  49% (7879/16078)
+2026-09-25T04:18:37.3608350Z Updating files:  50% (8039/16078)
+2026-09-25T04:18:37.4037270Z Updating files:  51% (8200/16078)
+2026-09-25T04:18:37.4333470Z Updating files:  52% (8361/16078)
+2026-09-25T04:18:37.4996580Z Updating files:  53% (8522/16078)
+2026-09-25T04:18:37.5309470Z Updating files:  54% (8683/16078)
+2026-09-25T04:18:37.5539400Z Updating files:  55% (8843/16078)
+2026-09-25T04:18:37.5641280Z Updating files:  56% (9004/16078)
+2026-09-25T04:18:37.5842640Z Updating files:  56% (9054/16078)
+2026-09-25T04:18:37.6086780Z Updating files:  57% (9165/16078)
+2026-09-25T04:18:37.6323750Z Updating files:  58% (9326/16078)
+2026-09-25T04:18:37.6686530Z Updating files:  59% (9487/16078)
+2026-09-25T04:18:37.7003050Z Updating files:  60% (9647/16078)
+2026-09-25T04:18:37.7229640Z Updating files:  61% (9808/16078)
+2026-09-25T04:18:37.7497430Z Updating files:  62% (9969/16078)
+2026-09-25T04:18:37.8009470Z Updating files:  63% (10130/16078)
+2026-09-25T04:18:37.8413550Z Updating files:  64% (10290/16078)
+2026-09-25T04:18:37.8673580Z Updating files:  65% (10451/16078)
+2026-09-25T04:18:37.8996570Z Updating files:  66% (10612/16078)
+2026-09-25T04:18:37.9258380Z Updating files:  67% (10773/16078)
+2026-09-25T04:18:37.9625440Z Updating files:  68% (10934/16078)
+2026-09-25T04:18:37.9950240Z Updating files:  69% (11094/16078)
+2026-09-25T04:18:38.0244200Z Updating files:  70% (11255/16078)
+2026-09-25T04:18:38.0465140Z Updating files:  71% (11416/16078)
+2026-09-25T04:18:38.0733790Z Updating files:  72% (11577/16078)
+2026-09-25T04:18:38.0999510Z Updating files:  73% (11737/16078)
+2026-09-25T04:18:38.1337600Z Updating files:  74% (11898/16078)
+2026-09-25T04:18:38.1577710Z Updating files:  75% (12059/16078)
+2026-09-25T04:18:38.1832550Z Updating files:  76% (12220/16078)
+2026-09-25T04:18:38.2055200Z Updating files:  77% (12381/16078)
+2026-09-25T04:18:38.2283550Z Updating files:  78% (12541/16078)
+2026-09-25T04:18:38.2488080Z Updating files:  79% (12702/16078)
+2026-09-25T04:18:38.2779340Z Updating files:  80% (12863/16078)
+2026-09-25T04:18:38.3153340Z Updating files:  81% (13024/16078)
+2026-09-25T04:18:38.3392060Z Updating files:  82% (13184/16078)
+2026-09-25T04:18:38.3693230Z Updating files:  83% (13345/16078)
+2026-09-25T04:18:38.3974340Z Updating files:  84% (13506/16078)
+2026-09-25T04:18:38.4269770Z Updating files:  85% (13667/16078)
+2026-09-25T04:18:38.4627570Z Updating files:  86% (13828/16078)
+2026-09-25T04:18:38.4974160Z Updating files:  87% (13988/16078)
+2026-09-25T04:18:38.5313560Z Updating files:  88% (14149/16078)
+2026-09-25T04:18:38.5605710Z Updating files:  89% (14310/16078)
+2026-09-25T04:18:38.5713380Z Updating files:  89% (14403/16078)
+2026-09-25T04:18:38.6063360Z Updating files:  90% (14471/16078)
+2026-09-25T04:18:38.6404610Z Updating files:  91% (14631/16078)
+2026-09-25T04:18:38.6660230Z Updating files:  92% (14792/16078)
+2026-09-25T04:18:38.7029720Z Updating files:  93% (14953/16078)
+2026-09-25T04:18:38.7447140Z Updating files:  94% (15114/16078)
+2026-09-25T04:18:38.7876120Z Updating files:  95% (15275/16078)
+2026-09-25T04:18:38.8412610Z Updating files:  96% (15435/16078)
+2026-09-25T04:18:38.8921040Z Updating files:  97% (15596/16078)
+2026-09-25T04:18:38.9284760Z Updating files:  98% (15757/16078)
+2026-09-25T04:18:39.0434690Z Updating files:  99% (15918/16078)
+2026-09-25T04:18:39.0535220Z Updating files: 100% (16078/16078)
+2026-09-25T04:18:39.0612440Z Updating files: 100% (16078/16078), done.
+2026-09-25T04:18:39.0855780Z HEAD is now at 91510e49 Merge 7b1d169a968d23327e6ca6dac9d8786ab4be3f7d into 61c06ca3ceb9fc775f79377402ea56107c127d5b
+2026-09-25T04:18:39.0886660Z ##[endgroup]
+2026-09-25T04:18:39.1114100Z [command]/opt/homebrew/bin/git log -1 --format=%H
+2026-09-25T04:18:39.1236070Z 91510e491112951231adc9a828eb9c36cc6e9de1
+2026-09-25T04:18:39.1892540Z Prepare all required actions
+2026-09-25T04:18:39.1893030Z Getting action download info
+2026-09-25T04:18:39.3074230Z Download action repository 'actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9' (SHA:55cc8345863c7cc4c66a329aec7e433d2d1c52a9)
+2026-09-25T04:18:39.5763310Z ##[group]Run ./.github/actions/setup-pm
+2026-09-25T04:18:39.5763530Z with:
+2026-09-25T04:18:39.5774910Z   packages: ripgrep
+2026-09-25T04:18:39.5775260Z   extras: ["all", "telegram", "anthropic", "mistral", "fal", "modal", "daytona", "parallel-web"]
+2026-09-25T04:18:39.5775600Z   test-environment: true
+2026-09-25T04:18:39.5775780Z   prune-python-cache: true
+2026-09-25T04:18:39.5775940Z   toolchain: python
+2026-09-25T04:18:39.5776090Z   archive-inputs: false
+2026-09-25T04:18:39.5776240Z   cache: true
+2026-09-25T04:18:39.5776370Z   save-tools-cache: true
+2026-09-25T04:18:39.5776550Z   cache-python: true
+2026-09-25T04:18:39.5776700Z   save-python-cache: true
+2026-09-25T04:18:39.5776860Z   cache-node: true
+2026-09-25T04:18:39.5777060Z   save-node-cache: true
+2026-09-25T04:18:39.5777280Z   python-cache-dependency-glob: pyproject.toml
+uv.lock
+
+2026-09-25T04:18:39.5777570Z   node-cache-dependency-path: package-lock.json
+2026-09-25T04:18:39.5777810Z ##[endgroup]
+2026-09-25T04:18:39.5838680Z ##[start-action display=Read PM pins with the runner bootstrap Python;id=__self_2.prepare]
+2026-09-25T04:18:39.5880120Z ##[group]Run set -euo pipefail
+2026-09-25T04:18:39.5880400Z [36;1mset -euo pipefail[0m
+2026-09-25T04:18:39.5880690Z [36;1m# Windows provides python, not necessarily python3. The host resolver[0m
+2026-09-25T04:18:39.5881110Z [36;1m# in PM still selects ARM64 when this bootstrap Python runs under x64.[0m
+2026-09-25T04:18:39.5881530Z [36;1mif [ "$RUNNER_OS" = Windows ]; then bootstrap=python; else bootstrap=python3; fi[0m
+2026-09-25T04:18:39.5881980Z [36;1m"$bootstrap" -S "$_PM_ACTION/../../../scripts/ci/setup_toolchain.py" prepare \[0m
+2026-09-25T04:18:39.5882530Z [36;1m  --toolchain "$_PM_TOOLCHAIN" --extras "$_PM_EXTRAS" --packages "$_PM_PACKAGES" --home "$RUNNER_TEMP/setup-pm"[0m
+2026-09-25T04:18:39.5955200Z shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+2026-09-25T04:18:39.5956770Z env:
+2026-09-25T04:18:39.5957450Z   _PM_ACTION: /Users/runner/work/hermes-agent/hermes-agent/./.github/actions/setup-pm
+2026-09-25T04:18:39.5958310Z   _PM_TOOLCHAIN: python
+2026-09-25T04:18:39.5959120Z   _PM_EXTRAS: ["all", "telegram", "anthropic", "mistral", "fal", "modal", "daytona", "parallel-web"]
+2026-09-25T04:18:39.5960020Z   _PM_PACKAGES: ripgrep
+2026-09-25T04:18:39.5960430Z ##[endgroup]
+2026-09-25T04:18:40.1207880Z ##[end-action id=__self_2.prepare;outcome=success;conclusion=success;duration_ms=536]
+2026-09-25T04:18:40.1211890Z ##[start-action display=Cache verified PM tools;id=__self_2.tools-cache]
+2026-09-25T04:18:40.5022770Z ##[group]Run actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+2026-09-25T04:18:40.5036260Z with:
+2026-09-25T04:18:40.5036590Z   path: /Users/runner/work/_temp/setup-pm/tools
+2026-09-25T04:18:40.5037160Z   key: setup-pm-tools-v1-darwin-arm64-python-ripgrep-547947a22a39393621be79150a07d8d4c96142899a9a58a7b983c9c62f2ec0fb-
+2026-09-25T04:18:40.5037670Z   enableCrossOsArchive: false
+2026-09-25T04:18:40.5037910Z   fail-on-cache-miss: false
+2026-09-25T04:18:40.5038070Z   lookup-only: false
+2026-09-25T04:18:40.5038220Z   save-always: false
+2026-09-25T04:18:40.5038350Z env:
+2026-09-25T04:18:40.5038520Z   HERMES_HOME: /Users/runner/work/_temp/setup-pm
+2026-09-25T04:18:40.5038810Z   HERMES_RUNTIME_DIR: /Users/runner/work/_temp/setup-pm/tools
+2026-09-25T04:18:40.5039060Z   PYTHONUTF8: 1
+2026-09-25T04:18:40.5039200Z ##[endgroup]
+2026-09-25T04:18:40.9404780Z Cache not found for input keys: setup-pm-tools-v1-darwin-arm64-python-ripgrep-547947a22a39393621be79150a07d8d4c96142899a9a58a7b983c9c62f2ec0fb-
+2026-09-25T04:18:40.9417200Z ##[end-action id=__self_2.tools-cache;outcome=success;conclusion=success;duration_ms=820]
+2026-09-25T04:18:40.9420800Z ##[start-action display=Restore verified PM tools without saving;id=__self_2.tools-cache-restore]
+2026-09-25T04:18:40.9427330Z ##[end-action id=__self_2.tools-cache-restore;outcome=skipped;conclusion=skipped;duration_ms=0]
+2026-09-25T04:18:40.9430190Z ##[start-action display=Preserve and retrieve the pinned toolchain;id=__self_2.__run]
+2026-09-25T04:18:40.9433540Z ##[end-action id=__self_2.__run;outcome=skipped;conclusion=skipped;duration_ms=0]
+2026-09-25T04:18:40.9435880Z ##[start-action display=Install and verify tools through PM;id=__self_2.install]
+2026-09-25T04:18:40.9456560Z ##[group]Run "$_PM_BOOTSTRAP" -S "$_PM_ACTION/../../../scripts/ci/setup_toolchain.py" install \
+2026-09-25T04:18:40.9457110Z [36;1m"$_PM_BOOTSTRAP" -S "$_PM_ACTION/../../../scripts/ci/setup_toolchain.py" install \[0m
+2026-09-25T04:18:40.9457600Z [36;1m  --toolchain "$_PM_TOOLCHAIN" --packages "$_PM_PACKAGES" --home "$HERMES_HOME"[0m
+2026-09-25T04:18:40.9581390Z shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+2026-09-25T04:18:40.9581730Z env:
+2026-09-25T04:18:40.9581970Z   HERMES_HOME: /Users/runner/work/_temp/setup-pm
+2026-09-25T04:18:40.9582340Z   HERMES_RUNTIME_DIR: /Users/runner/work/_temp/setup-pm/tools
+2026-09-25T04:18:40.9582690Z   PYTHONUTF8: 1
+2026-09-25T04:18:40.9583020Z   _PM_ACTION: /Users/runner/work/hermes-agent/hermes-agent/./.github/actions/setup-pm
+2026-09-25T04:18:40.9583390Z   _PM_BOOTSTRAP: /opt/homebrew/bin/python3
+2026-09-25T04:18:40.9583630Z   _PM_TOOLCHAIN: python
+2026-09-25T04:18:40.9583810Z   _PM_PACKAGES: ripgrep
+2026-09-25T04:18:40.9583990Z ##[endgroup]
+2026-09-25T04:18:42.1480470Z   uv:  15.7%  4.0 MiB / 25.4 MiB
+2026-09-25T04:18:42.1688960Z   uv:  31.5%  8.0 MiB / 25.4 MiB
+2026-09-25T04:18:42.1885760Z   uv:  47.9%  12.2 MiB / 25.4 MiB
+2026-09-25T04:18:42.1937460Z   uv:  65.0%  16.5 MiB / 25.4 MiB
+2026-09-25T04:18:42.2043600Z   uv:  81.5%  20.7 MiB / 25.4 MiB
+2026-09-25T04:18:42.2443350Z   uv:  99.3%  25.2 MiB / 25.4 MiB
+2026-09-25T04:18:42.2595540Z   uv: 100.0%  25.4 MiB / 25.4 MiB
+2026-09-25T04:18:42.3015600Z   uv: 100.0%  25.4 MiB / 25.4 MiB
+2026-09-25T04:18:42.3019470Z   uv: unpacking
+2026-09-25T04:18:43.7001310Z   uv:  23.7%  4.0 MiB / 16.9 MiB
+2026-09-25T04:18:43.7304090Z   uv:  49.4%  8.3 MiB / 16.9 MiB
+2026-09-25T04:18:43.7507890Z   uv:  80.9%  13.7 MiB / 16.9 MiB
+2026-09-25T04:18:43.7718080Z   uv: 100.0%  16.9 MiB / 16.9 MiB
+2026-09-25T04:18:43.8120110Z   uv: 100.0%  16.9 MiB / 16.9 MiB
+2026-09-25T04:18:43.8187550Z   uv: unpacking
+2026-09-25T04:18:44.6228410Z   ripgrep: 100.0%  1.7 MiB / 1.7 MiB
+2026-09-25T04:18:44.6330050Z   ripgrep: 100.0%  1.7 MiB / 1.7 MiB
+2026-09-25T04:18:44.6336610Z   ripgrep: unpacking
+2026-09-25T04:18:44.7633750Z Preparing the isolated Hermes runtime…
+2026-09-25T04:18:44.9502890Z Using CPython 3.14.7 interpreter at: /Users/runner/work/_temp/setup-pm/tools/python-3.14.7+20260901-darwin-arm64/bin/python3
+2026-09-25T04:18:44.9505580Z Creating virtual environment at: f7cf1ccdd0264ad1b6f7411195b9d9ac
+2026-09-25T04:18:44.9506930Z Activate with: source f7cf1ccdd0264ad1b6f7411195b9d9ac/bin/activate
+2026-09-25T04:18:45.1388280Z Resolved 5 packages in 8ms
+2026-09-25T04:18:45.3807600Z Prepared 4 packages in 182ms
+2026-09-25T04:18:45.3924460Z Installed 4 packages in 3ms
+2026-09-25T04:18:45.8005810Z Bytecode compiled 57 files in 403ms
+2026-09-25T04:18:45.8107200Z  + packaging==26.0
+2026-09-25T04:18:45.8208890Z  + ruamel-yaml==0.18.16
+2026-09-25T04:18:45.8309690Z  + tomli-w==1.2.0
+2026-09-25T04:18:45.8412000Z  + truststore==0.10.4
+2026-09-25T04:18:47.0180220Z Using CPython 3.14.7 interpreter at: /Users/runner/work/_temp/setup-pm/tools/python-3.14.7+20260901-darwin-arm64/bin/python3
+2026-09-25T04:18:47.0282220Z Creating virtual environment at: python-3.14.7+20260901-darwin-arm64
+2026-09-25T04:18:47.0890320Z Activate with: source python-3.14.7+20260901-darwin-arm64/bin/activate
+2026-09-25T04:18:47.4150400Z Using Python 3.14.7 environment at: python-3.14.7+20260901-darwin-arm64
+2026-09-25T04:18:47.4298750Z Checked 0 packages in 181ms
+2026-09-25T04:18:47.4433790Z All installed packages are compatible
+2026-09-25T04:18:47.6826250Z PM toolchain ready: python 3.14.7+20260901, ripgrep 15.2.0, uv 0.12.3
+2026-09-25T04:18:47.7455360Z ##[end-action id=__self_2.install;outcome=success;conclusion=success;duration_ms=6798]
+2026-09-25T04:18:47.7463360Z ##[start-action display=Cache uv dependency downloads and builds;id=__self_2.python-cache]
+2026-09-25T04:18:47.9863160Z ##[group]Run actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+2026-09-25T04:18:47.9863670Z with:
+2026-09-25T04:18:47.9864110Z   path: /Users/runner/work/_temp/setup-pm/cache/uv
+2026-09-25T04:18:47.9864920Z   key: setup-pm-uv-v3-production-darwin-arm64-macOS-26.6.2-arm64-arm-64bit-Mach-O-3.14.7-7b6cd6a9c07bb474bb817fbf9f3d83c5f69b46bebb6eaa4ed8520795c5160806
+2026-09-25T04:18:47.9865970Z   restore-keys: setup-pm-uv-v3-production-darwin-arm64-macOS-26.6.2-arm64-arm-64bit-Mach-O-3.14.7-
+2026-09-25T04:18:47.9866510Z   enableCrossOsArchive: false
+2026-09-25T04:18:47.9866900Z   fail-on-cache-miss: false
+2026-09-25T04:18:47.9867140Z   lookup-only: false
+2026-09-25T04:18:47.9867430Z   save-always: false
+2026-09-25T04:18:47.9867700Z env:
+2026-09-25T04:18:47.9867980Z   HERMES_HOME: /Users/runner/work/_temp/setup-pm
+2026-09-25T04:18:47.9868500Z   HERMES_RUNTIME_DIR: /Users/runner/work/_temp/setup-pm/tools
+2026-09-25T04:18:47.9868900Z   PYTHONUTF8: 1
+2026-09-25T04:18:47.9869470Z   HERMES_PYTHON: /Users/runner/work/_temp/setup-pm/python/python-3.14.7+20260901-darwin-arm64/bin/python
+2026-09-25T04:18:47.9870060Z ##[endgroup]
+2026-09-25T04:18:48.4145020Z Cache not found for input keys: setup-pm-uv-v3-production-darwin-arm64-macOS-26.6.2-arm64-arm-64bit-Mach-O-3.14.7-7b6cd6a9c07bb474bb817fbf9f3d83c5f69b46bebb6eaa4ed8520795c5160806, setup-pm-uv-v3-production-darwin-arm64-macOS-26.6.2-arm64-arm-64bit-Mach-O-3.14.7-
+2026-09-25T04:18:48.4173620Z ##[end-action id=__self_2.python-cache;outcome=success;conclusion=success;duration_ms=670]
+2026-09-25T04:18:48.4176750Z ##[start-action display=Restore uv dependencies for an explicit save;id=__self_2.python-cache-restore]
+2026-09-25T04:18:48.4183590Z ##[end-action id=__self_2.python-cache-restore;outcome=skipped;conclusion=skipped;duration_ms=0]
+2026-09-25T04:18:48.4185130Z ##[start-action display=Register uv cache pruning;id=__self_2.__self]
+2026-09-25T04:18:48.4409400Z ##[group]Run ./.github/actions/setup-pm/prune
+2026-09-25T04:18:48.4420240Z with:
+2026-09-25T04:18:48.4420700Z   python: /Users/runner/work/_temp/setup-pm/python/python-3.14.7+20260901-darwin-arm64/bin/python
+2026-09-25T04:18:48.4421110Z   cache: /Users/runner/work/_temp/setup-pm/cache/uv
+2026-09-25T04:18:48.4421430Z   lock-source: /Users/runner/work/hermes-agent/hermes-agent
+2026-09-25T04:18:48.4421700Z env:
+2026-09-25T04:18:48.4421880Z   HERMES_HOME: /Users/runner/work/_temp/setup-pm
+2026-09-25T04:18:48.4422190Z   HERMES_RUNTIME_DIR: /Users/runner/work/_temp/setup-pm/tools
+2026-09-25T04:18:48.4422490Z   PYTHONUTF8: 1
+2026-09-25T04:18:48.4422880Z   HERMES_PYTHON: /Users/runner/work/_temp/setup-pm/python/python-3.14.7+20260901-darwin-arm64/bin/python
+2026-09-25T04:18:48.4423250Z ##[endgroup]
+2026-09-25T04:18:48.5869020Z ##[end-action id=__self_2.__self;outcome=success;conclusion=success;duration_ms=162]
+2026-09-25T04:18:48.5873830Z ##[start-action display=Require an npm dependency lock for caching;id=__self_2.__run_2]
+2026-09-25T04:18:48.5885760Z ##[end-action id=__self_2.__run_2;outcome=skipped;conclusion=skipped;duration_ms=0]
+2026-09-25T04:18:48.5890720Z ##[start-action display=Cache npm dependency downloads;id=__self_2.node-cache]
+2026-09-25T04:18:48.5900220Z ##[end-action id=__self_2.node-cache;outcome=skipped;conclusion=skipped;duration_ms=0]
+2026-09-25T04:18:48.5904870Z ##[start-action display=Restore npm dependencies for an explicit save;id=__self_2.node-cache-restore]
+2026-09-25T04:18:48.5919620Z ##[end-action id=__self_2.node-cache-restore;outcome=skipped;conclusion=skipped;duration_ms=0]
+2026-09-25T04:18:48.5926440Z ##[start-action display=Install the requested Python dependencies through PM;id=__self_2.dependencies]
+2026-09-25T04:18:48.5964080Z ##[group]Run args=()
+2026-09-25T04:18:48.5964560Z [36;1margs=()[0m
+2026-09-25T04:18:48.5964840Z [36;1mif [ "$_PM_TEST_ENVIRONMENT" = true ]; then args+=(--test-environment); fi[0m
+2026-09-25T04:18:48.5965350Z [36;1m"$HERMES_PYTHON" -S "$_PM_ACTION/../../../scripts/ci/setup_toolchain.py" dependencies \[0m
+2026-09-25T04:18:48.5965980Z [36;1m  --toolchain "$_PM_TOOLCHAIN" --extras "$_PM_EXTRAS" --home "$HERMES_HOME" "${args[@]}"[0m
+2026-09-25T04:18:48.6025000Z shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+2026-09-25T04:18:48.6025740Z env:
+2026-09-25T04:18:48.6026240Z   HERMES_HOME: /Users/runner/work/_temp/setup-pm
+2026-09-25T04:18:48.6027060Z   HERMES_RUNTIME_DIR: /Users/runner/work/_temp/setup-pm/tools
+2026-09-25T04:18:48.6029020Z   PYTHONUTF8: 1
+2026-09-25T04:18:48.6030100Z   HERMES_PYTHON: /Users/runner/work/_temp/setup-pm/python/python-3.14.7+20260901-darwin-arm64/bin/python
+2026-09-25T04:18:48.6031460Z   _PM_ACTION: /Users/runner/work/hermes-agent/hermes-agent/./.github/actions/setup-pm
+2026-09-25T04:18:48.6032350Z   _PM_TOOLCHAIN: python
+2026-09-25T04:18:48.6033230Z   _PM_EXTRAS: ["all", "telegram", "anthropic", "mistral", "fal", "modal", "daytona", "parallel-web"]
+2026-09-25T04:18:48.6034200Z   _PM_TEST_ENVIRONMENT: true
+2026-09-25T04:18:48.6034790Z ##[endgroup]
+2026-09-25T04:18:51.1569890Z Using CPython 3.14.7 interpreter at: /Users/runner/work/_temp/setup-pm/tools/python-3.14.7+20260901-darwin-arm64/bin/python3
+2026-09-25T04:18:51.3667460Z Resolved 331 packages in 272ms
+2026-09-25T04:18:52.1062090Z Using CPython 3.14.7 interpreter at: /Users/runner/work/_temp/setup-pm/tools/python-3.14.7+20260901-darwin-arm64/bin/python3.14
+2026-09-25T04:18:52.1172630Z Creating virtual environment at: venv
+2026-09-25T04:18:52.1273890Z Activate with: source venv/bin/activate
+2026-09-25T04:18:52.4287690Z Downloading cryptography (3.8MiB)
+2026-09-25T04:18:52.4361400Z Downloading openai (1.1MiB)
+2026-09-25T04:18:52.4378540Z Downloading pygments (1.2MiB)
+2026-09-25T04:18:52.4399920Z Downloading debugpy (2.4MiB)
+2026-09-25T04:18:52.4401500Z Downloading pillow-heif (4.1MiB)
+2026-09-25T04:18:52.4402600Z Downloading obstore (3.2MiB)
+2026-09-25T04:18:52.4403400Z Downloading uvloop (1.3MiB)
+2026-09-25T04:18:52.4404370Z Downloading google-api-python-client (14.3MiB)
+2026-09-25T04:18:52.4407210Z Downloading pydantic-core (1.9MiB)
+2026-09-25T04:18:52.4408370Z Downloading ruff (9.8MiB)
+2026-09-25T04:18:52.4409690Z Downloading firecrawl-anydoc (3.1MiB)
+2026-09-25T04:18:52.4410330Z Downloading ty (12.8MiB)
+2026-09-25T04:18:52.4410720Z Downloading mistralai (1.1MiB)
+2026-09-25T04:18:52.4411320Z Downloading resvg-py (1.1MiB)
+2026-09-25T04:18:52.4412890Z Downloading pillow (4.6MiB)
+2026-09-25T04:18:52.4413890Z Downloading nemo-relay (9.7MiB)
+2026-09-25T04:18:54.5341300Z  Downloaded resvg-py
+2026-09-25T04:18:55.8325060Z  Downloaded pydantic-core
+2026-09-25T04:18:55.9552030Z  Downloaded uvloop
+2026-09-25T04:18:56.0755480Z  Downloaded obstore
+2026-09-25T04:18:56.0756530Z  Downloaded firecrawl-anydoc
+2026-09-25T04:18:56.1983310Z  Downloaded pillow-heif
+2026-09-25T04:18:56.2548900Z  Downloaded pillow
+2026-09-25T04:18:56.5070880Z  Downloaded cryptography
+2026-09-25T04:18:56.6321290Z  Downloaded pygments
+2026-09-25T04:18:56.6325110Z  Downloaded ruff
+2026-09-25T04:18:56.6326740Z  Downloaded ty
+2026-09-25T04:18:56.6327630Z  Downloaded debugpy
+2026-09-25T04:18:56.7099570Z  Downloaded nemo-relay
+2026-09-25T04:18:57.0296350Z  Downloaded google-api-python-client
+2026-09-25T04:18:57.2771600Z  Downloaded mistralai
+2026-09-25T04:18:57.2890970Z  Downloaded openai
+2026-09-25T04:18:57.2988700Z Prepared 149 packages in 4.97s
+2026-09-25T04:18:57.7334670Z Installed 153 packages in 457ms
+2026-09-25T04:19:07.2663040Z Bytecode compiled 7806 files in 9.59s
+2026-09-25T04:19:07.2665190Z  + agent-client-protocol==0.9.0
+2026-09-25T04:19:07.2666630Z  + aiofiles==24.1.0
+2026-09-25T04:19:07.2667740Z  + aiohappyeyeballs==2.7.1
+2026-09-25T04:19:07.2668930Z  + aiohttp==3.14.3
+2026-09-25T04:19:07.2669840Z  + aiohttp-retry==2.9.1
+2026-09-25T04:19:07.2670760Z  + aiosignal==1.4.0
+2026-09-25T04:19:07.2671200Z  + annotated-doc==0.0.5
+2026-09-25T04:19:07.2695850Z  + annotated-types==0.8.0
+2026-09-25T04:19:07.2696720Z  + anthropic==0.87.0
+2026-09-25T04:19:07.2698610Z  + anyio==4.14.2
+2026-09-25T04:19:07.2699420Z  + attrs==26.1.0
+2026-09-25T04:19:07.2699670Z  + cbor2==6.1.4
+2026-09-25T04:19:07.2699900Z  + certifi==2026.5.20
+2026-09-25T04:19:07.2700150Z  + cffi==2.1.1
+2026-09-25T04:19:07.2768620Z  + charset-normalizer==3.5.1
+2026-09-25T04:19:07.2769030Z  + click==8.4.2
+2026-09-25T04:19:07.2769270Z  + croniter==6.0.0
+2026-09-25T04:19:07.2769540Z  + cryptography==50.0.1
+2026-09-25T04:19:07.2769850Z  + daytona==0.155.0
+2026-09-25T04:19:07.2770230Z  + daytona-api-client==0.155.0
+2026-09-25T04:19:07.2770540Z  + daytona-api-client-async==0.155.0
+2026-09-25T04:19:07.2770890Z  + daytona-toolbox-api-client==0.155.0
+2026-09-25T04:19:07.2771230Z  + daytona-toolbox-api-client-async==0.155.0
+2026-09-25T04:19:07.2771660Z  + debugpy==1.8.20
+2026-09-25T04:19:07.2771980Z  + defusedxml==0.7.1
+2026-09-25T04:19:07.2772460Z  + deprecated==1.3.1
+2026-09-25T04:19:07.2772890Z  + distro==1.9.0
+2026-09-25T04:19:07.2773140Z  + docstring-parser==0.18.0
+2026-09-25T04:19:07.2773550Z  + environs==14.6.0
+2026-09-25T04:19:07.2773950Z  + eval-type-backport==0.4.0
+2026-09-25T04:19:07.2774300Z  + fal-client==0.13.1
+2026-09-25T04:19:07.2774620Z  + fastapi==0.133.1
+2026-09-25T04:19:07.2774980Z  + fire==0.7.1
+2026-09-25T04:19:07.2775260Z  + firecrawl-anydoc==0.2.4
+2026-09-25T04:19:07.2775640Z  + frozenlist==1.8.0
+2026-09-25T04:19:07.2776080Z  + google-api-core==2.34.0
+2026-09-25T04:19:07.2776370Z  + google-api-python-client==2.194.0
+2026-09-25T04:19:07.2776770Z  + google-auth==2.55.1
+2026-09-25T04:19:07.2777000Z  + google-auth-httplib2==0.3.1
+2026-09-25T04:19:07.2777250Z  + google-auth-oauthlib==1.3.1
+2026-09-25T04:19:07.2777550Z  + googleapis-common-protos==1.75.1
+2026-09-25T04:19:07.2777800Z  + grpclib==0.4.9
+2026-09-25T04:19:07.2777960Z  + h11==0.16.0
+2026-09-25T04:19:07.2778120Z  + h2==4.4.1
+2026-09-25T04:19:07.2778280Z  + hpack==4.2.0
+2026-09-25T04:19:07.2778540Z  + httpcore==1.0.9
+2026-09-25T04:19:07.2778680Z  + httpcore2==2.7.0
+2026-09-25T04:19:07.2778970Z  + httplib2==0.32.0
+2026-09-25T04:19:07.2779330Z  + httptools==0.8.0
+2026-09-25T04:19:07.2779550Z  + httpx==0.28.1
+2026-09-25T04:19:07.2787270Z  + httpx-sse==0.4.3
+2026-09-25T04:19:07.2787420Z  + httpx2==2.7.0
+2026-09-25T04:19:07.2787670Z  + hyperframe==6.1.0
+2026-09-25T04:19:07.2787880Z  + idna==3.19
+2026-09-25T04:19:07.2788160Z  + importlib-metadata==8.7.1
+2026-09-25T04:19:07.2788440Z  + iniconfig==2.3.0
+2026-09-25T04:19:07.2788640Z  + jinja2==3.1.6
+2026-09-25T04:19:07.2788920Z  + jiter==0.16.0
+2026-09-25T04:19:07.2789180Z  + jsonpath-python==1.1.6
+2026-09-25T04:19:07.2789430Z  + jsonschema==4.26.0
+2026-09-25T04:19:07.2789790Z  + jsonschema-specifications==2025.9.1
+2026-09-25T04:19:07.2790060Z  + markdown==3.10.2
+2026-09-25T04:19:07.2790340Z  + markdown-it-py==4.2.0
+2026-09-25T04:19:07.2790550Z  + markupsafe==3.0.3
+2026-09-25T04:19:07.2790860Z  + marshmallow==4.3.1
+2026-09-25T04:19:07.2791200Z  + mcp==2.0.0
+2026-09-25T04:19:07.2791450Z  + mcp-types==2.0.0
+2026-09-25T04:19:07.2791630Z  + mdurl==0.1.2
+2026-09-25T04:19:07.2791850Z  + mistralai==2.4.8
+2026-09-25T04:19:07.2792170Z  + modal==1.3.4
+2026-09-25T04:19:07.2792400Z  + msgpack==1.2.1
+2026-09-25T04:19:07.2792670Z  + multidict==6.7.1
+2026-09-25T04:19:07.2792930Z  + nemo-relay==0.8.4
+2026-09-25T04:19:07.2793190Z  + oauthlib==3.3.1
+2026-09-25T04:19:07.2793380Z  + obstore==0.8.2
+2026-09-25T04:19:07.2793680Z  + openai==2.24.0
+2026-09-25T04:19:07.2793930Z  + opentelemetry-api==1.39.1
+2026-09-25T04:19:07.2794290Z  + opentelemetry-exporter-otlp-proto-common==1.39.1
+2026-09-25T04:19:07.2794840Z  + opentelemetry-exporter-otlp-proto-http==1.39.1
+2026-09-25T04:19:07.2795150Z  + opentelemetry-instrumentation==0.60b1
+2026-09-25T04:19:07.2795570Z  + opentelemetry-instrumentation-aiohttp-client==0.60b1
+2026-09-25T04:19:07.2795910Z  + opentelemetry-proto==1.39.1
+2026-09-25T04:19:07.2796150Z  + opentelemetry-sdk==1.39.1
+2026-09-25T04:19:07.2796400Z  + opentelemetry-semantic-conventions==0.60b1
+2026-09-25T04:19:07.2797150Z  + opentelemetry-util-http==0.60b1
+2026-09-25T04:19:07.2797380Z  + packaging==26.0
+2026-09-25T04:19:07.2797800Z  + parallel-web==0.4.2
+2026-09-25T04:19:07.2798030Z  + pathspec==1.1.1
+2026-09-25T04:19:07.2798350Z  + pillow==12.3.0
+2026-09-25T04:19:07.2798690Z  + pillow-heif==1.6.0
+2026-09-25T04:19:07.2798910Z  + pluggy==1.6.0
+2026-09-25T04:19:07.2799230Z  + prompt-toolkit==3.0.52
+2026-09-25T04:19:07.2799530Z  + propcache==0.5.2
+2026-09-25T04:19:07.2800020Z  + proto-plus==1.28.3
+2026-09-25T04:19:07.2800390Z  + protobuf==6.33.6
+2026-09-25T04:19:07.2801500Z  + psutil==7.2.2
+2026-09-25T04:19:07.2806740Z  + ptyprocess==0.7.0
+2026-09-25T04:19:07.2808480Z  + pyasn1==0.6.4
+2026-09-25T04:19:07.2809310Z  + pyasn1-modules==0.4.2
+2026-09-25T04:19:07.2809650Z  + pycparser==3.0
+2026-09-25T04:19:07.2809970Z  + pydantic==2.13.4
+2026-09-25T04:19:07.2810150Z  + pydantic-core==2.46.4
+2026-09-25T04:19:07.2810690Z  + pygments==2.21.0
+2026-09-25T04:19:07.2812960Z  + pyjwt==2.13.0
+2026-09-25T04:19:07.2814250Z  + pyparsing==3.3.2
+2026-09-25T04:19:07.2814750Z  + pytest==9.1.1
+2026-09-25T04:19:07.2816310Z  + pytest-asyncio==1.3.0
+2026-09-25T04:19:07.2816670Z  + python-dateutil==2.9.0.post0
+2026-09-25T04:19:07.2818870Z  + python-dotenv==1.2.2
+2026-09-25T04:19:07.2819490Z  + python-multipart==0.0.32
+2026-09-25T04:19:07.2820400Z  + python-telegram-bot==22.8
+2026-09-25T04:19:07.2821380Z  + pytz==2026.3.post1
+2026-09-25T04:19:07.2822790Z  + referencing==0.37.0
+2026-09-25T04:19:07.2824390Z  + requests==2.33.0
+2026-09-25T04:19:07.2825100Z  + requests-oauthlib==2.0.0
+2026-09-25T04:19:07.2827110Z  + resvg-py==0.4.0
+2026-09-25T04:19:07.2827840Z  + rich==14.3.3
+2026-09-25T04:19:07.2828150Z  + rpds-py==2026.6.3
+2026-09-25T04:19:07.2828360Z  + ruamel-yaml==0.18.16
+2026-09-25T04:19:07.2829660Z  + ruff==0.15.10
+2026-09-25T04:19:07.2829880Z  + setuptools==83.0.0
+2026-09-25T04:19:07.2831880Z  + shellingham==1.5.4
+2026-09-25T04:19:07.2833450Z  + six==1.17.0
+2026-09-25T04:19:07.2835960Z  + sniffio==1.3.1
+2026-09-25T04:19:07.2838610Z  + snowballstemmer==3.1.1
+2026-09-25T04:19:07.2839500Z  + socksio==1.0.0
+2026-09-25T04:19:07.2840710Z  + sse-starlette==3.4.8
+2026-09-25T04:19:07.2841500Z  + starlette==1.3.1
+2026-09-25T04:19:07.2844670Z  + synchronicity==0.11.1
+2026-09-25T04:19:07.2845730Z  + tenacity==9.1.4
+2026-09-25T04:19:07.2846580Z  + termcolor==3.3.0
+2026-09-25T04:19:07.2847150Z  + toml==0.10.2
+2026-09-25T04:19:07.2848950Z  + tomli-w==1.2.0
+2026-09-25T04:19:07.2849780Z  + tornado==6.5.8
+2026-09-25T04:19:07.2851190Z  + tqdm==4.70.0
+2026-09-25T04:19:07.2851710Z  + truststore==0.10.4
+2026-09-25T04:19:07.2852180Z  + ty==0.0.82
+2026-09-25T04:19:07.2852610Z  + typer==0.27.1
+2026-09-25T04:19:07.2852880Z  + types-certifi==2021.10.8.3
+2026-09-25T04:19:07.2853060Z  + types-toml==0.10.8.20260518
+2026-09-25T04:19:07.2853240Z  + typing-extensions==4.16.0
+2026-09-25T04:19:07.2853520Z  + typing-inspection==0.4.4
+2026-09-25T04:19:07.2854130Z  + uritemplate==4.2.0
+2026-09-25T04:19:07.2854340Z  + urllib3==2.7.0
+2026-09-25T04:19:07.2854590Z  + uvicorn==0.41.0
+2026-09-25T04:19:07.2855370Z  + uvloop==0.22.1
+2026-09-25T04:19:07.2856120Z  + watchfiles==1.2.0
+2026-09-25T04:19:07.2856930Z  + wcwidth==0.8.2
+2026-09-25T04:19:07.2858250Z  + websockets==15.0.1
+2026-09-25T04:19:07.2860390Z  + wrapt==1.17.3
+2026-09-25T04:19:07.2861150Z  + yarl==1.24.5
+2026-09-25T04:19:07.2861760Z  + youtube-transcript-api==1.2.4
+2026-09-25T04:19:07.2863080Z  + zipp==4.1.0
+2026-09-25T04:19:07.4421580Z Using Python 3.14.7 environment at: venv
+2026-09-25T04:19:07.4423160Z Checked 153 packages in 73ms
+2026-09-25T04:19:07.5432680Z All installed packages are compatible
+2026-09-25T04:19:07.6249250Z PM dependencies ready: ['all', 'anthropic', 'daytona', 'fal', 'mistral', 'modal', 'parallel-web', 'telegram'] in /Users/runner/work/_temp/setup-pm/installs/fcabfe9b629f97eb/test-environment/gen-3c6da1815761460f8a849fc5b118bf9d/venv
+2026-09-25T04:19:07.6621010Z ##[end-action id=__self_2.dependencies;outcome=success;conclusion=success;duration_ms=19058]
+2026-09-25T04:19:07.6812230Z ##[group]Run set -uo pipefail
+2026-09-25T04:19:07.6812750Z [36;1mset -uo pipefail[0m
+2026-09-25T04:19:07.6813130Z [36;1m[0m
+2026-09-25T04:19:07.6813660Z [36;1mLIST="${RUNNER_TEMP:-.}/selected-tests.txt"[0m
+2026-09-25T04:19:07.6814010Z [36;1m[0m
+2026-09-25T04:19:07.6814370Z [36;1m# Process substitution would hide the helper's exit status, so write[0m
+2026-09-25T04:19:07.6814780Z [36;1m# to a file and check it explicitly.[0m
+2026-09-25T04:19:07.6815090Z [36;1mif ! python scripts/ci/list_os_marked_tests.py \[0m
+2026-09-25T04:19:07.6815480Z [36;1m       "macos" > "$LIST"; then[0m
+2026-09-25T04:19:07.6815740Z [36;1m  echo "::error::could not enumerate macos test files"[0m
+2026-09-25T04:19:07.6815980Z [36;1m  exit 1[0m
+2026-09-25T04:19:07.6816110Z [36;1mfi[0m
+2026-09-25T04:19:07.6816250Z [36;1mif [ ! -s "$LIST" ]; then[0m
+2026-09-25T04:19:07.6816460Z [36;1m  echo "::error::empty macos file list"[0m
+2026-09-25T04:19:07.6816670Z [36;1m  exit 1[0m
+2026-09-25T04:19:07.6816980Z [36;1mfi[0m
+2026-09-25T04:19:07.6817110Z [36;1m[0m
+2026-09-25T04:19:07.6817260Z [36;1mecho "selected file(s) for macos:"[0m
+2026-09-25T04:19:07.6817470Z [36;1mcat "$LIST"[0m
+2026-09-25T04:19:07.6817620Z [36;1m[0m
+2026-09-25T04:19:07.6817880Z [36;1m# Desktop-update hand-off integration tests spawn the real[0m
+2026-09-25T04:19:07.6818270Z [36;1m# windows.ps1; deselect them unless the PR touched that surface[0m
+2026-09-25T04:19:07.6818700Z [36;1m# (see the workflow_call input). ``--ignore-glob`` keeps the file[0m
+2026-09-25T04:19:07.6819110Z [36;1m# list above intact, so a renamed test file still trips the[0m
+2026-09-25T04:19:07.6819560Z [36;1m# zero-tests guard rather than silently vanishing.[0m
+2026-09-25T04:19:07.6819930Z [36;1m# (bash 3.2 on the macOS runner: an empty array under ``set -u`` is[0m
+2026-09-25T04:19:07.6833100Z [36;1m# an unbound-variable error, hence the ``${arr[@]+...}`` idiom.)[0m
+2026-09-25T04:19:07.6833490Z [36;1mEXTRA_ARGS=()[0m
+2026-09-25T04:19:07.6833690Z [36;1mif [ "false" != "true" ]; then[0m
+2026-09-25T04:19:07.6834200Z [36;1m  echo "desktop_updater lane off: skipping tests/scripts/desktop_update/test_desktop_update_windows_*.py"[0m
+2026-09-25T04:19:07.6835380Z [36;1m  EXTRA_ARGS+=(--ignore-glob='*test_desktop_update_windows_*.py')[0m
+2026-09-25T04:19:07.6835740Z [36;1mfi[0m
+2026-09-25T04:19:07.6835900Z [36;1m[0m
+2026-09-25T04:19:07.6836100Z [36;1m# ``tr -d '\r'``: on Windows the helper's redirected stdout gains[0m
+2026-09-25T04:19:07.6836630Z [36;1m# CRLF line endings; a stray \r would corrupt the path. The list[0m
+2026-09-25T04:19:07.6837030Z [36;1m# uses the native path-list separator consumed by --files.[0m
+2026-09-25T04:19:07.6837310Z [36;1m#[0m
+2026-09-25T04:19:07.6837580Z [36;1m# Any non-zero exit propagates red: real test failures, or the[0m
+2026-09-25T04:19:07.6838010Z [36;1m# runner's own zero-run guard (every file filtered to empty by[0m
+2026-09-25T04:19:07.6838440Z [36;1m# ``-m`` — "must never pass without running its OS's tests").[0m
+2026-09-25T04:19:07.6838890Z [36;1mSEPARATOR="$(python -c 'import os, sys; sys.stdout.write(os.pathsep)')"[0m
+2026-09-25T04:19:07.6839320Z [36;1mFILES="$(tr -d '\r' < "$LIST" | paste -sd "$SEPARATOR" -)"[0m
+2026-09-25T04:19:07.6839690Z [36;1mscripts/run_tests.sh --files "$FILES" -- \[0m
+2026-09-25T04:19:07.6840010Z [36;1m  ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"} \[0m
+2026-09-25T04:19:07.6840260Z [36;1m  -m "platforms and not integration" \[0m
+2026-09-25T04:19:07.6840490Z [36;1m  -v --tb=short[0m
+2026-09-25T04:19:07.6906450Z shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+2026-09-25T04:19:07.6907290Z env:
+2026-09-25T04:19:07.6907810Z   HERMES_HOME: /Users/runner/work/_temp/setup-pm
+2026-09-25T04:19:07.6908680Z   HERMES_RUNTIME_DIR: /Users/runner/work/_temp/setup-pm/tools
+2026-09-25T04:19:07.6909480Z   PYTHONUTF8: 1
+2026-09-25T04:19:07.6912210Z   HERMES_PYTHON: /Users/runner/work/_temp/setup-pm/installs/fcabfe9b629f97eb/test-environment/gen-3c6da1815761460f8a849fc5b118bf9d/venv/bin/python
+2026-09-25T04:19:07.6914600Z   VIRTUAL_ENV: /Users/runner/work/_temp/setup-pm/installs/fcabfe9b629f97eb/test-environment/gen-3c6da1815761460f8a849fc5b118bf9d/venv
+2026-09-25T04:19:07.6916140Z   PYTHONPATH: /Users/runner/work/hermes-agent/hermes-agent
+2026-09-25T04:19:07.6917170Z   HERMES_TEST_WORKERS: 
+2026-09-25T04:19:07.6917730Z   OPENROUTER_API_KEY: 
+2026-09-25T04:19:07.6918270Z   OPENAI_API_KEY: 
+2026-09-25T04:19:07.6918770Z   NOUS_API_KEY: 
+2026-09-25T04:19:07.6919230Z ##[endgroup]
+2026-09-25T04:19:09.2444490Z selected file(s) for macos:
+2026-09-25T04:19:09.2681800Z tests/agent/test_anthropic_adapter.py
+2026-09-25T04:19:09.2683710Z tests/agent/test_anthropic_keychain.py
+2026-09-25T04:19:09.2684530Z tests/agent/test_claude_code_version_path.py
+2026-09-25T04:19:09.2684830Z tests/agent/test_command_secret_source.py
+2026-09-25T04:19:09.2685120Z tests/agent/test_deadline.py
+2026-09-25T04:19:09.2685340Z tests/agent/test_private_credential_writers.py
+2026-09-25T04:19:09.2685740Z tests/agent/test_prompt_builder.py
+2026-09-25T04:19:09.2686020Z tests/agent/test_shell_hooks_tree_kill.py
+2026-09-25T04:19:09.2686300Z tests/agent/test_treekill_consolidation.py
+2026-09-25T04:19:09.2686630Z tests/agent/test_vault_backends.py
+2026-09-25T04:19:09.2687010Z tests/agent/test_verification_stop.py
+2026-09-25T04:19:09.2687360Z tests/agent/transports/test_codex_app_server_runtime.py
+2026-09-25T04:19:09.2687670Z tests/ci/test_channel_build_publication.py
+2026-09-25T04:19:09.2687970Z tests/ci/test_list_os_marked_tests.py
+2026-09-25T04:19:09.2688200Z tests/ci/test_plugin_validate_action.py
+2026-09-25T04:19:09.2688470Z tests/ci/test_protected_canary_publication.py
+2026-09-25T04:19:09.2688730Z tests/computer_use/test_cua_no_overlay.py
+2026-09-25T04:19:09.2689020Z tests/computer_use/test_permissions_resolution.py
+2026-09-25T04:19:09.2689280Z tests/cron/test_file_permissions.py
+2026-09-25T04:19:09.2689510Z tests/cron/test_jobs_file_ownership.py
+2026-09-25T04:19:09.2689780Z tests/cron/test_script_claim_heartbeat.py
+2026-09-25T04:19:09.2690040Z tests/cron/test_timezone.py
+2026-09-25T04:19:09.2690270Z tests/gateway/test_api_server_bind_guard.py
+2026-09-25T04:19:09.2690560Z tests/gateway/test_control_socket.py
+2026-09-25T04:19:09.2690800Z tests/gateway/test_control_socket_pause.py
+2026-09-25T04:19:09.2691900Z tests/gateway/test_homeassistant.py
+2026-09-25T04:19:09.2692130Z tests/gateway/test_host_attach_lifecycle.py
+2026-09-25T04:19:09.2692420Z tests/gateway/test_host_gateway_lock_refusal.py
+2026-09-25T04:19:09.2692750Z tests/gateway/test_host_rendezvous.py
+2026-09-25T04:19:09.2693000Z tests/gateway/test_hosted_room_links.py
+2026-09-25T04:19:09.2693260Z tests/gateway/test_hosted_room_peer.py
+2026-09-25T04:19:09.2693490Z tests/gateway/test_pairing.py
+2026-09-25T04:19:09.2693700Z tests/gateway/test_proxy_mode.py
+2026-09-25T04:19:09.2693950Z tests/gateway/test_session_db_replaced_fallback.py
+2026-09-25T04:19:09.2694230Z tests/gateway/test_shutdown_forensics.py
+2026-09-25T04:19:09.2694480Z tests/gateway/test_shutdown_watchdog.py
+2026-09-25T04:19:09.2694730Z tests/hermes_cli/test_actual_provider.py
+2026-09-25T04:19:09.2695030Z tests/hermes_cli/test_apply_profile_override.py
+2026-09-25T04:19:09.2695310Z tests/hermes_cli/test_auth_toctou_file_modes.py
+2026-09-25T04:19:09.2695580Z tests/hermes_cli/test_backup.py
+2026-09-25T04:19:09.2696010Z tests/hermes_cli/test_backup_stability.py
+2026-09-25T04:19:09.2696290Z tests/hermes_cli/test_boot_bootstrap.py
+2026-09-25T04:19:09.2696530Z tests/hermes_cli/test_bounded_probe_run.py
+2026-09-25T04:19:09.2696790Z tests/hermes_cli/test_bundled_desktop_launch.py
+2026-09-25T04:19:09.2697060Z tests/hermes_cli/test_chat_q_exit_clear.py
+2026-09-25T04:19:09.2697300Z tests/hermes_cli/test_cli_light_mode.py
+2026-09-25T04:19:09.2697560Z tests/hermes_cli/test_clipboard_text_write.py
+2026-09-25T04:19:09.2697810Z tests/hermes_cli/test_cmd_update.py
+2026-09-25T04:19:09.2698080Z tests/hermes_cli/test_cross_profile_kill_refusal.py
+2026-09-25T04:19:09.2698370Z tests/hermes_cli/test_data_dir_suffix.py
+2026-09-25T04:19:09.2701920Z tests/hermes_cli/test_doctor.py
+2026-09-25T04:19:09.2702270Z tests/hermes_cli/test_doctor_command_install.py
+2026-09-25T04:19:09.2702570Z tests/hermes_cli/test_doctor_journal_modes.py
+2026-09-25T04:19:09.2702870Z tests/hermes_cli/test_doctor_pm_store_probe.py
+2026-09-25T04:19:09.2703170Z tests/hermes_cli/test_ensure_hermes_home_uid.py
+2026-09-25T04:19:09.2703460Z tests/hermes_cli/test_exit_watchdog_signal_arm.py
+2026-09-25T04:19:09.2703730Z tests/hermes_cli/test_gateway.py
+2026-09-25T04:19:09.2703980Z tests/hermes_cli/test_gateway_proc_fallback.py
+2026-09-25T04:19:09.2704230Z tests/hermes_cli/test_gateway_service.py
+2026-09-25T04:19:09.2704490Z tests/hermes_cli/test_git_probe_tree_kill.py
+2026-09-25T04:19:09.2704750Z tests/hermes_cli/test_gui_command.py
+2026-09-25T04:19:09.2705040Z tests/hermes_cli/test_gui_uninstall.py
+2026-09-25T04:19:09.2705310Z tests/hermes_cli/test_install_cua_driver.py
+2026-09-25T04:19:09.2705580Z tests/hermes_cli/test_kanban_worktree_unicode_path.py
+2026-09-25T04:19:09.2705880Z tests/hermes_cli/test_launchd_plist_guard.py
+2026-09-25T04:19:09.2706130Z tests/hermes_cli/test_linux_desktop_entry.py
+2026-09-25T04:19:09.2706390Z tests/hermes_cli/test_macos_fda_guidance.py
+2026-09-25T04:19:09.2706650Z tests/hermes_cli/test_macos_tcc_anchor.py
+2026-09-25T04:19:09.2706890Z tests/hermes_cli/test_mcp_helper_ledger.py
+2026-09-25T04:19:09.2707190Z tests/hermes_cli/test_memory_setup_env_denylist.py
+2026-09-25T04:19:09.2707450Z tests/hermes_cli/test_migrate_xai.py
+2026-09-25T04:19:09.2707720Z tests/hermes_cli/test_plugin_private_repo_auth.py
+2026-09-25T04:19:09.2707980Z tests/hermes_cli/test_plugins_cmd.py
+2026-09-25T04:19:09.2708200Z tests/hermes_cli/test_plugins_cmd_list.py
+2026-09-25T04:19:09.2708460Z tests/hermes_cli/test_post_update_adoption.py
+2026-09-25T04:19:09.2708720Z tests/hermes_cli/test_post_update_expose_cli.py
+2026-09-25T04:19:09.2709020Z tests/hermes_cli/test_profile_distribution.py
+2026-09-25T04:19:09.2709290Z tests/hermes_cli/test_profile_export_default_path.py
+2026-09-25T04:19:09.2709610Z tests/hermes_cli/test_profile_export_special_files.py
+2026-09-25T04:19:09.2709900Z tests/hermes_cli/test_relay_shared_metrics.py
+2026-09-25T04:19:09.2710170Z tests/hermes_cli/test_review_update_runtime.py
+2026-09-25T04:19:09.2710710Z tests/hermes_cli/test_serve_parent_watchdog.py
+2026-09-25T04:19:09.2711000Z tests/hermes_cli/test_serve_parent_watchdog_live_macos.py
+2026-09-25T04:19:09.2711290Z tests/hermes_cli/test_serve_port_in_use.py
+2026-09-25T04:19:09.2711560Z tests/hermes_cli/test_session_recovery_lost_and_found.py
+2026-09-25T04:19:09.2711860Z tests/hermes_cli/test_sessions_held_store_gate.py
+2026-09-25T04:19:09.2712140Z tests/hermes_cli/test_setup_pin_values.py
+2026-09-25T04:19:09.2712390Z tests/hermes_cli/test_source_build.py
+2026-09-25T04:19:09.2712670Z tests/hermes_cli/test_source_launcher_publication.py
+2026-09-25T04:19:09.2712990Z tests/hermes_cli/test_sqlite_runtime.py
+2026-09-25T04:19:09.2713240Z tests/hermes_cli/test_ssh_session_token_parser.py
+2026-09-25T04:19:09.2713490Z tests/hermes_cli/test_stale_pid_guard.py
+2026-09-25T04:19:09.2713780Z tests/hermes_cli/test_stderr_timestamp.py
+2026-09-25T04:19:09.2714010Z tests/hermes_cli/test_tui_npm_install.py
+2026-09-25T04:19:09.2714280Z tests/hermes_cli/test_uninstall_shell_configs.py
+2026-09-25T04:19:09.2714560Z tests/hermes_cli/test_update_completion_process.py
+2026-09-25T04:19:09.2714860Z tests/hermes_cli/test_update_cua_pm.py
+2026-09-25T04:19:09.2715080Z tests/hermes_cli/test_update_eol_churn.py
+2026-09-25T04:19:09.2715320Z tests/hermes_cli/test_update_finish.py
+2026-09-25T04:19:09.2715620Z tests/hermes_cli/test_update_flat_install_state_gitignore.py
+2026-09-25T04:19:09.2715910Z tests/hermes_cli/test_update_import_guard.py
+2026-09-25T04:19:09.2716200Z tests/hermes_cli/test_update_launchd_fleet_restart.py
+2026-09-25T04:19:09.2717220Z tests/hermes_cli/test_update_launchd_unloaded_gateway.py
+2026-09-25T04:19:09.2717960Z tests/hermes_cli/test_update_lock.py
+2026-09-25T04:19:09.2718260Z tests/hermes_cli/test_update_missing_configured_deps.py
+2026-09-25T04:19:09.2718840Z tests/hermes_cli/test_update_secret_import_lock.py
+2026-09-25T04:19:09.2719170Z tests/hermes_cli/test_update_serve_generation_recovery.py
+2026-09-25T04:19:09.2719510Z tests/hermes_cli/test_update_stale_dashboard.py
+2026-09-25T04:19:09.2719800Z tests/hermes_cli/test_web_profile_soul_writes.py
+2026-09-25T04:19:09.2720170Z tests/hermes_cli/test_web_server_auto_archive_gateway_lock.py
+2026-09-25T04:19:09.2720560Z tests/hermes_cli/test_web_server_idle_proof.py
+2026-09-25T04:19:09.2720810Z tests/hermes_cli/test_web_server_pty_import.py
+2026-09-25T04:19:09.2721120Z tests/hermes_cli/test_web_server_pty_reconnect.py
+2026-09-25T04:19:09.2721360Z tests/hermes_cli/test_web_ui_build.py
+2026-09-25T04:19:09.2721600Z tests/hermes_cli/test_webhook_cli.py
+2026-09-25T04:19:09.2721860Z tests/hermes_cli/test_win_pty_bridge.py
+2026-09-25T04:19:09.2722210Z tests/hermes_platform/test_declaration.py
+2026-09-25T04:19:09.2722480Z tests/hermes_platform/test_facts.py
+2026-09-25T04:19:09.2722720Z tests/hermes_platform/test_resolver_core.py
+2026-09-25T04:19:09.2722990Z tests/hermes_state/test_auto_vacuum_holder_gate.py
+2026-09-25T04:19:09.2723280Z tests/hermes_state/test_deleted_wal_generation_guard.py
+2026-09-25T04:19:09.2723600Z tests/hermes_state/test_hermes_state_readonly_preflight.py
+2026-09-25T04:19:09.2723920Z tests/hermes_state/test_retired_wal_generation_capture.py
+2026-09-25T04:19:09.2724270Z tests/hermes_state/test_shared_session_db_registry.py
+2026-09-25T04:19:09.2724550Z tests/hermes_state/test_state_db_corrupt_quarantine.py
+2026-09-25T04:19:09.2724880Z tests/hermes_state/test_state_db_file_identity.py
+2026-09-25T04:19:09.2725180Z tests/hermes_state/test_state_db_lock_fail_closed.py
+2026-09-25T04:19:09.2725480Z tests/hermes_state/test_state_db_malformed_repair.py
+2026-09-25T04:19:09.2725810Z tests/hermes_state/test_state_db_stats.py
+2026-09-25T04:19:09.2726080Z tests/hermes_state/test_state_db_write_durability.py
+2026-09-25T04:19:09.2726370Z tests/hermes_state/test_state_synchronous_pragma.py
+2026-09-25T04:19:09.2726630Z tests/honcho_plugin/test_session.py
+2026-09-25T04:19:09.2726910Z tests/installation/test_installer_common.py
+2026-09-25T04:19:09.2727250Z tests/plugins/memory/test_openviking_provider.py
+2026-09-25T04:19:09.2727870Z tests/plugins/memory/test_supermemory_provider.py
+2026-09-25T04:19:09.2728190Z tests/plugins/platforms/photon/test_auth.py
+2026-09-25T04:19:09.2728490Z tests/plugins/platforms/photon/test_runtime_record.py
+2026-09-25T04:19:09.2728800Z tests/plugins/test_google_meet_plugin.py
+2026-09-25T04:19:09.2729040Z tests/plugins/test_honcho_client_config.py
+2026-09-25T04:19:09.2729310Z tests/pm/test_activation_runtime.py
+2026-09-25T04:19:09.2729580Z tests/pm/test_activation_setup.py
+2026-09-25T04:19:09.2729810Z tests/pm/test_archive_safety.py
+2026-09-25T04:19:09.2730030Z tests/pm/test_bootstrap_import_closure.py
+2026-09-25T04:19:09.2730380Z tests/pm/test_darwin_build.py
+2026-09-25T04:19:09.2730630Z tests/pm/test_deb_safety.py
+2026-09-25T04:19:09.2730870Z tests/pm/test_node_resolution.py
+2026-09-25T04:19:09.2731110Z tests/pm/test_node_sidecar.py
+2026-09-25T04:19:09.2731300Z tests/pm/test_pm_core.py
+2026-09-25T04:19:09.2731500Z tests/pm/test_runtime.py
+2026-09-25T04:19:09.2731730Z tests/pm/test_runtime_bootstrap_tls.py
+2026-09-25T04:19:09.2731960Z tests/pm/test_security_consumers.py
+2026-09-25T04:19:09.2732290Z tests/pm/test_setup_lock_format.py
+2026-09-25T04:19:09.2732620Z tests/pm/test_source_update_launch.py
+2026-09-25T04:19:09.2732950Z tests/pm/test_stage_only.py
+2026-09-25T04:19:09.2733190Z tests/pm/test_tree_digest_links.py
+2026-09-25T04:19:09.2733470Z tests/pm/test_update_dependency_legs.py
+2026-09-25T04:19:09.2733740Z tests/pm/test_worker.py
+2026-09-25T04:19:09.2733970Z tests/pm/test_worker_observers.py
+2026-09-25T04:19:09.2734220Z tests/pm/test_zip_symlinks.py
+2026-09-25T04:19:09.2734520Z tests/scripts/desktop_update/test_desktop_update_macos_no_browser.py
+2026-09-25T04:19:09.2734920Z tests/scripts/install/test_dmg_install_driver.py
+2026-09-25T04:19:09.2735440Z tests/scripts/install/test_install_sh_node_tarball_without_xz.py
+2026-09-25T04:19:09.2735820Z tests/scripts/install/test_install_sh_output.py
+2026-09-25T04:19:09.2736220Z tests/scripts/install/test_install_sh_repository_stage.py
+2026-09-25T04:19:09.2736680Z tests/scripts/install/test_install_sh_reuse_supported_python.py
+2026-09-25T04:19:09.2737060Z tests/scripts/install/test_pm_desktop_launch_capture.py
+2026-09-25T04:19:09.2737360Z tests/scripts/test_activation_guard.py
+2026-09-25T04:19:09.2737710Z tests/scripts/test_agent_build.py
+2026-09-25T04:19:09.2737950Z tests/scripts/test_bootstrap_mirror.py
+2026-09-25T04:19:09.2738310Z tests/scripts/test_bundle_payload.py
+2026-09-25T04:19:09.2751490Z tests/scripts/test_desktop_cli_wrapper.py
+2026-09-25T04:19:09.2751900Z tests/scripts/test_desktop_toolchain.py
+2026-09-25T04:19:09.2752220Z tests/scripts/test_desktop_update_target.py
+2026-09-25T04:19:09.2752540Z tests/scripts/test_dev_sandbox.py
+2026-09-25T04:19:09.2752810Z tests/scripts/test_dmgbuild_diagnostics.py
+2026-09-25T04:19:09.2753110Z tests/scripts/test_install_sh_launch_handoff.py
+2026-09-25T04:19:09.2753400Z tests/scripts/test_install_sh_python_pin_indent.py
+2026-09-25T04:19:09.2753700Z tests/scripts/test_install_stage_frames.py
+2026-09-25T04:19:09.2753980Z tests/scripts/test_native_build.py
+2026-09-25T04:19:09.2754270Z tests/scripts/test_payload_digests.py
+2026-09-25T04:19:09.2754540Z tests/scripts/test_pm_runtime_bundle.py
+2026-09-25T04:19:09.2754840Z tests/scripts/test_release_artifacts.py
+2026-09-25T04:19:09.2755130Z tests/scripts/test_run_tests_parallel.py
+2026-09-25T04:19:09.2755420Z tests/scripts/test_run_tests_shell.py
+2026-09-25T04:19:09.2755710Z tests/scripts/test_source_build_env.py
+2026-09-25T04:19:09.2755950Z tests/scripts/test_source_driver.py
+2026-09-25T04:19:09.2756190Z tests/scripts/test_source_update_command.py
+2026-09-25T04:19:09.2756420Z tests/scripts/test_termux_build_driver.py
+2026-09-25T04:19:09.2756670Z tests/scripts/test_termux_launchers.py
+2026-09-25T04:19:09.2756910Z tests/scripts/test_termux_update_refusal.py
+2026-09-25T04:19:09.2757190Z tests/scripts/test_verify_plugin_preservation.py
+2026-09-25T04:19:09.2757680Z tests/skills/test_skill_document_contracts.py
+2026-09-25T04:19:09.2757990Z tests/test_atomic_write_text_metadata.py
+2026-09-25T04:19:09.2758710Z tests/test_credential_file_permissions.py
+2026-09-25T04:19:09.2758940Z tests/test_git_safety_boundary.py
+2026-09-25T04:19:09.2759210Z tests/test_hermes_bootstrap.py
+2026-09-25T04:19:09.2759410Z tests/test_hermes_constants.py
+2026-09-25T04:19:09.2759640Z tests/test_os_marker_gating.py
+2026-09-25T04:19:09.2759830Z tests/test_scratch_dir.py
+2026-09-25T04:19:09.2760090Z tests/tools/environments/test_local_path_completion.py
+2026-09-25T04:19:09.2760360Z tests/tools/test_a2a_reason_roundtrip.py
+2026-09-25T04:19:09.2760630Z tests/tools/test_async_delegation.py
+2026-09-25T04:19:09.2760910Z tests/tools/test_bot_live_owner_delivery.py
+2026-09-25T04:19:09.2761220Z tests/tools/test_browser_lightpanda_serve.py
+2026-09-25T04:19:09.2761440Z tests/tools/test_browser_pm.py
+2026-09-25T04:19:09.2761650Z tests/tools/test_browser_process_tree.py
+2026-09-25T04:19:09.2761860Z tests/tools/test_browser_use_pm.py
+2026-09-25T04:19:09.2762110Z tests/tools/test_clipboard.py
+2026-09-25T04:19:09.2762330Z tests/tools/test_code_execution_file_rpc.py
+2026-09-25T04:19:09.2762570Z tests/tools/test_code_execution_modes.py
+2026-09-25T04:19:09.2762830Z tests/tools/test_computer_use_cua_macos_identity.py
+2026-09-25T04:19:09.2763200Z tests/tools/test_computer_use_native_platform.py
+2026-09-25T04:19:09.2763510Z tests/tools/test_execute_code_approval_cluster.py
+2026-09-25T04:19:09.2763830Z tests/tools/test_file_ops_single_roundtrip.py
+2026-09-25T04:19:09.2764110Z tests/tools/test_find_shell.py
+2026-09-25T04:19:09.2764320Z tests/tools/test_git_consumer_environment.py
+2026-09-25T04:19:09.2764540Z tests/tools/test_interrupt.py
+2026-09-25T04:19:09.2764750Z tests/tools/test_kill_verify_tree_death.py
+2026-09-25T04:19:09.2764990Z tests/tools/test_local_cwd_permission_fallback.py
+2026-09-25T04:19:09.2765700Z tests/tools/test_local_env_blocklist.py
+2026-09-25T04:19:09.2765980Z tests/tools/test_macos_protected_search.py
+2026-09-25T04:19:09.2766210Z tests/tools/test_mcp_death_supervisor.py
+2026-09-25T04:19:09.2766430Z tests/tools/test_mcp_oauth.py
+2026-09-25T04:19:09.2766650Z tests/tools/test_process_registry_list_exit.py
+2026-09-25T04:19:09.2766880Z tests/tools/test_pty_query_responder.py
+2026-09-25T04:19:09.2767110Z tests/tools/test_read_special_file_guard.py
+2026-09-25T04:19:09.2767350Z tests/tools/test_search_native_rg.py
+2026-09-25T04:19:09.2767550Z tests/tools/test_skill_view_traversal.py
+2026-09-25T04:19:09.2767820Z tests/tools/test_snapshot_multiline_session_env_injection.py
+2026-09-25T04:19:09.2768100Z tests/tools/test_snapshot_session_id_leak.py
+2026-09-25T04:19:09.2768330Z tests/tools/test_spill_safety.py
+2026-09-25T04:19:09.2768540Z tests/tools/test_transcription_tools.py
+2026-09-25T04:19:09.2768780Z tests/tools/test_tts_command_providers.py
+2026-09-25T04:19:09.2769010Z tests/tools/test_tts_macos_output.py
+2026-09-25T04:19:09.2769240Z tests/tools/test_voice_mode.py
+2026-09-25T04:19:09.2769440Z tests/tools/test_wake_word.py
+2026-09-25T04:19:09.2769640Z tests/tui_gateway/test_bot_relay_methods.py
+2026-09-25T04:19:09.2769880Z tests/tui_gateway/test_entry_rpc_stdin_cloexec.py
+2026-09-25T04:19:09.2770120Z tests/tui_gateway/test_serve_exit_flush.py
+2026-09-25T04:19:09.2770500Z desktop_updater lane off: skipping tests/scripts/desktop_update/test_desktop_update_windows_*.py
+2026-09-25T04:19:09.5897770Z ▶ not activated — using HERMES_PYTHON: /Users/runner/work/_temp/setup-pm/installs/fcabfe9b629f97eb/test-environment/gen-3c6da1815761460f8a849fc5b118bf9d/venv/bin/python
+2026-09-25T04:19:09.5974370Z ▶ running per-file parallel test suite via run_tests_parallel.py
+2026-09-25T04:19:09.5975360Z   (TZ=UTC LANG=C.UTF-8 PYTHONHASHSEED=0; clean env)
+2026-09-25T04:19:09.5976420Z ▶ pre-compiling bytecode cache
+2026-09-25T04:19:29.8202290Z ▶ launching test runner
+2026-09-25T04:19:29.9485200Z Running 239 test files (~3104 tests) with -j 3
+2026-09-25T04:19:31.8522390Z [  0.1% |     2/~3104 | ✓1 | ✗0] ✓ tests/agent/test_claude_code_version_path.py (1✓, 1.9s)
+2026-09-25T04:19:31.9419880Z [  3.1% |    95/~3104 | ✓2 | ✗0] ✓ tests/agent/test_anthropic_adapter.py (1✓, 1.9s)
+2026-09-25T04:19:32.4437780Z [  3.5% |   110/~3104 | ✓14 | ✗ 0] ✓ tests/agent/test_anthropic_keychain.py (12✓, 2.5s)
+2026-09-25T04:19:33.5304920Z [  5.2% |   162/~3104 | ✓18 | ✗ 0] ✓ tests/agent/test_deadline.py (4✓, 1.6s)
+2026-09-25T04:19:33.9688410Z [  5.3% |   164/~3104 | ✓20 | ✗ 0] ✓ tests/agent/test_private_credential_writers.py (2✓, 1.5s)
+2026-09-25T04:19:34.8348690Z [  7.0% |   218/~3104 | ✓22 | ✗ 0] ✓ tests/agent/test_prompt_builder.py (2✓ 1s, 1.3s)
+2026-09-25T04:19:35.6134360Z [  7.3% |   228/~3104 | ✓32 | ✗ 0] ✓ tests/agent/test_command_secret_source.py (10✓, 3.8s)
+2026-09-25T04:19:36.9464930Z [  7.5% |   234/~3104 | ✓38 | ✗ 0] ✓ tests/agent/test_shell_hooks_tree_kill.py (6✓, 3.0s)
+2026-09-25T04:19:37.2973060Z [  7.7% |   238/~3104 | ✓39 | ✗ 0] ✓ tests/agent/test_treekill_consolidation.py (1✓ 1s, 2.5s)
+2026-09-25T04:19:37.4480990Z [  7.9% |   244/~3104 | ✓45 | ✗ 0] ✓ tests/agent/test_vault_backends.py (6✓, 1.8s)
+2026-09-25T04:19:38.5169660Z [  8.1% |   252/~3104 | ✓46 | ✗ 0] ✓ tests/agent/test_verification_stop.py (1✓, 1.6s)
+2026-09-25T04:19:38.8276740Z [  8.5% |   263/~3104 | ✓47 | ✗ 0] ✓ tests/agent/transports/test_codex_app_server_runtime.py (1✓, 1.5s)
+2026-09-25T04:19:38.9761180Z [  9.0% |   279/~3104 | ✓47 | ✗ 0] ✓ tests/ci/test_list_os_marked_tests.py (16 tests, 0.5s)
+2026-09-25T04:19:46.5931090Z [  9.0% |   280/~3104 | ✓48 | ✗ 0] ✓ tests/ci/test_plugin_validate_action.py (1✓, 7.8s)
+2026-09-25T04:19:47.3516210Z [  9.5% |   295/~3104 | ✓49 | ✗ 0] ✓ tests/computer_use/test_cua_no_overlay.py (1✓ 6s, 0.8s)
+2026-09-25T04:19:48.3057720Z [  9.6% |   297/~3104 | ✓50 | ✗ 0] ✓ tests/computer_use/test_permissions_resolution.py (1✓, 1.0s)
+2026-09-25T04:19:49.2182660Z [  9.8% |   305/~3104 | ✓58 | ✗ 0] ✓ tests/cron/test_file_permissions.py (8✓, 0.9s)
+2026-09-25T04:19:50.3198150Z [ 10.1% |   314/~3104 | ✓67 | ✗ 0] ✓ tests/cron/test_jobs_file_ownership.py (9✓, 1.1s)
+2026-09-25T04:19:55.1598430Z [ 10.5% |   325/~3104 | ✓74 | ✗ 0] ✓ tests/ci/test_channel_build_publication.py (7✓, 17.7s)
+2026-09-25T04:19:58.1077500Z [ 11.0% |   341/~3104 | ✓78 | ✗ 0] ✓ tests/cron/test_script_claim_heartbeat.py (4✓, 7.8s)
+2026-09-25T04:19:58.9153200Z [ 11.3% |   352/~3104 | ✓79 | ✗ 0] ✓ tests/cron/test_timezone.py (1✓, 3.8s)
+2026-09-25T04:20:00.5105590Z [ 11.6% |   361/~3104 | ✓80 | ✗ 0] ✓ tests/gateway/test_api_server_bind_guard.py (1✓, 2.4s)
+2026-09-25T04:20:01.0719780Z [ 12.1% |   377/~3104 | ✓96 | ✗ 0] ✓ tests/gateway/test_control_socket.py (16✓, 2.1s)
+2026-09-25T04:20:01.6029240Z [ 12.3% |   382/~3104 | ✓98 | ✗ 0] ✓ tests/gateway/test_control_socket_pause.py (2✓, 1.1s)
+2026-09-25T04:20:02.1064050Z [ 12.8% |   397/~3104 | ✓99 | ✗ 0] ✓ tests/gateway/test_homeassistant.py (1✓, 1.0s)
+2026-09-25T04:20:03.6791510Z [ 13.2% |   410/~3104 | ✓100 | ✗  0] ✓ tests/gateway/test_host_attach_lifecycle.py (1✓, 2.1s)
+2026-09-25T04:20:04.4478600Z [ 13.4% |   415/~3104 | ✓104 | ✗  0] ✓ tests/gateway/test_host_gateway_lock_refusal.py (4✓, 2.3s)
+2026-09-25T04:20:05.1756830Z [ 13.6% |   422/~3104 | ✓105 | ✗  0] ✓ tests/gateway/test_host_rendezvous.py (1✓, 1.5s)
+2026-09-25T04:20:07.3155740Z [ 14.0% |   435/~3104 | ✓106 | ✗  0] ✓ tests/gateway/test_hosted_room_peer.py (1✓, 2.1s)
+2026-09-25T04:20:08.1895700Z [ 14.2% |   440/~3104 | ✓107 | ✗  0] ✓ tests/gateway/test_hosted_room_links.py (1✓, 3.7s)
+2026-09-25T04:20:08.5525880Z [ 15.3% |   474/~3104 | ✓108 | ✗  0] ✓ tests/gateway/test_pairing.py (1✓, 1.2s)
+2026-09-25T04:20:10.2906050Z [ 15.8% |   490/~3104 | ✓110 | ✗  0] ✓ tests/gateway/test_proxy_mode.py (2✓, 2.1s)
+2026-09-25T04:20:10.5966260Z [ 15.9% |   492/~3104 | ✓111 | ✗  0] ✓ tests/gateway/test_session_db_replaced_fallback.py (1✓, 2.0s)
+2026-09-25T04:20:11.7693280Z [ 16.0% |   496/~3104 | ✓112 | ✗  0] ✓ tests/gateway/test_shutdown_watchdog.py (1✓ 1s, 1.2s)
+2026-09-25T04:20:11.9002440Z [ 16.2% |   504/~3104 | ✓113 | ✗  0] ✓ tests/gateway/test_shutdown_forensics.py (1✓ 3s, 1.6s)
+2026-09-25T04:20:13.4804670Z [ 16.7% |   517/~3104 | ✓114 | ✗  0] ✓ tests/hermes_cli/test_apply_profile_override.py (1✓, 1.6s)
+2026-09-25T04:20:15.1569350Z [ 16.8% |   520/~3104 | ✓117 | ✗  0] ✓ tests/hermes_cli/test_auth_toctou_file_modes.py (3✓, 1.7s)
+2026-09-25T04:20:15.6483740Z [ 17.5% |   543/~3104 | ✓119 | ✗  0] ✓ tests/hermes_cli/test_actual_provider.py (2✓, 3.9s)
+2026-09-25T04:20:16.6029200Z [ 20.1% |   623/~3104 | ✓120 | ✗  0] ✓ tests/hermes_cli/test_backup.py (1✓ 2s, 1.4s)
+2026-09-25T04:20:16.6297470Z [ 20.3% |   630/~3104 | ✓121 | ✗  0] ✓ tests/hermes_cli/test_backup_stability.py (1✓, 1.0s)
+2026-09-25T04:20:17.5900080Z [ 20.8% |   646/~3104 | ✓122 | ✗  0] ✓ tests/hermes_cli/test_boot_bootstrap.py (1✓, 1.0s)
+2026-09-25T04:20:17.6333810Z [ 21.1% |   654/~3104 | ✓123 | ✗  0] ✓ tests/hermes_cli/test_bounded_probe_run.py (1✓, 1.0s)
+2026-09-25T04:20:18.6865050Z [ 21.3% |   660/~3104 | ✓125 | ✗  0] ✓ tests/hermes_cli/test_chat_q_exit_clear.py (2✓ 1s, 1.1s)
+2026-09-25T04:20:19.4408490Z [ 21.8% |   677/~3104 | ✓133 | ✗  0] ✓ tests/hermes_cli/test_bundled_desktop_launch.py (8✓, 1.8s)
+2026-09-25T04:20:19.7651090Z [ 21.9% |   679/~3104 | ✓142 | ✗  0] ✓ tests/ci/test_protected_canary_publication.py (9✓, 40.8s)
+2026-09-25T04:20:20.6030860Z [ 22.0% |   682/~3104 | ✓143 | ✗  0] ✓ tests/hermes_cli/test_clipboard_text_write.py (1✓ 1s, 1.2s)
+2026-09-25T04:20:20.9207790Z [ 22.1% |   687/~3104 | ✓144 | ✗  0] ✓ tests/hermes_cli/test_cmd_update.py (1✓ 3s, 1.1s)
+2026-09-25T04:20:22.6252080Z [ 22.2% |   690/~3104 | ✓149 | ✗  0] ✓ tests/hermes_cli/test_data_dir_suffix.py (5✓, 1.7s)
+2026-09-25T04:20:24.1212450Z [ 24.0% |   746/~3104 | ✓157 | ✗  0] ✓ tests/hermes_cli/test_doctor.py (8✓, 1.5s)
+2026-09-25T04:20:25.1980930Z [ 24.3% |   754/~3104 | ✓161 | ✗  0] ✓ tests/hermes_cli/test_cross_profile_kill_refusal.py (4✓, 4.6s)
+2026-09-25T04:20:26.3727030Z [ 24.5% |   759/~3104 | ✓170 | ✗  0] ✓ tests/hermes_cli/test_doctor_command_install.py (9✓, 2.3s)
+2026-09-25T04:20:26.5968970Z [ 25.6% |   794/~3104 | ✓173 | ✗  0] ✓ tests/hermes_cli/test_doctor_journal_modes.py (3✓ 1s, 1.4s)
+2026-09-25T04:20:26.6575680Z [ 26.3% |   817/~3104 | ✓176 | ✗  0] ✓ tests/hermes_cli/test_cli_light_mode.py (3✓ 2s, 8.0s)
+2026-09-25T04:20:28.2541160Z [ 26.5% |   822/~3104 | ✓178 | ✗  0] ✓ tests/hermes_cli/test_ensure_hermes_home_uid.py (2✓ 3s, 1.7s)
+2026-09-25T04:20:29.8021820Z [ 26.5% |   824/~3104 | ✓186 | ✗  0] ✓ tests/hermes_cli/test_doctor_pm_store_probe.py (8✓, 3.4s)
+2026-09-25T04:20:31.2065950Z [ 26.7% |   830/~3104 | ✓188 | ✗  0] ✓ tests/hermes_cli/test_gateway_proc_fallback.py (2✓ 4s, 1.4s)
+2026-09-25T04:20:31.7259520Z [ 27.6% |   858/~3104 | ✓194 | ✗  0] ✓ tests/hermes_cli/test_gateway.py (6✓ 9s, 3.5s)
+2026-09-25T04:20:33.2835110Z [ 31.2% |   970/~3104 | ✓195 | ✗  0] ✓ tests/hermes_cli/test_gateway_service.py (1✓ 5s, 2.1s)
+2026-09-25T04:20:34.6077840Z [ 31.4% |   975/~3104 | ✓200 | ✗  0] ✓ tests/hermes_cli/test_git_probe_tree_kill.py (5✓, 2.9s)
+2026-09-25T04:20:36.1107070Z [ 31.5% |   979/~3104 | ✓201 | ✗  0] ✓ tests/hermes_cli/test_gui_uninstall.py (1✓ 1s, 1.5s)
+2026-09-25T04:20:36.8194280Z [ 32.7% |  1015/~3104 | ✓212 | ✗  0] ✓ tests/hermes_cli/test_gui_command.py (11✓ 8s, 3.5s)
+2026-09-25T04:20:37.7315670Z [ 32.8% |  1018/~3104 | ✓214 | ✗  0] ✓ tests/hermes_cli/test_exit_watchdog_signal_arm.py (2✓, 11.1s)
+2026-09-25T04:20:37.7415600Z [ 33.1% |  1028/~3104 | ✓217 | ✗  0] ✓ tests/hermes_cli/test_install_cua_driver.py (3✓ 5s, 1.6s)
+2026-09-25T04:20:39.3836500Z [ 33.2% |  1031/~3104 | ✓219 | ✗  0] ✓ tests/hermes_cli/test_kanban_worktree_unicode_path.py (2✓, 2.6s)
+2026-09-25T04:20:39.9213760Z [ 33.3% |  1033/~3104 | ✓221 | ✗  0] ✓ tests/hermes_cli/test_launchd_plist_guard.py (2✓, 2.2s)
+2026-09-25T04:20:39.9420570Z [ 34.7% |  1076/~3104 | ✓222 | ✗  0] ✓ tests/hermes_cli/test_linux_desktop_entry.py (1✓ 1s, 2.2s)
+2026-09-25T04:20:41.4728660Z [ 34.9% |  1082/~3104 | ✓227 | ✗  0] ✓ tests/hermes_cli/test_macos_fda_guidance.py (5✓ 1s, 2.1s)
+2026-09-25T04:20:42.3818690Z [ 35.1% |  1090/~3104 | ✓235 | ✗  0] ✓ tests/hermes_cli/test_mcp_helper_ledger.py (8✓, 2.4s)
+2026-09-25T04:20:43.5358210Z [ 35.4% |  1098/~3104 | ✓236 | ✗  0] ✓ tests/hermes_cli/test_memory_setup_env_denylist.py (1✓, 2.1s)
+2026-09-25T04:20:44.8227700Z [ 35.8% |  1112/~3104 | ✓237 | ✗  0] ✓ tests/hermes_cli/test_migrate_xai.py (1✓, 2.4s)
+2026-09-25T04:20:45.1077160Z [ 37.0% |  1147/~3104 | ✓256 | ✗  0] ✓ tests/hermes_cli/test_macos_tcc_anchor.py (19✓ 2s, 5.2s)
+2026-09-25T04:20:46.8623750Z [ 37.2% |  1154/~3104 | ✓258 | ✗  0] ✓ tests/hermes_cli/test_plugin_private_repo_auth.py (2✓, 3.3s)
+2026-09-25T04:20:46.9732020Z [ 37.3% |  1159/~3104 | ✓259 | ✗  0] ✓ tests/hermes_cli/test_plugins_cmd_list.py (1✓, 1.9s)
+2026-09-25T04:20:48.6749440Z [ 38.7% |  1202/~3104 | ✓261 | ✗  0] ✓ tests/hermes_cli/test_plugins_cmd.py (2✓, 3.8s)
+2026-09-25T04:20:48.9362250Z [ 39.0% |  1210/~3104 | ✓262 | ✗  0] ✓ tests/hermes_cli/test_post_update_adoption.py (1✓, 2.1s)
+2026-09-25T04:20:50.8239190Z [ 40.1% |  1246/~3104 | ✓264 | ✗  0] ✓ tests/hermes_cli/test_profile_distribution.py (2✓ 1s, 2.1s)
+2026-09-25T04:20:51.0480810Z [ 40.4% |  1255/~3104 | ✓265 | ✗  0] ✓ tests/hermes_cli/test_profile_export_default_path.py (1✓, 2.1s)
+2026-09-25T04:20:54.5316860Z [ 42.1% |  1306/~3104 | ✓266 | ✗  0] ✓ tests/hermes_cli/test_relay_shared_metrics.py (1✓, 3.5s)
+2026-09-25T04:20:54.6699410Z [ 42.1% |  1308/~3104 | ✓268 | ✗  0] ✓ tests/hermes_cli/test_profile_export_special_files.py (2✓, 3.8s)
+2026-09-25T04:20:54.9131750Z [ 42.6% |  1323/~3104 | ✓282 | ✗  0] ✓ tests/hermes_cli/test_post_update_expose_cli.py (14✓ 3s, 7.9s)
+2026-09-25T04:20:56.5871440Z [ 42.8% |  1328/~3104 | ✓283 | ✗  0] ✓ tests/hermes_cli/test_review_update_runtime.py (1✓, 2.1s)
+2026-09-25T04:20:56.5993910Z [ 43.2% |  1342/~3104 | ✓284 | ✗  0] ✓ tests/hermes_cli/test_serve_parent_watchdog.py (1✓, 1.9s)
+2026-09-25T04:20:59.5566690Z [ 43.8% |  1358/~3104 | ✓285 | ✗  0] ✓ tests/hermes_cli/test_session_recovery_lost_and_found.py (1✓, 3.0s)
+2026-09-25T04:21:06.6118260Z [ 43.8% |  1359/~3104 | ✓286 | ✗  0] ✓ tests/hermes_cli/test_serve_parent_watchdog_live_macos.py (1✓, 11.7s)
+2026-09-25T04:21:06.9486460Z [ 44.0% |  1366/~3104 | ✓293 | ✗  0] ✓ tests/hermes_cli/test_serve_port_in_use.py (7✓, 10.4s)
+2026-09-25T04:21:08.4221050Z [ 44.0% |  1367/~3104 | ✓295 | ✗  0] ✓ tests/hermes_cli/test_setup_pin_values.py (2✓, 1.8s)
+2026-09-25T04:21:10.6467500Z [ 44.3% |  1374/~3104 | ✓296 | ✗  0] ✓ tests/hermes_cli/test_source_build.py (1✓ 7s, 3.7s)
+2026-09-25T04:21:11.8230040Z [ 44.4% |  1377/~3104 | ✓297 | ✗  0] ✓ tests/hermes_cli/test_sqlite_runtime.py (1✓, 1.2s)
+2026-09-25T04:21:12.9559590Z [ 44.6% |  1383/~3104 | ✓301 | ✗  0] ✓ tests/hermes_cli/test_ssh_session_token_parser.py (4✓ 1s, 1.1s)
+2026-09-25T04:21:14.1890570Z [ 45.2% |  1402/~3104 | ✓303 | ✗  0] ✓ tests/hermes_cli/test_stale_pid_guard.py (2✓ 3s, 1.2s)
+2026-09-25T04:21:14.3270850Z [ 45.2% |  1404/~3104 | ✓307 | ✗  0] ✓ tests/hermes_cli/test_sessions_held_store_gate.py (4✓, 14.8s)
+2026-09-25T04:21:15.5050210Z [ 45.6% |  1416/~3104 | ✓308 | ✗  0] ✓ tests/hermes_cli/test_stderr_timestamp.py (1✓, 1.3s)
+2026-09-25T04:21:16.8084720Z [ 45.8% |  1422/~3104 | ✓309 | ✗  0] ✓ tests/hermes_cli/test_uninstall_shell_configs.py (1✓, 1.3s)
+2026-09-25T04:21:21.6991250Z [ 46.2% |  1434/~3104 | ✓312 | ✗  0] ✓ tests/hermes_cli/test_update_completion_process.py (3✓ 3s, 4.9s)
+2026-09-25T04:21:23.1974920Z [ 46.3% |  1438/~3104 | ✓314 | ✗  0] ✓ tests/hermes_cli/test_update_cua_pm.py (2✓ 2s, 1.5s)
+2026-09-25T04:21:23.7764940Z [ 46.6% |  1447/~3104 | ✓322 | ✗  0] ✓ tests/hermes_cli/test_tui_npm_install.py (8✓ 1s, 9.5s)
+2026-09-25T04:21:24.4918410Z [ 46.9% |  1456/~3104 | ✓323 | ✗  0] ✓ tests/hermes_cli/test_update_eol_churn.py (1✓, 1.3s)
+2026-09-25T04:21:25.6726080Z [ 47.0% |  1460/~3104 | ✓324 | ✗  0] ✓ tests/hermes_cli/test_update_flat_install_state_gitignore.py (1✓, 1.2s)
+2026-09-25T04:21:26.6271260Z [ 47.7% |  1482/~3104 | ✓325 | ✗  0] ✓ tests/hermes_cli/test_update_import_guard.py (1✓, 1.0s)
+2026-09-25T04:21:28.1124350Z [ 48.6% |  1507/~3104 | ✓350 | ✗  0] ✓ tests/hermes_cli/test_update_launchd_fleet_restart.py (25✓, 1.5s)
+2026-09-25T04:21:29.8276750Z [ 48.9% |  1517/~3104 | ✓353 | ✗  0] ✓ tests/hermes_cli/test_update_launchd_unloaded_gateway.py (3✓, 1.7s)
+2026-09-25T04:21:32.0526680Z [ 49.6% |  1539/~3104 | ✓355 | ✗  0] ✓ tests/hermes_cli/test_update_lock.py (2✓, 2.2s)
+2026-09-25T04:21:33.9424050Z [ 50.1% |  1556/~3104 | ✓366 | ✗  5] ✗ tests/hermes_cli/test_source_launcher_publication.py (11✓ 5✗ 9s, 25.5s)
+2026-09-25T04:21:33.9540540Z 
+2026-09-25T04:21:33.9643300Z   ╔╍ Failed: tests/hermes_cli/test_source_launcher_publication.py ╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+2026-09-25T04:21:33.9768650Z   ║     File "<string>", line 23, in <module>
+2026-09-25T04:21:33.9881380Z   ║       sys.exit(main())
+2026-09-25T04:21:34.0011980Z   ║                ~~~~^^
+2026-09-25T04:21:34.0114200Z   ║     File "/private/var/tmp/hermes-pytest-501/r-03y2801l/pytest-of-runner/pytest-0/test_service_survives_python_t0/source 'café repo/hermes_cli/main.py", line 3, in main
+2026-09-25T04:21:34.0237870Z   ║       import selected_probe
+2026-09-25T04:21:34.0352630Z   ║   ModuleNotFoundError: No module named 'selected_probe'
+2026-09-25T04:21:34.0454120Z   ║   
+2026-09-25T04:21:34.0483600Z   ║ assert 1 == 7
+2026-09-25T04:21:34.0486840Z   ║  +  where 1 = CompletedProcess(args=["/private/var/tmp/hermes-pytest-501/r-03y2801l/pytest-of-runner/pytest-0/test_service_survives_python_t0/source 'café repo/.hermes/bin/hermes", 'gateway', 'run'], returncode=1, stdout='', stderr='Traceback (most recent call last):\n  File "<string>", line 23, in <module>\n    sys.exit(main())\n             ~~~~^^\n  File "/private/var/tmp/hermes-pytest-501/r-03y2801l/pytest-of-runner/pytest-0/test_service_survives_python_t0/source \'café repo/hermes_cli/main.py", line 3, in main\n    import selected_probe\nModuleNotFoundError: No module named \'selected_probe\'\n').returncode
+2026-09-25T04:21:34.0564210Z   ║ FAILED tests/hermes_cli/test_source_launcher_publication.py::test_sync_migrates_old_store_wrapper_before_python_collection[True] - AssertionError: Traceback (most recent call last):
+2026-09-25T04:21:34.0564950Z   ║     File "<string>", line 23, in <module>
+2026-09-25T04:21:34.0565300Z   ║       sys.exit(main())
+2026-09-25T04:21:34.0565590Z   ║                ~~~~^^
+2026-09-25T04:21:34.0566320Z   ║     File "/private/var/tmp/hermes-pytest-501/r-03y2801l/pytest-of-runner/pytest-0/test_sync_migrates_old_store_w0/source 'café repo/hermes_cli/main.py", line 3, in main
+2026-09-25T04:21:34.0567110Z   ║       import selected_probe
+2026-09-25T04:21:34.0567460Z   ║   ModuleNotFoundError: No module named 'selected_probe'
+2026-09-25T04:21:34.0567870Z   ║   
+2026-09-25T04:21:34.0568080Z   ║ assert 1 == 7
+2026-09-25T04:21:34.0570190Z   ║  +  where 1 = CompletedProcess(args=['/private/var/tmp/hermes-pytest-501/r-03y2801l/pytest-of-runner/pytest-0/test_sync_migrates_old_store_w0/.hermes/.local/bin/hermes'], returncode=1, stdout='', stderr='Traceback (most recent call last):\n  File "<string>", line 23, in <module>\n    sys.exit(main())\n             ~~~~^^\n  File "/private/var/tmp/hermes-pytest-501/r-03y2801l/pytest-of-runner/pytest-0/test_sync_migrates_old_store_w0/source \'café repo/hermes_cli/main.py", line 3, in main\n    import selected_probe\nModuleNotFoundError: No module named \'selected_probe\'\n').returncode
+2026-09-25T04:21:34.0572550Z   ║ FAILED tests/hermes_cli/test_source_launcher_publication.py::test_sync_migrates_old_store_wrapper_before_python_collection[False] - AssertionError: Traceback (most recent call last):
+2026-09-25T04:21:34.0573230Z   ║     File "<string>", line 23, in <module>
+2026-09-25T04:21:34.0573560Z   ║       sys.exit(main())
+2026-09-25T04:21:34.0573780Z   ║                ~~~~^^
+2026-09-25T04:21:34.0574440Z   ║     File "/private/var/tmp/hermes-pytest-501/r-03y2801l/pytest-of-runner/pytest-0/test_sync_migrates_old_store_w1/source 'café repo/hermes_cli/main.py", line 3, in main
+2026-09-25T04:21:34.0575060Z   ║       import selected_probe
+2026-09-25T04:21:34.0575410Z   ║   ModuleNotFoundError: No module named 'selected_probe'
+2026-09-25T04:21:34.0575740Z   ║   
+2026-09-25T04:21:34.0575920Z   ║ assert 1 == 7
+2026-09-25T04:21:34.0578080Z   ║  +  where 1 = CompletedProcess(args=['/private/var/tmp/hermes-pytest-501/r-03y2801l/pytest-of-runner/pytest-0/test_sync_migrates_old_store_w1/.hermes/.local/bin/hermes'], returncode=1, stdout='', stderr='Traceback (most recent call last):\n  File "<string>", line 23, in <module>\n    sys.exit(main())\n             ~~~~^^\n  File "/private/var/tmp/hermes-pytest-501/r-03y2801l/pytest-of-runner/pytest-0/test_sync_migrates_old_store_w1/source \'café repo/hermes_cli/main.py", line 3, in main\n    import selected_probe\nModuleNotFoundError: No module named \'selected_probe\'\n').returncode
+2026-09-25T04:21:34.0580270Z   ║ ============ 5 failed, 11 passed, 9 skipped, 6 deselected in 11.45s ============
+2026-09-25T04:21:34.0580660Z   ║
+2026-09-25T04:21:34.0581320Z   ║  Repro: python -m pytest tests/hermes_cli/test_source_launcher_publication.py --ignore-glob=*test_desktop_update_windows_*.py -m platforms and not integration -v --tb=short
+2026-09-25T04:21:34.0582780Z   ╚╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍╍
+2026-09-25T04:21:34.0614860Z 
+2026-09-25T04:21:37.7422770Z [ 50.3% |  1560/~3104 | ✓367 | ✗  5] ✓ tests/hermes_cli/test_update_secret_import_lock.py (1✓, 3.8s)
+2026-09-25T04:21:39.3895370Z [ 51.9% |  1611/~3104 | ✓368 | ✗  5] ✓ tests/hermes_cli/test_update_serve_generation_recovery.py (1✓, 1.6s)
+2026-09-25T04:21:40.8711610Z [ 53.1% |  1647/~3104 | ✓369 | ✗  5] ✓ tests/hermes_cli/test_update_stale_dashboard.py (1✓ 3s, 1.5s)
+2026-09-25T04:21:43.7093750Z [ 53.1% |  1649/~3104 | ✓371 | ✗  5] ✓ tests/hermes_cli/test_update_missing_configured_deps.py (2✓, 11.7s)
+2026-09-25T04:21:43.7736670Z [ 53.4% |  1656/~3104 | ✓373 | ✗  5] ✓ tests/hermes_cli/test_web_profile_soul_writes.py (2✓, 2.9s)
+2026-09-25T04:21:45.6005680Z [ 53.4% |  1657/~3104 | ✓374 | ✗  5] ✓ tests/hermes_cli/test_web_server_auto_archive_gateway_lock.py (1✓, 1.9s)
+2026-09-25T04:21:47.9154070Z [ 53.4% |  1658/~3104 | ✓375 | ✗  5] ✓ tests/hermes_cli/test_web_server_pty_import.py (1✓, 2.3s)
+2026-09-25T04:21:49.5488870Z [ 53.5% |  1662/~3104 | ✓376 | ✗  5] ✓ tests/hermes_cli/test_web_server_idle_proof.py (1✓, 5.8s)
+2026-09-25T04:21:51.7288280Z [ 53.7% |  1666/~3104 | ✓380 | ✗  5] ✓ tests/hermes_cli/test_web_server_pty_reconnect.py (4✓, 3.8s)
+2026-09-25T04:21:53.0016740Z [ 54.1% |  1679/~3104 | ✓382 | ✗  5] ✓ tests/hermes_cli/test_webhook_cli.py (2✓, 1.3s)
+2026-09-25T04:21:54.2811490Z [ 54.6% |  1696/~3104 | ✓383 | ✗  5] ✓ tests/hermes_cli/test_win_pty_bridge.py (1✓ 11s, 1.3s)
+2026-09-25T04:21:55.5912530Z [ 55.0% |  1706/~3104 | ✓384 | ✗  5] ✓ tests/hermes_platform/test_declaration.py (1✓, 1.3s)
+2026-09-25T04:21:56.7302360Z [ 55.2% |  1712/~3104 | ✓385 | ✗  5] ✓ tests/hermes_platform/test_facts.py (1✓ 2s, 1.1s)
+2026-09-25T04:21:56.9511180Z [ 55.3% |  1718/~3104 | ✓390 | ✗  5] ✓ tests/hermes_cli/test_web_ui_build.py (5✓ 3s, 7.4s)
+2026-09-25T04:21:57.5079260Z [ 55.7% |  1728/~3104 | ✓395 | ✗  5] ✓ tests/hermes_platform/test_resolver_core.py (5✓ 1s, 0.8s)
+2026-09-25T04:21:59.5814490Z [ 56.3% |  1749/~3104 | ✓401 | ✗  5] ✓ tests/hermes_state/test_deleted_wal_generation_guard.py (6✓ 12s, 2.1s)
+2026-09-25T04:22:01.2490620Z [ 56.6% |  1757/~3104 | ✓409 | ✗  5] ✓ tests/hermes_state/test_hermes_state_readonly_preflight.py (8✓, 1.7s)
+2026-09-25T04:22:02.2520080Z [ 56.6% |  1758/~3104 | ✓410 | ✗  5] ✓ tests/hermes_state/test_auto_vacuum_holder_gate.py (1✓, 5.3s)
+2026-09-25T04:22:04.2922880Z [ 57.2% |  1776/~3104 | ✓413 | ✗  5] ✓ tests/hermes_state/test_shared_session_db_registry.py (3✓, 2.0s)
+2026-09-25T04:22:04.6149940Z [ 57.5% |  1784/~3104 | ✓420 | ✗  5] ✓ tests/hermes_state/test_retired_wal_generation_capture.py (7✓ 1s, 3.4s)
+2026-09-25T04:22:05.3143760Z [ 57.9% |  1796/~3104 | ✓421 | ✗  5] ✓ tests/hermes_state/test_state_db_corrupt_quarantine.py (1✓, 1.0s)
+2026-09-25T04:22:06.2953120Z [ 58.2% |  1806/~3104 | ✓424 | ✗  5] ✓ tests/hermes_state/test_state_db_file_identity.py (3✓ 1s, 1.7s)
+2026-09-25T04:22:06.3542470Z [ 58.3% |  1811/~3104 | ✓425 | ✗  5] ✓ tests/hermes_state/test_state_db_lock_fail_closed.py (1✓, 1.0s)
+2026-09-25T04:22:07.2341120Z [ 58.8% |  1824/~3104 | ✓426 | ✗  5] ✓ tests/hermes_state/test_state_db_stats.py (1✓ 1s, 0.9s)
+2026-09-25T04:22:08.1513490Z [ 58.9% |  1827/~3104 | ✓427 | ✗  5] ✓ tests/hermes_state/test_state_db_write_durability.py (1✓, 0.9s)
+2026-09-25T04:22:09.3905120Z [ 59.2% |  1837/~3104 | ✓429 | ✗  5] ✓ tests/hermes_state/test_state_synchronous_pragma.py (2✓ 1s, 1.2s)
+2026-09-25T04:22:10.3799300Z [ 59.9% |  1860/~3104 | ✓432 | ✗  5] ✓ tests/hermes_state/test_state_db_malformed_repair.py (3✓, 4.1s)
+2026-09-25T04:22:10.6555170Z [ 61.6% |  1912/~3104 | ✓433 | ✗  5] ✓ tests/honcho_plugin/test_session.py (1✓, 1.3s)
+2026-09-25T04:22:11.5587650Z [ 63.4% |  1969/~3104 | ✓435 | ✗  5] ✓ tests/plugins/memory/test_openviking_provider.py (2✓, 0.9s)
+2026-09-25T04:22:12.2907660Z [ 63.5% |  1970/~3104 | ✓436 | ✗  5] ✓ tests/installation/test_installer_common.py (1✓, 1.9s)
+2026-09-25T04:22:12.3334720Z [ 64.6% |  2005/~3104 | ✓437 | ✗  5] ✓ tests/plugins/memory/test_supermemory_provider.py (1✓, 0.8s)
+2026-09-25T04:22:13.1741220Z [ 64.8% |  2011/~3104 | ✓438 | ✗  5] ✓ tests/plugins/platforms/photon/test_runtime_record.py (1✓, 0.8s)
+2026-09-25T04:22:13.1809090Z [ 65.4% |  2030/~3104 | ✓439 | ✗  5] ✓ tests/plugins/platforms/photon/test_auth.py (1✓, 0.9s)
+2026-09-25T04:22:14.1313500Z [ 65.9% |  2045/~3104 | ✓440 | ✗  5] ✓ tests/plugins/test_honcho_client_config.py (1✓, 1.0s)
+2026-09-25T04:22:14.1496810Z [ 66.5% |  2065/~3104 | ✓442 | ✗  5] ✓ tests/plugins/test_google_meet_plugin.py (2✓, 1.0s)
+2026-09-25T04:22:17.8424890Z [ 66.6% |  2068/~3104 | ✓446 | ✗  5] ✓ tests/pm/test_activation_runtime.py (4✓ 1s, 3.7s)
+2026-09-25T04:22:18.6767060Z [ 67.1% |  2083/~3104 | ✓447 | ✗  5] ✓ tests/pm/test_archive_safety.py (1✓, 0.8s)
+2026-09-25T04:22:19.8045790Z [ 67.2% |  2086/~3104 | ✓448 | ✗  5] ✓ tests/pm/test_bootstrap_import_closure.py (1✓, 1.1s)
+2026-09-25T04:22:38.5677430Z [ 67.3% |  2088/~3104 | ✓450 | ✗  5] ✓ tests/pm/test_darwin_build.py (2✓, 18.7s)
+2026-09-25T04:22:39.7054150Z [ 67.3% |  2089/~3104 | ✓451 | ✗  5] ✓ tests/pm/test_activation_setup.py (1✓, 25.5s)
+2026-09-25T04:22:42.1135600Z [ 67.4% |  2093/~3104 | ✓453 | ✗  5] ✓ tests/pm/test_deb_safety.py (2✓, 3.5s)
+2026-09-25T04:22:47.3339860Z [ 67.6% |  2097/~3104 | ✓454 | ✗  5] ✓ tests/pm/test_node_sidecar.py (1✓, 5.2s)
+2026-09-25T04:22:51.2402660Z [ 68.7% |  2131/~3104 | ✓455 | ✗  5] ✓ tests/pm/test_pm_core.py (1✓ 1s, 3.9s)
+2026-09-25T04:22:53.1239980Z [ 68.8% |  2134/~3104 | ✓456 | ✗  5] ✓ tests/pm/test_runtime.py (1✓, 1.9s)
+2026-09-25T04:22:53.7804170Z [ 69.1% |  2145/~3104 | ✓475 | ✗  5] ✓ tests/pm/test_node_resolution.py (19✓ 1s, 14.1s)
+2026-09-25T04:23:03.4469250Z [ 69.2% |  2148/~3104 | ✓476 | ✗  5] ✓ tests/pm/test_runtime_bootstrap_tls.py (1✓ 1s, 10.3s)
+2026-09-25T04:23:15.2249040Z [ 69.2% |  2149/~3104 | ✓482 | ✗  5] ✓ tests/pm/test_setup_lock_format.py (6✓, 11.8s)
+2026-09-25T04:23:42.1479390Z [ 69.5% |  2158/~3104 | ✓496 | ✗  5] ✓ tests/pm/test_security_consumers.py (14✓, 48.3s)
+2026-09-25T04:23:43.7739540Z [ 69.7% |  2162/~3104 | ✓498 | ✗  5] ✓ tests/pm/test_stage_only.py (2✓ 2s, 1.6s)
+2026-09-25T04:23:45.0890540Z [ 69.7% |  2165/~3104 | ✓499 | ✗  5] ✓ tests/pm/test_tree_digest_links.py (1✓ 1s, 1.3s)
+2026-09-25T04:23:50.1988760Z [ 69.8% |  2167/~3104 | ✓501 | ✗  5] ✓ tests/pm/test_update_dependency_legs.py (2✓, 5.1s)
+2026-09-25T04:23:57.7767600Z [ 70.0% |  2172/~3104 | ✓512 | ✗  5] ✓ tests/hermes_cli/test_update_finish.py (11✓ 2s, 153.9s)
+2026-09-25T04:23:58.4541650Z [ 70.6% |  2191/~3104 | ✓517 | ✗  5] ✓ tests/pm/test_worker.py (5✓, 8.3s)
+2026-09-25T04:23:59.6716670Z [ 70.8% |  2197/~3104 | ✓519 | ✗  5] ✓ tests/pm/test_zip_symlinks.py (2✓ 1s, 1.2s)
+2026-09-25T04:24:00.3130860Z [ 71.0% |  2205/~3104 | ✓533 | ✗  5] ✓ tests/pm/test_source_update_launch.py (14✓, 45.1s)
+2026-09-25T04:24:03.3737970Z [ 71.1% |  2207/~3104 | ✓536 | ✗  5] ✓ tests/pm/test_worker_observers.py (3✓, 5.6s)
+2026-09-25T04:24:03.9797810Z [ 71.1% |  2208/~3104 | ✓545 | ✗  5] ✓ tests/scripts/install/test_dmg_install_driver.py (9✓, 3.7s)
+2026-09-25T04:24:04.2000940Z [ 71.2% |  2209/~3104 | ✓546 | ✗  5] ✓ tests/scripts/install/test_install_sh_node_tarball_without_xz.py (1✓, 0.8s)
+2026-09-25T04:24:05.0036770Z [ 71.2% |  2210/~3104 | ✓547 | ✗  5] ✓ tests/scripts/desktop_update/test_desktop_update_macos_no_browser.py (1✓, 5.3s)
+2026-09-25T04:24:05.1820630Z [ 71.3% |  2212/~3104 | ✓549 | ✗  5] ✓ tests/scripts/install/test_install_sh_output.py (2✓, 1.2s)
+2026-09-25T04:24:06.2654290Z [ 71.3% |  2213/~3104 | ✓551 | ✗  5] ✓ tests/scripts/install/test_pm_desktop_launch_capture.py (2✓, 1.1s)
+2026-09-25T04:24:07.1172910Z [ 71.4% |  2216/~3104 | ✓552 | ✗  5] ✓ tests/scripts/test_activation_guard.py (1✓ 1s, 0.9s)
+2026-09-25T04:24:07.2077280Z [ 71.5% |  2220/~3104 | ✓576 | ✗  5] ✓ tests/scripts/install/test_install_sh_reuse_supported_python.py (24✓, 2.2s)
+2026-09-25T04:24:08.4209590Z [ 71.8% |  2229/~3104 | ✓586 | ✗  5] ✓ tests/scripts/install/test_install_sh_repository_stage.py (10✓, 4.2s)
+2026-09-25T04:24:09.6961880Z [ 71.9% |  2233/~3104 | ✓589 | ✗  5] ✓ tests/scripts/test_bundle_payload.py (3✓, 1.3s)
+2026-09-25T04:24:10.6445730Z [ 72.3% |  2244/~3104 | ✓590 | ✗  5] ✓ tests/scripts/test_desktop_cli_wrapper.py (1✓ 2s, 1.0s)
+2026-09-25T04:24:10.9322790Z [ 72.5% |  2249/~3104 | ✓595 | ✗  5] ✓ tests/scripts/test_bootstrap_mirror.py (5✓ 7s, 3.7s)
+2026-09-25T04:24:12.8504280Z [ 72.7% |  2256/~3104 | ✓599 | ✗  5] ✓ tests/scripts/test_desktop_toolchain.py (4✓, 2.2s)
+2026-09-25T04:24:14.6551840Z [ 72.7% |  2258/~3104 | ✓602 | ✗  5] ✓ tests/scripts/test_dev_sandbox.py (3✓, 1.8s)
+2026-09-25T04:24:28.6725710Z [ 72.9% |  2262/~3104 | ✓603 | ✗  5] ✓ tests/scripts/test_dmgbuild_diagnostics.py (1✓, 14.0s)
+2026-09-25T04:24:29.9141770Z [ 73.0% |  2265/~3104 | ✓609 | ✗  5] ✓ tests/scripts/test_install_sh_launch_handoff.py (6✓, 1.2s)
+2026-09-25T04:24:30.6789450Z [ 73.0% |  2266/~3104 | ✓614 | ✗  5] ✓ tests/scripts/test_install_sh_python_pin_indent.py (5✓, 0.8s)
+2026-09-25T04:24:31.3659920Z [ 73.1% |  2269/~3104 | ✓615 | ✗  5] ✓ tests/scripts/test_install_stage_frames.py (1✓, 0.7s)
+2026-09-25T04:24:35.9868490Z [ 73.2% |  2272/~3104 | ✓616 | ✗  5] ✓ tests/scripts/test_native_build.py (1✓, 4.6s)
+2026-09-25T04:24:36.8373020Z [ 73.4% |  2277/~3104 | ✓618 | ✗  5] ✓ tests/scripts/test_payload_digests.py (2✓, 0.8s)
+2026-09-25T04:24:39.2898600Z [ 73.5% |  2280/~3104 | ✓619 | ✗  5] ✓ tests/scripts/test_pm_runtime_bundle.py (1✓ 1s, 2.5s)
+2026-09-25T04:24:46.6028610Z [ 73.7% |  2288/~3104 | ✓622 | ✗  5] ✓ tests/scripts/test_release_artifacts.py (3✓, 7.3s)
+2026-09-25T04:24:46.8182510Z [ 74.1% |  2299/~3104 | ✓637 | ✗  5] ✓ tests/scripts/test_agent_build.py (15✓, 39.7s)
+2026-09-25T04:24:48.0514500Z [ 74.9% |  2324/~3104 | ✓639 | ✗  5] ✓ tests/scripts/test_run_tests_parallel.py (2✓, 1.4s)
+2026-09-25T04:24:56.7516550Z [ 74.9% |  2326/~3104 | ✓642 | ✗  5] ✓ tests/scripts/test_source_build_env.py (3✓, 8.7s)
+2026-09-25T04:25:07.5887290Z [ 75.0% |  2328/~3104 | ✓643 | ✗  5] ✓ tests/scripts/test_run_tests_shell.py (1✓, 20.8s)
+2026-09-25T04:25:09.1710270Z [ 75.1% |  2330/~3104 | ✓648 | ✗  5] ✓ tests/scripts/test_source_update_command.py (5✓, 1.6s)
+2026-09-25T04:25:13.2735620Z [ 75.3% |  2338/~3104 | ✓663 | ✗  5] ✓ tests/scripts/test_desktop_update_target.py (15✓ 10s, 62.3s)
+2026-09-25T04:25:13.7543870Z [ 75.5% |  2345/~3104 | ✓684 | ✗  5] ✓ tests/scripts/test_termux_build_driver.py (21✓, 4.6s)
+2026-09-25T04:25:14.4102820Z [ 75.6% |  2348/~3104 | ✓687 | ✗  5] ✓ tests/scripts/test_termux_launchers.py (3✓, 1.1s)
+2026-09-25T04:25:15.0936880Z [ 75.7% |  2351/~3104 | ✓692 | ✗  5] ✓ tests/scripts/test_termux_update_refusal.py (5✓, 1.3s)
+2026-09-25T04:25:15.1675310Z [ 75.9% |  2356/~3104 | ✓693 | ✗  5] ✓ tests/scripts/test_verify_plugin_preservation.py (1✓, 0.8s)
+2026-09-25T04:25:15.7161780Z [ 76.2% |  2364/~3104 | ✓695 | ✗  5] ✓ tests/skills/test_skill_document_contracts.py (2✓ 1s, 0.6s)
+2026-09-25T04:25:16.0311420Z [ 76.5% |  2375/~3104 | ✓706 | ✗  5] ✓ tests/test_atomic_write_text_metadata.py (11✓, 0.9s)
+2026-09-25T04:25:17.2808000Z [ 76.7% |  2380/~3104 | ✓711 | ✗  5] ✓ tests/test_credential_file_permissions.py (5✓, 1.6s)
+2026-09-25T04:25:17.5845220Z [ 76.7% |  2382/~3104 | ✓712 | ✗  5] ✓ tests/test_git_safety_boundary.py (1✓, 1.6s)
+2026-09-25T04:25:18.6704900Z [ 78.1% |  2424/~3104 | ✓714 | ✗  5] ✓ tests/test_hermes_constants.py (2✓ 3s, 1.1s)
+2026-09-25T04:25:18.8114890Z [ 78.8% |  2447/~3104 | ✓715 | ✗  5] ✓ tests/test_hermes_bootstrap.py (1✓ 9s, 1.5s)
+2026-09-25T04:25:18.9626660Z [ 78.9% |  2450/~3104 | ✓715 | ✗  5] ✓ tests/test_os_marker_gating.py (3 tests, 0.3s)
+2026-09-25T04:25:19.6770740Z [ 79.5% |  2467/~3104 | ✓727 | ✗  5] ✓ tests/test_scratch_dir.py (12✓, 0.9s)
+2026-09-25T04:25:21.2431670Z [ 79.5% |  2469/~3104 | ✓729 | ✗  5] ✓ tests/tools/environments/test_local_path_completion.py (2✓, 2.3s)
+2026-09-25T04:25:22.0349580Z [ 79.7% |  2473/~3104 | ✓730 | ✗  5] ✓ tests/tools/test_a2a_reason_roundtrip.py (1✓, 2.4s)
+2026-09-25T04:25:23.8326650Z [ 80.8% |  2509/~3104 | ✓732 | ✗  5] ✓ tests/tools/test_async_delegation.py (2✓, 2.6s)
+2026-09-25T04:25:24.9863850Z [ 81.1% |  2518/~3104 | ✓734 | ✗  5] ✓ tests/tools/test_bot_live_owner_delivery.py (2✓, 2.9s)
+2026-09-25T04:25:28.1564530Z [ 82.0% |  2545/~3104 | ✓737 | ✗  5] ✓ tests/tools/test_browser_lightpanda_serve.py (3✓ 1s, 4.3s)
+2026-09-25T04:25:30.6181200Z [ 82.5% |  2562/~3104 | ✓740 | ✗  5] ✓ tests/tools/test_browser_pm.py (3✓, 5.6s)
+2026-09-25T04:25:31.2312990Z [ 82.7% |  2567/~3104 | ✓745 | ✗  5] ✓ tests/tools/test_browser_process_tree.py (5✓ 2s, 3.1s)
+2026-09-25T04:25:33.8807820Z [ 83.8% |  2601/~3104 | ✓746 | ✗  5] ✓ tests/tools/test_clipboard.py (1✓ 1s, 2.6s)
+2026-09-25T04:25:35.7426380Z [ 83.8% |  2602/~3104 | ✓747 | ✗  5] ✓ tests/tools/test_browser_use_pm.py (1✓, 5.1s)
+2026-09-25T04:25:42.2902460Z [ 83.9% |  2603/~3104 | ✓748 | ✗  5] ✓ tests/tools/test_code_execution_file_rpc.py (1✓, 8.4s)
+2026-09-25T04:25:44.1488420Z [ 84.1% |  2611/~3104 | ✓754 | ✗  5] ✓ tests/tools/test_code_execution_modes.py (6✓, 8.4s)
+2026-09-25T04:25:44.5048640Z [ 84.5% |  2623/~3104 | ✓755 | ✗  5] ✓ tests/tools/test_computer_use_cua_macos_identity.py (1✓, 2.2s)
+2026-09-25T04:25:46.5186590Z [ 84.5% |  2624/~3104 | ✓759 | ✗  5] ✓ tests/tools/test_computer_use_native_platform.py (4✓ 4s, 2.4s)
+2026-09-25T04:25:50.4290550Z [ 85.2% |  2645/~3104 | ✓761 | ✗  5] ✓ tests/tools/test_execute_code_approval_cluster.py (2✓, 5.9s)
+2026-09-25T04:25:51.8332250Z [ 85.5% |  2654/~3104 | ✓762 | ✗  5] ✓ tests/tools/test_find_shell.py (1✓ 4s, 1.4s)
+2026-09-25T04:25:53.3411300Z [ 85.7% |  2659/~3104 | ✓772 | ✗  5] ✓ tests/scripts/test_source_driver.py (10✓, 56.6s)
+2026-09-25T04:25:54.9385290Z [ 85.7% |  2661/~3104 | ✓773 | ✗  5] ✓ tests/tools/test_git_consumer_environment.py (1✓, 3.1s)
+2026-09-25T04:25:58.0248490Z [ 86.0% |  2669/~3104 | ✓774 | ✗  5] ✓ tests/tools/test_interrupt.py (1✓, 4.7s)
+2026-09-25T04:25:58.0618380Z [ 86.1% |  2674/~3104 | ✓775 | ✗  5] ✓ tests/tools/test_kill_verify_tree_death.py (1✓, 3.1s)
+2026-09-25T04:26:00.0136750Z [ 86.3% |  2679/~3104 | ✓778 | ✗  5] ✓ tests/tools/test_local_cwd_permission_fallback.py (3✓, 2.0s)
+2026-09-25T04:26:01.6055880Z [ 87.7% |  2722/~3104 | ✓788 | ✗  5] ✓ tests/tools/test_local_env_blocklist.py (10✓ 4s, 3.5s)
+2026-09-25T04:26:03.9582970Z [ 88.0% |  2730/~3104 | ✓793 | ✗  5] ✓ tests/tools/test_macos_protected_search.py (5✓, 3.9s)
+2026-09-25T04:26:06.9751080Z [ 89.6% |  2781/~3104 | ✓794 | ✗  5] ✓ tests/tools/test_mcp_oauth.py (1✓, 3.0s)
+2026-09-25T04:26:07.7764090Z [ 90.5% |  2810/~3104 | ✓826 | ✗  5] ✓ tests/tools/test_mcp_death_supervisor.py (32✓, 6.2s)
+2026-09-25T04:26:08.3028130Z [ 91.5% |  2841/~3104 | ✓884 | ✗  5] ✓ tests/tools/test_file_ops_single_roundtrip.py (58✓, 21.8s)
+2026-09-25T04:26:10.3320650Z [ 92.0% |  2855/~3104 | ✓885 | ✗  5] ✓ tests/tools/test_pty_query_responder.py (1✓, 2.6s)
+2026-09-25T04:26:11.0010530Z [ 92.3% |  2864/~3104 | ✓886 | ✗  5] ✓ tests/tools/test_read_special_file_guard.py (1✓ 4s, 2.7s)
+2026-09-25T04:26:11.3231820Z [ 92.3% |  2866/~3104 | ✓887 | ✗  5] ✓ tests/tools/test_process_registry_list_exit.py (1✓ 1s, 4.3s)
+2026-09-25T04:26:13.8876100Z [ 92.6% |  2875/~3104 | ✓888 | ✗  5] ✓ tests/tools/test_skill_view_traversal.py (1✓, 2.9s)
+2026-09-25T04:26:14.2142280Z [ 92.7% |  2877/~3104 | ✓890 | ✗  5] ✓ tests/tools/test_snapshot_multiline_session_env_injection.py (2✓, 2.9s)
+2026-09-25T04:26:16.7379840Z [ 93.0% |  2888/~3104 | ✓892 | ✗  5] ✓ tests/tools/test_spill_safety.py (2✓, 2.5s)
+2026-09-25T04:26:18.9339250Z [ 93.2% |  2892/~3104 | ✓895 | ✗  5] ✓ tests/tools/test_snapshot_session_id_leak.py (3✓, 5.0s)
+2026-09-25T04:26:22.2642670Z [ 93.3% |  2896/~3104 | ✓899 | ✗  5] ✓ tests/tools/test_search_native_rg.py (4✓, 11.9s)
+2026-09-25T04:26:22.7895690Z [ 94.3% |  2927/~3104 | ✓900 | ✗  5] ✓ tests/tools/test_tts_command_providers.py (1✓, 3.9s)
+2026-09-25T04:26:24.7917130Z [ 94.4% |  2929/~3104 | ✓901 | ✗  5] ✓ tests/tools/test_tts_macos_output.py (1✓ 1s, 2.5s)
+2026-09-25T04:26:25.5619080Z [ 96.2% |  2986/~3104 | ✓902 | ✗  5] ✓ tests/tools/test_voice_mode.py (1✓ 7s, 2.8s)
+2026-09-25T04:26:26.5972960Z [ 98.1% |  3046/~3104 | ✓904 | ✗  5] ✓ tests/tools/test_transcription_tools.py (2✓, 9.8s)
+2026-09-25T04:26:27.2997950Z [ 99.1% |  3077/~3104 | ✓905 | ✗  5] ✓ tests/tools/test_wake_word.py (1✓ 2s, 2.5s)
+2026-09-25T04:26:27.8988910Z [ 99.7% |  3095/~3104 | ✓906 | ✗  5] ✓ tests/tui_gateway/test_bot_relay_methods.py (1✓, 2.3s)
+2026-09-25T04:26:28.2020660Z [ 99.7% |  3096/~3104 | ✓907 | ✗  5] ✓ tests/tui_gateway/test_entry_rpc_stdin_cloexec.py (1✓, 1.6s)
+2026-09-25T04:26:29.2090250Z [100.0% |  3104/~3104 | ✓908 | ✗  5] ✓ tests/tui_gateway/test_serve_exit_flush.py (1✓, 1.9s)
+2026-09-25T04:26:29.4066770Z 
+2026-09-25T04:26:29.4068770Z === Summary: 239 files, 908 tests passed, 5 failed, 202 skipped (100% complete) in 419.1s (3 workers) ===
+2026-09-25T04:26:29.4071780Z 
+2026-09-25T04:26:29.4072990Z   note: platforms('linux') tests (in 48 files) were SKIPPED on this host (darwin); they run on the main Linux CI lane.
+2026-09-25T04:26:29.4082520Z   note: platforms('not macos') tests (in 5 files) were SKIPPED on this host (darwin); they run on the main Linux CI lane, the Windows Python-tests lane.
+2026-09-25T04:26:29.4085450Z   note: platforms('windows') tests (in 54 files) were SKIPPED on this host (darwin); they run on the Windows Python-tests lane.
+2026-09-25T04:26:29.4087510Z   Durations cached to test_durations.json (238 files)
+2026-09-25T04:26:29.4088410Z 
+2026-09-25T04:26:29.4089110Z === Per-file subprocess time distribution ===
+2026-09-25T04:26:29.4099700Z   Files:   239
+2026-09-25T04:26:29.4101530Z   Total subprocess CPU-wall: 1254.5s  (runner wall: 419.1s, parallelism: 3x)
+2026-09-25T04:26:29.4102660Z   P50: 2.15s  P90: 9.84s  P95: 18.75s  P99: 56.56s  Max: 153.92s
+2026-09-25T04:26:29.4103440Z   <1s: 28 files (12%)  <2s: 107 files (45%)
+2026-09-25T04:26:29.4104160Z   Top 10 slowest:
+2026-09-25T04:26:29.4104740Z     153.92s  tests/hermes_cli/test_update_finish.py
+2026-09-25T04:26:29.4105640Z      62.31s  tests/scripts/test_desktop_update_target.py
+2026-09-25T04:26:29.4106460Z      56.56s  tests/scripts/test_source_driver.py
+2026-09-25T04:26:29.4107330Z      48.34s  tests/pm/test_security_consumers.py
+2026-09-25T04:26:29.4108150Z      45.06s  tests/pm/test_source_update_launch.py
+2026-09-25T04:26:29.4109070Z      40.77s  tests/ci/test_protected_canary_publication.py
+2026-09-25T04:26:29.4109830Z      39.68s  tests/scripts/test_agent_build.py
+2026-09-25T04:26:29.4110630Z      25.54s  tests/pm/test_activation_setup.py
+2026-09-25T04:26:29.4111510Z      25.51s  tests/hermes_cli/test_source_launcher_publication.py
+2026-09-25T04:26:29.4112380Z      21.78s  tests/tools/test_file_ops_single_roundtrip.py
+2026-09-25T04:26:29.4112940Z 
+2026-09-25T04:26:29.4113220Z === Failure output ===
+2026-09-25T04:26:29.4113600Z 
+2026-09-25T04:26:29.4113940Z --- tests/hermes_cli/test_source_launcher_publication.py ---
+2026-09-25T04:26:29.4114930Z ============================= test session starts ==============================
+2026-09-25T04:26:29.4116890Z platform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0 -- /Users/runner/work/_temp/setup-pm/installs/fcabfe9b629f97eb/test-environment/gen-3c6da1815761460f8a849fc5b118bf9d/venv/bin/python
+2026-09-25T04:26:29.4118790Z cachedir: .pytest_cache
+2026-09-25T04:26:29.4131430Z rootdir: /Users/runner/work/hermes-agent/hermes-agent
+2026-09-25T04:26:29.4132150Z configfile: pyproject.toml
+2026-09-25T04:26:29.4132430Z plugins: anyio-4.14.2, asyncio-1.3.0
+2026-09-25T04:26:29.4133300Z asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+2026-09-25T04:26:29.4134110Z collecting ... collected 31 items / 6 deselected / 25 selected
+2026-09-25T04:26:29.4134480Z 
+2026-09-25T04:26:29.4135260Z tests/hermes_cli/test_source_launcher_publication.py::test_source_launchers_boot_selected_generation_from_custom_home[native] PASSED [  4%]
+2026-09-25T04:26:29.4136210Z tests/hermes_cli/test_source_launcher_publication.py::test_source_launchers_boot_selected_generation_from_custom_home[shell] PASSED [  8%]
+2026-09-25T04:26:29.4137200Z tests/hermes_cli/test_source_launcher_publication.py::test_launcher_resolves_default_home_at_use_not_publication PASSED [ 12%]
+2026-09-25T04:26:29.4137990Z tests/hermes_cli/test_source_launcher_publication.py::test_profile_publication_preserves_shared_launcher_default_home[boot] FAILED [ 16%]
+2026-09-25T04:26:29.4138930Z tests/hermes_cli/test_source_launcher_publication.py::test_profile_publication_preserves_shared_launcher_default_home[repair] FAILED [ 20%]
+2026-09-25T04:26:29.4139980Z tests/hermes_cli/test_source_launcher_publication.py::test_profile_publication_preserves_shared_launcher_default_home[native] SKIPPED [ 24%]
+2026-09-25T04:26:29.4140930Z tests/hermes_cli/test_source_launcher_publication.py::test_profile_publication_preserves_shared_launcher_default_home[cmd] SKIPPED [ 28%]
+2026-09-25T04:26:29.4141900Z tests/hermes_cli/test_source_launcher_publication.py::test_posix_materializer_publishes_only_executable_shell_launchers[bom] PASSED [ 32%]
+2026-09-25T04:26:29.4142850Z tests/hermes_cli/test_source_launcher_publication.py::test_posix_materializer_publishes_only_executable_shell_launchers[crlf] PASSED [ 36%]
+2026-09-25T04:26:29.4144110Z tests/hermes_cli/test_source_launcher_publication.py::test_boot_migrates_legacy_conveniences_to_selected_runtime PASSED [ 40%]
+2026-09-25T04:26:29.4145000Z tests/hermes_cli/test_source_launcher_publication.py::test_posix_commands_survive_generation_collection[published] PASSED [ 44%]
+2026-09-25T04:26:29.4146700Z tests/hermes_cli/test_source_launcher_publication.py::test_posix_commands_survive_generation_collection[systemd] PASSED [ 48%]
+2026-09-25T04:26:29.4147530Z tests/hermes_cli/test_source_launcher_publication.py::test_posix_commands_survive_generation_collection[launchd] PASSED [ 52%]
+2026-09-25T04:26:29.4148300Z tests/hermes_cli/test_source_launcher_publication.py::test_posix_commands_survive_generation_collection[ssh] PASSED [ 56%]
+2026-09-25T04:26:29.4149400Z tests/hermes_cli/test_source_launcher_publication.py::test_posix_commands_survive_generation_collection[legacy] PASSED [ 60%]
+2026-09-25T04:26:29.4150270Z tests/hermes_cli/test_source_launcher_publication.py::test_windows_commands_survive_generation_collection[published] SKIPPED [ 64%]
+2026-09-25T04:26:29.4151040Z tests/hermes_cli/test_source_launcher_publication.py::test_windows_commands_survive_generation_collection[ssh] SKIPPED [ 68%]
+2026-09-25T04:26:29.4151950Z tests/hermes_cli/test_source_launcher_publication.py::test_running_source_launcher_can_republish_itself[native] SKIPPED [ 72%]
+2026-09-25T04:26:29.4152770Z tests/hermes_cli/test_source_launcher_publication.py::test_running_source_launcher_can_republish_itself[cmd] SKIPPED [ 76%]
+2026-09-25T04:26:29.4153690Z tests/hermes_cli/test_source_launcher_publication.py::test_running_source_launcher_can_republish_itself[native-with-maker] SKIPPED [ 80%]
+2026-09-25T04:26:29.4154560Z tests/hermes_cli/test_source_launcher_publication.py::test_repin_without_distlib_retires_stale_native_launcher SKIPPED [ 84%]
+2026-09-25T04:26:29.4155300Z tests/hermes_cli/test_source_launcher_publication.py::test_windows_repair_upgrades_healthy_old_pm_external_launchers SKIPPED [ 88%]
+2026-09-25T04:26:29.4156550Z tests/hermes_cli/test_source_launcher_publication.py::test_service_survives_python_tool_replacement FAILED [ 92%]
+2026-09-25T04:26:29.4157320Z tests/hermes_cli/test_source_launcher_publication.py::test_sync_migrates_old_store_wrapper_before_python_collection[True] FAILED [ 96%]
+2026-09-25T04:26:29.4158220Z tests/hermes_cli/test_source_launcher_publication.py::test_sync_migrates_old_store_wrapper_before_python_collection[False] FAILED [100%]
+2026-09-25T04:26:29.4158720Z 
+2026-09-25T04:26:29.4158830Z =================================== FAILURES ===================================
+2026-09-25T04:26:29.4159330Z ____ test_profile_publication_preserves_shared_launcher_default_home[boot] _____
+2026-09-25T04:26:29.4160110Z tests/hermes_cli/test_source_launcher_publication.py:174: in test_profile_publication_preserves_shared_launcher_default_home
+2026-09-25T04:26:29.4160610Z     assert_home(None, home)
+2026-09-25T04:26:29.4160980Z tests/hermes_cli/test_source_launcher_publication.py:168: in assert_home
+2026-09-25T04:26:29.4161390Z     assert result.returncode == 7, result.stdout + result.stderr
+2026-09-25T04:26:29.4161900Z E   AssertionError: Traceback (most recent call last):
+2026-09-25T04:26:29.4162270Z E       File "<string>", line 23, in <module>
+2026-09-25T04:26:29.4162610Z E         sys.exit(main())
+2026-09-25T04:26:29.4162820Z E                  ~~~~^^
+2026-09-25T04:26:29.4163820Z E       File "/private/var/tmp/hermes-pytest-501/r-03y2801l/pytest-of-runner/pytest-0/test_profile_publication_prese0/source 'café repo/hermes_cli/main.py", line 3, in main
+2026-09-25T04:26:29.4164670Z E         import selected_probe
+2026-09-25T04:26:29.4164950Z E     ModuleNotFoundError: No module named 'selected_probe'
+2026-09-25T04:26:29.4165310Z E     
+2026-09-25T04:26:29.4165490Z E   assert 1 == 7
+2026-09-25T04:26:29.4167880Z E    +  where 1 = CompletedProcess(args=['/private/var/tmp/hermes-pytest-501/r-03y2801l/pytest-of-runner/pytest-0/test_profile_publication_prese0/.local/bin/hermes'], returncode=1, stdout='', stderr='Traceback (most recent call last):\n  File "<string>", line 23, in <module>\n    sys.exit(main())\n             ~~~~^^\n  File "/private/var/tmp/hermes-pytest-501/r-03y2801l/pytest-of-runner/pytest-0/test_profile_publication_prese0/source \'café repo/hermes_cli/main.py", line 3, in main\n    import selected_probe\nModuleNotFoundError: No module named \'selected_probe\'\n').returncode
+2026-09-25T04:26:29.4170210Z ___ test_profile_publication_preserves_shared_launcher_default_home[repair] ____
+2026-09-25T04:26:29.4170820Z tests/hermes_cli/test_source_launcher_publication.py:174: in test_profile_publication_preserves_shared_launcher_default_home
+2026-09-25T04:26:29.4171360Z     assert_home(None, home)
+2026-09-25T04:26:29.4171660Z tests/hermes_cli/test_source_launcher_publication.py:168: in assert_home
+2026-09-25T04:26:29.4172120Z     assert result.returncode == 7, result.stdout + result.stderr
+2026-09-25T04:26:29.4172480Z E   AssertionError: Traceback (most recent call last):
+2026-09-25T04:26:29.4172890Z E       File "<string>", line 23, in <module>
+2026-09-25T04:26:29.4173190Z E         sys.exit(main())
+2026-09-25T04:26:29.4173450Z E                  ~~~~^^
+2026-09-25T04:26:29.4174190Z E       File "/private/var/tmp/hermes-pytest-501/r-03y2801l/pytest-of-runner/pytest-0/test_profile_publication_prese1/source 'café repo/hermes_cli/main.py", line 3, in main
+2026-09-25T04:26:29.4174910Z E         import selected_probe
+2026-09-25T04:26:29.4175300Z E     ModuleNotFoundError: No module named 'selected_probe'
+2026-09-25T04:26:29.4175660Z E     
+2026-09-25T04:26:29.4175950Z E   assert 1 == 7
+2026-09-25T04:26:29.4181150Z E    +  where 1 = CompletedProcess(args=['/private/var/tmp/hermes-pytest-501/r-03y2801l/pytest-of-runner/pytest-0/test_profile_publication_prese1/.local/bin/hermes'], returncode=1, stdout='', stderr='Traceback (most recent call last):\n  File "<string>", line 23, in <module>\n    sys.exit(main())\n             ~~~~^^\n  File "/private/var/tmp/hermes-pytest-501/r-03y2801l/pytest-of-runner/pytest-0/test_profile_publication_prese1/source \'café repo/hermes_cli/main.py", line 3, in main\n    import selected_probe\nModuleNotFoundError: No module named \'selected_probe\'\n').returncode
+2026-09-25T04:26:29.4188540Z ________________ test_service_survives_python_tool_replacement _________________
+2026-09-25T04:26:29.4190500Z tests/hermes_cli/test_source_launcher_publication.py:483: in test_service_survives_python_tool_replacement
+2026-09-25T04:26:29.4191910Z     assert result.returncode == 7, result.stderr
+2026-09-25T04:26:29.4192720Z E   AssertionError: Traceback (most recent call last):
+2026-09-25T04:26:29.4193590Z E       File "<string>", line 23, in <module>
+2026-09-25T04:26:29.4194230Z E         sys.exit(main())
+2026-09-25T04:26:29.4194880Z E                  ~~~~^^
+2026-09-25T04:26:29.4197020Z E       File "/private/var/tmp/hermes-pytest-501/r-03y2801l/pytest-of-runner/pytest-0/test_service_survives_python_t0/source 'café repo/hermes_cli/main.py", line 3, in main
+2026-09-25T04:26:29.4199560Z E         import selected_probe
+2026-09-25T04:26:29.4200450Z E     ModuleNotFoundError: No module named 'selected_probe'
+2026-09-25T04:26:29.4201280Z E     
+2026-09-25T04:26:29.4201830Z E   assert 1 == 7
+2026-09-25T04:26:29.4207490Z E    +  where 1 = CompletedProcess(args=["/private/var/tmp/hermes-pytest-501/r-03y2801l/pytest-of-runner/pytest-0/test_service_survives_python_t0/source 'café repo/.hermes/bin/hermes", 'gateway', 'run'], returncode=1, stdout='', stderr='Traceback (most recent call last):\n  File "<string>", line 23, in <module>\n    sys.exit(main())\n             ~~~~^^\n  File "/private/var/tmp/hermes-pytest-501/r-03y2801l/pytest-of-runner/pytest-0/test_service_survives_python_t0/source \'café repo/hermes_cli/main.py", line 3, in main\n    import selected_probe\nModuleNotFoundError: No module named \'selected_probe\'\n').returncode
+2026-09-25T04:26:29.4212850Z ------------------------------ Captured log call -------------------------------
+2026-09-25T04:26:29.4214330Z INFO     hermes_cli.plugins:plugins.py:378 Plugin 'browser-browser-use' registered browser provider: browser-use
+2026-09-25T04:26:29.4216570Z INFO     hermes_cli.plugins:plugins.py:378 Plugin 'browser-browserbase' registered browser provider: browserbase
+2026-09-25T04:26:29.4218580Z INFO     hermes_cli.plugins:plugins.py:378 Plugin 'browser-firecrawl' registered browser provider: firecrawl
+2026-09-25T04:26:29.4223960Z INFO     hermes_cli.plugins:plugins.py:378 Plugin 'deepinfra' registered image_gen provider: deepinfra
+2026-09-25T04:26:29.4225480Z INFO     hermes_cli.plugins:plugins.py:378 Plugin 'fal' registered image_gen provider: fal
+2026-09-25T04:26:29.4226780Z INFO     hermes_cli.plugins:plugins.py:378 Plugin 'krea' registered image_gen provider: krea
+2026-09-25T04:26:29.4232740Z INFO     hermes_cli.plugins:plugins.py:378 Plugin 'meta-ai-image-gen' registered image_gen provider: meta-ai
+2026-09-25T04:26:29.4233760Z INFO     hermes_cli.plugins:plugins.py:378 Plugin 'openai' registered image_gen provider: openai
+2026-09-25T04:26:29.4234420Z INFO     hermes_cli.plugins:plugins.py:378 Plugin 'openai-codex' registered image_gen provider: openai-codex
+2026-09-25T04:26:29.4235140Z INFO     hermes_cli.plugins:plugins.py:378 Plugin 'openrouter' registered image_gen provider: openrouter
+2026-09-25T04:26:29.4235730Z INFO     hermes_cli.plugins:plugins.py:378 Plugin 'openrouter' registered image_gen provider: nous
+2026-09-25T04:26:29.4236390Z INFO     hermes_cli.plugins:plugins.py:378 Plugin 'xai' registered image_gen provider: xai
+2026-09-25T04:26:29.4236950Z INFO     hermes_cli.plugins:plugins.py:378 Plugin 'deepinfra' registered video_gen provider: deepinfra
+2026-09-25T04:26:29.4237580Z INFO     hermes_cli.plugins:plugins.py:378 Plugin 'fal' registered video_gen provider: fal
+2026-09-25T04:26:29.4238230Z INFO     hermes_cli.plugins:plugins.py:378 Plugin 'openrouter' registered video_gen provider: openrouter
+2026-09-25T04:26:29.4238780Z INFO     hermes_cli.plugins:plugins.py:378 Plugin 'xai' registered video_gen provider: xai
+2026-09-25T04:26:29.4239810Z INFO     hermes_cli.plugins:plugins.py:378 Plugin 'web-brave-free' registered web provider: brave-free
+2026-09-25T04:26:29.4294940Z INFO     hermes_cli.plugins:plugins.py:378 Plugin 'web-ddgs' registered web provider: ddgs
+2026-09-25T04:26:29.4296460Z INFO     hermes_cli.plugins:plugins.py:378 Plugin 'web-exa' registered web provider: exa
+2026-09-25T04:26:29.4297150Z INFO     hermes_cli.plugins:plugins.py:378 Plugin 'web-firecrawl' registered web provider: firecrawl
+2026-09-25T04:26:29.4297770Z INFO     hermes_cli.plugins:plugins.py:378 Plugin 'web-keenable' registered web provider: keenable
+2026-09-25T04:26:29.4298790Z INFO     hermes_cli.plugins:plugins.py:378 Plugin 'web-openai-native' registered web provider: openai-native
+2026-09-25T04:26:29.4299660Z INFO     hermes_cli.plugins:plugins.py:378 Plugin 'web-parallel' registered web provider: parallel
+2026-09-25T04:26:29.4300540Z INFO     hermes_cli.plugins:plugins.py:378 Plugin 'web-perplexity' registered web provider: perplexity
+2026-09-25T04:26:29.4301230Z INFO     hermes_cli.plugins:plugins.py:378 Plugin 'web-searxng' registered web provider: searxng
+2026-09-25T04:26:29.4302180Z INFO     hermes_cli.plugins:plugins.py:378 Plugin 'web-tavily' registered web provider: tavily
+2026-09-25T04:26:29.4302830Z INFO     hermes_cli.plugins:plugins.py:378 Plugin 'web-xai' registered web provider: xai
+2026-09-25T04:26:29.4303380Z INFO     hermes_cli.plugins:plugins.py:1430 Plugin discovery complete: 58 found, 53 enabled
+2026-09-25T04:26:29.4304180Z _____ test_sync_migrates_old_store_wrapper_before_python_collection[True] ______
+2026-09-25T04:26:29.4304780Z tests/hermes_cli/test_source_launcher_publication.py:529: in test_sync_migrates_old_store_wrapper_before_python_collection
+2026-09-25T04:26:29.4305470Z     assert result.returncode == 7, result.stderr
+2026-09-25T04:26:29.4305960Z E   AssertionError: Traceback (most recent call last):
+2026-09-25T04:26:29.4306390Z E       File "<string>", line 23, in <module>
+2026-09-25T04:26:29.4306740Z E         sys.exit(main())
+2026-09-25T04:26:29.4306950Z E                  ~~~~^^
+2026-09-25T04:26:29.4308110Z E       File "/private/var/tmp/hermes-pytest-501/r-03y2801l/pytest-of-runner/pytest-0/test_sync_migrates_old_store_w0/source 'café repo/hermes_cli/main.py", line 3, in main
+2026-09-25T04:26:29.4310900Z E         import selected_probe
+2026-09-25T04:26:29.4314110Z E     ModuleNotFoundError: No module named 'selected_probe'
+2026-09-25T04:26:29.4318980Z E     
+2026-09-25T04:26:29.4319310Z E   assert 1 == 7
+2026-09-25T04:26:29.4322040Z E    +  where 1 = CompletedProcess(args=['/private/var/tmp/hermes-pytest-501/r-03y2801l/pytest-of-runner/pytest-0/test_sync_migrates_old_store_w0/.hermes/.local/bin/hermes'], returncode=1, stdout='', stderr='Traceback (most recent call last):\n  File "<string>", line 23, in <module>\n    sys.exit(main())\n             ~~~~^^\n  File "/private/var/tmp/hermes-pytest-501/r-03y2801l/pytest-of-runner/pytest-0/test_sync_migrates_old_store_w0/source \'café repo/hermes_cli/main.py", line 3, in main\n    import selected_probe\nModuleNotFoundError: No module named \'selected_probe\'\n').returncode
+2026-09-25T04:26:29.4324290Z _____ test_sync_migrates_old_store_wrapper_before_python_collection[False] _____
+2026-09-25T04:26:29.4325030Z tests/hermes_cli/test_source_launcher_publication.py:529: in test_sync_migrates_old_store_wrapper_before_python_collection
+2026-09-25T04:26:29.4325650Z     assert result.returncode == 7, result.stderr
+2026-09-25T04:26:29.4325980Z E   AssertionError: Traceback (most recent call last):
+2026-09-25T04:26:29.4326310Z E       File "<string>", line 23, in <module>
+2026-09-25T04:26:29.4326520Z E         sys.exit(main())
+2026-09-25T04:26:29.4326820Z E                  ~~~~^^
+2026-09-25T04:26:29.4327600Z E       File "/private/var/tmp/hermes-pytest-501/r-03y2801l/pytest-of-runner/pytest-0/test_sync_migrates_old_store_w1/source 'café repo/hermes_cli/main.py", line 3, in main
+2026-09-25T04:26:29.4328440Z E         import selected_probe
+2026-09-25T04:26:29.4328920Z E     ModuleNotFoundError: No module named 'selected_probe'
+2026-09-25T04:26:29.4329210Z E     
+2026-09-25T04:26:29.4329690Z E   assert 1 == 7
+2026-09-25T04:26:29.4333780Z E    +  where 1 = CompletedProcess(args=['/private/var/tmp/hermes-pytest-501/r-03y2801l/pytest-of-runner/pytest-0/test_sync_migrates_old_store_w1/.hermes/.local/bin/hermes'], returncode=1, stdout='', stderr='Traceback (most recent call last):\n  File "<string>", line 23, in <module>\n    sys.exit(main())\n             ~~~~^^\n  File "/private/var/tmp/hermes-pytest-501/r-03y2801l/pytest-of-runner/pytest-0/test_sync_migrates_old_store_w1/source \'café repo/hermes_cli/main.py", line 3, in main\n    import selected_probe\nModuleNotFoundError: No module named \'selected_probe\'\n').returncode
+2026-09-25T04:26:29.4337490Z =========================== short test summary info ============================
+2026-09-25T04:26:29.4338350Z FAILED tests/hermes_cli/test_source_launcher_publication.py::test_profile_publication_preserves_shared_launcher_default_home[boot] - AssertionError: Traceback (most recent call last):
+2026-09-25T04:26:29.4339030Z     File "<string>", line 23, in <module>
+2026-09-25T04:26:29.4339370Z       sys.exit(main())
+2026-09-25T04:26:29.4339570Z                ~~~~^^
+2026-09-25T04:26:29.4340260Z     File "/private/var/tmp/hermes-pytest-501/r-03y2801l/pytest-of-runner/pytest-0/test_profile_publication_prese0/source 'café repo/hermes_cli/main.py", line 3, in main
+2026-09-25T04:26:29.4340940Z       import selected_probe
+2026-09-25T04:26:29.4341260Z   ModuleNotFoundError: No module named 'selected_probe'
+2026-09-25T04:26:29.4341620Z   
+2026-09-25T04:26:29.4341990Z assert 1 == 7
+2026-09-25T04:26:29.4345730Z  +  where 1 = CompletedProcess(args=['/private/var/tmp/hermes-pytest-501/r-03y2801l/pytest-of-runner/pytest-0/test_profile_publication_prese0/.local/bin/hermes'], returncode=1, stdout='', stderr='Traceback (most recent call last):\n  File "<string>", line 23, in <module>\n    sys.exit(main())\n             ~~~~^^\n  File "/private/var/tmp/hermes-pytest-501/r-03y2801l/pytest-of-runner/pytest-0/test_profile_publication_prese0/source \'café repo/hermes_cli/main.py", line 3, in main\n    import selected_probe\nModuleNotFoundError: No module named \'selected_probe\'\n').returncode
+2026-09-25T04:26:29.4348330Z FAILED tests/hermes_cli/test_source_launcher_publication.py::test_profile_publication_preserves_shared_launcher_default_home[repair] - AssertionError: Traceback (most recent call last):
+2026-09-25T04:26:29.4350200Z     File "<string>", line 23, in <module>
+2026-09-25T04:26:29.4350800Z       sys.exit(main())
+2026-09-25T04:26:29.4351430Z                ~~~~^^
+2026-09-25T04:26:29.4352620Z     File "/private/var/tmp/hermes-pytest-501/r-03y2801l/pytest-of-runner/pytest-0/test_profile_publication_prese1/source 'café repo/hermes_cli/main.py", line 3, in main
+2026-09-25T04:26:29.4354940Z       import selected_probe
+2026-09-25T04:26:29.4355850Z   ModuleNotFoundError: No module named 'selected_probe'
+2026-09-25T04:26:29.4356690Z   
+2026-09-25T04:26:29.4357130Z assert 1 == 7
+2026-09-25T04:26:29.4359950Z  +  where 1 = CompletedProcess(args=['/private/var/tmp/hermes-pytest-501/r-03y2801l/pytest-of-runner/pytest-0/test_profile_publication_prese1/.local/bin/hermes'], returncode=1, stdout='', stderr='Traceback (most recent call last):\n  File "<string>", line 23, in <module>\n    sys.exit(main())\n             ~~~~^^\n  File "/private/var/tmp/hermes-pytest-501/r-03y2801l/pytest-of-runner/pytest-0/test_profile_publication_prese1/source \'café repo/hermes_cli/main.py", line 3, in main\n    import selected_probe\nModuleNotFoundError: No module named \'selected_probe\'\n').returncode
+2026-09-25T04:26:29.4362700Z FAILED tests/hermes_cli/test_source_launcher_publication.py::test_service_survives_python_tool_replacement - AssertionError: Traceback (most recent call last):
+2026-09-25T04:26:29.4363640Z     File "<string>", line 23, in <module>
+2026-09-25T04:26:29.4364550Z       sys.exit(main())
+2026-09-25T04:26:29.4364770Z                ~~~~^^
+2026-09-25T04:26:29.4366520Z     File "/private/var/tmp/hermes-pytest-501/r-03y2801l/pytest-of-runner/pytest-0/test_service_survives_python_t0/source 'café repo/hermes_cli/main.py", line 3, in main
+2026-09-25T04:26:29.4371050Z       import selected_probe
+2026-09-25T04:26:29.4376460Z   ModuleNotFoundError: No module named 'selected_probe'
+2026-09-25T04:26:29.4377290Z   
+2026-09-25T04:26:29.4377850Z assert 1 == 7
+2026-09-25T04:26:29.4383430Z  +  where 1 = CompletedProcess(args=["/private/var/tmp/hermes-pytest-501/r-03y2801l/pytest-of-runner/pytest-0/test_service_survives_python_t0/source 'café repo/.hermes/bin/hermes", 'gateway', 'run'], returncode=1, stdout='', stderr='Traceback (most recent call last):\n  File "<string>", line 23, in <module>\n    sys.exit(main())\n             ~~~~^^\n  File "/private/var/tmp/hermes-pytest-501/r-03y2801l/pytest-of-runner/pytest-0/test_service_survives_python_t0/source \'café repo/hermes_cli/main.py", line 3, in main\n    import selected_probe\nModuleNotFoundError: No module named \'selected_probe\'\n').returncode
+2026-09-25T04:26:29.4389960Z FAILED tests/hermes_cli/test_source_launcher_publication.py::test_sync_migrates_old_store_wrapper_before_python_collection[True] - AssertionError: Traceback (most recent call last):
+2026-09-25T04:26:29.4390690Z     File "<string>", line 23, in <module>
+2026-09-25T04:26:29.4391000Z       sys.exit(main())
+2026-09-25T04:26:29.4391250Z                ~~~~^^
+2026-09-25T04:26:29.4392050Z     File "/private/var/tmp/hermes-pytest-501/r-03y2801l/pytest-of-runner/pytest-0/test_sync_migrates_old_store_w0/source 'café repo/hermes_cli/main.py", line 3, in main
+2026-09-25T04:26:29.4392690Z       import selected_probe
+2026-09-25T04:26:29.4393030Z   ModuleNotFoundError: No module named 'selected_probe'
+2026-09-25T04:26:29.4393320Z   
+2026-09-25T04:26:29.4393600Z assert 1 == 7
+2026-09-25T04:26:29.4395680Z  +  where 1 = CompletedProcess(args=['/private/var/tmp/hermes-pytest-501/r-03y2801l/pytest-of-runner/pytest-0/test_sync_migrates_old_store_w0/.hermes/.local/bin/hermes'], returncode=1, stdout='', stderr='Traceback (most recent call last):\n  File "<string>", line 23, in <module>\n    sys.exit(main())\n             ~~~~^^\n  File "/private/var/tmp/hermes-pytest-501/r-03y2801l/pytest-of-runner/pytest-0/test_sync_migrates_old_store_w0/source \'café repo/hermes_cli/main.py", line 3, in main\n    import selected_probe\nModuleNotFoundError: No module named \'selected_probe\'\n').returncode
+2026-09-25T04:26:29.4398700Z FAILED tests/hermes_cli/test_source_launcher_publication.py::test_sync_migrates_old_store_wrapper_before_python_collection[False] - AssertionError: Traceback (most recent call last):
+2026-09-25T04:26:29.4403910Z     File "<string>", line 23, in <module>
+2026-09-25T04:26:29.4404140Z       sys.exit(main())
+2026-09-25T04:26:29.4404490Z                ~~~~^^
+2026-09-25T04:26:29.4405390Z     File "/private/var/tmp/hermes-pytest-501/r-03y2801l/pytest-of-runner/pytest-0/test_sync_migrates_old_store_w1/source 'café repo/hermes_cli/main.py", line 3, in main
+2026-09-25T04:26:29.4406030Z       import selected_probe
+2026-09-25T04:26:29.4406350Z   ModuleNotFoundError: No module named 'selected_probe'
+2026-09-25T04:26:29.4406740Z   
+2026-09-25T04:26:29.4406930Z assert 1 == 7
+2026-09-25T04:26:29.4409060Z  +  where 1 = CompletedProcess(args=['/private/var/tmp/hermes-pytest-501/r-03y2801l/pytest-of-runner/pytest-0/test_sync_migrates_old_store_w1/.hermes/.local/bin/hermes'], returncode=1, stdout='', stderr='Traceback (most recent call last):\n  File "<string>", line 23, in <module>\n    sys.exit(main())\n             ~~~~^^\n  File "/private/var/tmp/hermes-pytest-501/r-03y2801l/pytest-of-runner/pytest-0/test_sync_migrates_old_store_w1/source \'café repo/hermes_cli/main.py", line 3, in main\n    import selected_probe\nModuleNotFoundError: No module named \'selected_probe\'\n').returncode
+2026-09-25T04:26:29.4411080Z ============ 5 failed, 11 passed, 9 skipped, 6 deselected in 11.45s ============
+2026-09-25T04:26:29.4411320Z 
+2026-09-25T04:26:29.4411490Z === 1 file with test failures (5 tests failed) ===
+2026-09-25T04:26:29.4411960Z   tests/hermes_cli/test_source_launcher_publication.py  (5 tests failed)
+2026-09-25T04:26:29.4455100Z ##[error]Process completed with exit code 1.
+2026-09-25T04:26:29.5058500Z Post job cleanup.
+2026-09-25T04:26:29.5064400Z ##[start-action display=Register uv cache pruning;id=__2a69fa83-707b-4a4e-8241-edc2b61438fa.__self]
+2026-09-25T04:26:29.5066850Z ##[end-action id=__2a69fa83-707b-4a4e-8241-edc2b61438fa.__self;outcome=skipped;conclusion=skipped;duration_ms=0]
+2026-09-25T04:26:29.5069010Z ##[start-action display=Cache uv dependency downloads and builds;id=__2a69fa83-707b-4a4e-8241-edc2b61438fa.python-cache]
+2026-09-25T04:26:29.5070930Z ##[end-action id=__2a69fa83-707b-4a4e-8241-edc2b61438fa.python-cache;outcome=skipped;conclusion=skipped;duration_ms=0]
+2026-09-25T04:26:29.5075840Z ##[start-action display=Cache verified PM tools;id=__2a69fa83-707b-4a4e-8241-edc2b61438fa.tools-cache]
+2026-09-25T04:26:29.5081420Z ##[end-action id=__2a69fa83-707b-4a4e-8241-edc2b61438fa.tools-cache;outcome=skipped;conclusion=skipped;duration_ms=0]
+2026-09-25T04:26:29.5228290Z Post job cleanup.
+2026-09-25T04:26:29.9850900Z [command]/opt/homebrew/bin/git version
+2026-09-25T04:26:29.9942510Z git version 2.55.0
+2026-09-25T04:26:29.9985370Z Copying '/Users/runner/.gitconfig' to '/Users/runner/work/_temp/536d2fdd-b453-46ce-a08c-ad5a0abb8438/.gitconfig'
+2026-09-25T04:26:29.9988960Z Temporarily overriding HOME='/Users/runner/work/_temp/536d2fdd-b453-46ce-a08c-ad5a0abb8438' before making global git config changes
+2026-09-25T04:26:29.9990080Z Adding repository directory to the temporary git global config as a safe directory
+2026-09-25T04:26:29.9990980Z [command]/opt/homebrew/bin/git config --global --add safe.directory /Users/runner/work/hermes-agent/hermes-agent
+2026-09-25T04:26:30.0067720Z Removing SSH command configuration
+2026-09-25T04:26:30.0075850Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-09-25T04:26:30.0155250Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-09-25T04:26:30.1449640Z Removing HTTP extra header
+2026-09-25T04:26:30.1454960Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-09-25T04:26:30.1575850Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-09-25T04:26:30.2578790Z Removing includeIf entries pointing to credentials config files
+2026-09-25T04:26:30.2584080Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-09-25T04:26:30.2659270Z includeif.gitdir:/Users/runner/work/hermes-agent/hermes-agent/.git.path
+2026-09-25T04:26:30.2659780Z includeif.gitdir:/Users/runner/work/hermes-agent/hermes-agent/.git/worktrees/*.path
+2026-09-25T04:26:30.2660250Z includeif.gitdir:/github/workspace/.git.path
+2026-09-25T04:26:30.2660610Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-09-25T04:26:30.2666840Z [command]/opt/homebrew/bin/git config --local --get-all includeif.gitdir:/Users/runner/work/hermes-agent/hermes-agent/.git.path
+2026-09-25T04:26:30.2763950Z /Users/runner/work/_temp/git-credentials-c605e683-e4ae-43ae-8bb0-1baa0f05134f.config
+2026-09-25T04:26:30.2768640Z [command]/opt/homebrew/bin/git config --local --unset includeif.gitdir:/Users/runner/work/hermes-agent/hermes-agent/.git.path /Users/runner/work/_temp/git-credentials-c605e683-e4ae-43ae-8bb0-1baa0f05134f.config
+2026-09-25T04:26:30.2857930Z [command]/opt/homebrew/bin/git config --local --get-all includeif.gitdir:/Users/runner/work/hermes-agent/hermes-agent/.git/worktrees/*.path
+2026-09-25T04:26:30.2955680Z /Users/runner/work/_temp/git-credentials-c605e683-e4ae-43ae-8bb0-1baa0f05134f.config
+2026-09-25T04:26:30.2972360Z [command]/opt/homebrew/bin/git config --local --unset includeif.gitdir:/Users/runner/work/hermes-agent/hermes-agent/.git/worktrees/*.path /Users/runner/work/_temp/git-credentials-c605e683-e4ae-43ae-8bb0-1baa0f05134f.config
+2026-09-25T04:26:30.3058550Z [command]/opt/homebrew/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+2026-09-25T04:26:30.3127140Z /github/runner_temp/git-credentials-c605e683-e4ae-43ae-8bb0-1baa0f05134f.config
+2026-09-25T04:26:30.3132610Z [command]/opt/homebrew/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-c605e683-e4ae-43ae-8bb0-1baa0f05134f.config
+2026-09-25T04:26:30.3205850Z [command]/opt/homebrew/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-09-25T04:26:30.3270990Z /github/runner_temp/git-credentials-c605e683-e4ae-43ae-8bb0-1baa0f05134f.config
+2026-09-25T04:26:30.3280690Z [command]/opt/homebrew/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-c605e683-e4ae-43ae-8bb0-1baa0f05134f.config
+2026-09-25T04:26:30.3355170Z [command]/opt/homebrew/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-09-25T04:26:30.4316200Z Removing credentials config '/Users/runner/work/_temp/git-credentials-c605e683-e4ae-43ae-8bb0-1baa0f05134f.config'
+2026-09-25T04:26:30.4734050Z Cleaning up orphan processes

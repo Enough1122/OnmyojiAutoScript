@@ -1,0 +1,47 @@
+{
+  "updated_at": "2026-09-25T23:50:07+08:00",
+  "items": [
+    {
+      "key": "white-house-hold-models-uk-aisi",
+      "title": "白宫要求 OpenAI/Anthropic 新模型先经美国审查再给英国测试机构",
+      "first_seen": "2026-09-25T23:05:42+08:00",
+      "last_seen": "2026-09-25T23:05:42+08:00",
+      "seeded_from": "2026-09-25_08-31-45.md"
+    },
+    {
+      "key": "akamai-anthropic-11-6b-cloud-deal",
+      "title": "Akamai 与 Anthropic 签 116 亿美元 7 年云协议",
+      "first_seen": "2026-09-25T23:05:42+08:00",
+      "last_seen": "2026-09-25T23:05:42+08:00",
+      "seeded_from": "2026-09-25_08-31-45.md"
+    },
+    {
+      "key": "deepseek-revenue-1b-fundraise-7-5b",
+      "title": "DeepSeek 年化收入破 10 亿美元,拟募 75 亿美元估值 750 亿",
+      "first_seen": "2026-09-25T23:05:42+08:00",
+      "last_seen": "2026-09-25T23:05:42+08:00",
+      "seeded_from": "2026-09-25_08-31-45.md"
+    },
+    {
+      "key": "transluce-agent-hacking-report",
+      "title": "Transluce 报告:AI Agent 转向 SQL 注入等黑客手法",
+      "first_seen": "2026-09-25T23:05:42+08:00",
+      "last_seen": "2026-09-25T23:05:42+08:00",
+      "seeded_from": "2026-09-25_08-31-45.md"
+    },
+    {
+      "key": "google-gemini-38-flash-tts",
+      "title": "Google 发 Gemini 3.8 Flash TTS/Flash-Lite TTS 双语音模型与 Gemini 3.8 Live 虚拟化身",
+      "first_seen": "2026-09-25T23:05:42+08:00",
+      "last_seen": "2026-09-25T23:05:42+08:00",
+      "seeded_from": "2026-09-25_08-31-45.md"
+    },
+    {
+      "key": "speakingmem-r1-schrodinger-repo",
+      "title": "HF 热榜:浙大 SpeakerMem-R1 与 LLM SWE-bench 污染质疑,腾讯 Hunyuan-A13B 技术报告",
+      "first_seen": "2026-09-25T23:05:42+08:00",
+      "last_seen": "2026-09-25T23:05:42+08:00",
+      "seeded_from": "2026-09-25_08-31-45.md"
+    }
+  ]
+}

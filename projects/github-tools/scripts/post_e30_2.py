@@ -27,10 +27,8 @@ for n in prs:
             results[n] = f"skipped (state={pr.get('state')} draft={pr.get('draft')})"
             print(n, results[n], flush=True)
             continue
-        if len(ic) or len(rv) or len(rc):
-            results[n] = f"skipped (comments: issues={len(ic)} reviews={len(rv)} review_comments={len(rc)})"
-            print(n, results[n], flush=True)
-            continue
+        # Existing comments/reviews are comparison context, not a skip condition.
+        # The caller must have completed semantic de-duplication before invoking this poster.
         body = open(os.path.join(camp, f'{n}.md'), encoding='utf-8').read()
         resp = post(f'https://api.github.com/repos/NousResearch/hermes-agent/issues/{n}/comments', {'body': body})
         results[n] = f"posted {resp.get('html_url')}"

@@ -1,4 +1,8 @@
-# batch25 子代理通用简报（每任务必读）
+# ARCHIVED: batch25 brief (retired)
+
+> Historical batch instructions only. Do not use this file for new work; it
+> predates the durable queue and contains obsolete `SKIP_STALE` semantics.
+> Use `PROMPT-inbox-pr.md` and `scripts/review_pool.py` instead.
 
 你在做 `NousResearch/hermes-agent` 开源 PR 的批量 AI code review。
 身份仅作说明：账号 Enough1122。**你只做参考分析：不发帖、不评论、不 approve、不改任何仓库**。

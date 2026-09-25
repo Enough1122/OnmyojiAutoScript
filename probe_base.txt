@@ -1,0 +1,13 @@
+npm notice run hermes-agent@1.0.0 npx
+npm notice run vitest run src/lib/_probe_pill.test.ts
+
+ RUN  v4.1.10 D:/Hermes/cache-review-pr122080-exact/apps/desktop
+
+(node:96356) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  00:50:52
+   Duration  5.26s (transform 126ms, setup 433ms, import 50ms, tests 8ms, environment 2.15s)
+

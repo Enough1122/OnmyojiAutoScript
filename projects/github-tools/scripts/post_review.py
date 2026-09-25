@@ -2,8 +2,9 @@
 """post_review.py <number> — post one AI review for a PR.
 
 Reads the review body from Temp/opencode/campaign/{n}.md, enforces the AI header,
-dedupe-checks existing comments by Enough1122 (skip if AI header already present),
-POSTs to the issue comments endpoint, sleeps 8 after a successful post.
+dedupe-checks existing comments by Enough1122 (skip only if the exact authored body
+is already present), POSTs to the issue comments endpoint, and reads the comment
+back to require Enough1122 as author before printing POSTED.
 
 Exit codes: 0 posted | 2 skipped-dup | 3 no md / bad header | 4 http error
 """
@@ -42,9 +43,11 @@ def main():
     except Exception as e:
         print('HTTP-ERR %d %s' % (n, str(e)[:80]))
         sys.exit(4)
-    mine = [c for c in cs if (c.get('user') or {}).get('login') == ME and HEADER in (c.get('body') or '')]
+    mine = [c for c in cs if (c.get('user') or {}).get('login') == ME
+            and HEADER in (c.get('body') or '')
+            and (c.get('body') or '').strip() == body]
     if mine:
-        print('SKIP-DUP %d (already %d AI comment(s))' % (n, len(mine)))
+        print('SKIP-DUP %d (exact AI comment already present)' % n)
         sys.exit(2)
 
     data = json.dumps({'body': body}).encode()
@@ -53,6 +56,25 @@ def main():
         r = json.loads(urlopen(req, timeout=60).read())
     except Exception as e:
         print('HTTP-ERR %d %s' % (n, str(e)[:80]))
+        sys.exit(4)
+    comment_id = r.get('id')
+    if not comment_id:
+        print('HTTP-ERR %d POST response missing comment id' % n)
+        sys.exit(4)
+    try:
+        receipt = g('https://api.github.com/repos/%s/issues/comments/%s' % (REPO, comment_id))
+    except Exception as e:
+        print('HTTP-ERR %d receipt read-back %s' % (n, str(e)[:80]))
+        sys.exit(4)
+    if (receipt.get('user') or {}).get('login') != ME:
+        print('HTTP-ERR %d read-back author is not %s' % (n, ME))
+        sys.exit(4)
+    expected_url = 'https://github.com/%s/pull/%d#issuecomment-%s' % (REPO, n, comment_id)
+    if r.get('html_url') != expected_url or receipt.get('html_url') != expected_url:
+        print('HTTP-ERR %d read-back URL is not the canonical issuecomment URL' % n)
+        sys.exit(4)
+    if (receipt.get('body') or '').strip() != body:
+        print('HTTP-ERR %d read-back body mismatch' % n)
         sys.exit(4)
     print('POSTED %d %s' % (n, r.get('html_url', '')))
     time.sleep(8)
