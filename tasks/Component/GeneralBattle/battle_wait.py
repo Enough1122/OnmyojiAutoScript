@@ -1123,7 +1123,6 @@ class BattleWait(BaseTask, GeneralBattleAssets):
         """
         if 'BATTLE_STATUS_S' not in self.device.detect_record:
             self.device.stuck_record_add('BATTLE_STATUS_S')
-
     # ------------------------------------------------------------------------------------------------------------------
     # build in
     # ------------------------------------------------------------------------------------------------------------------
