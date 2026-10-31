@@ -32,11 +32,30 @@ from tasks.GameUi.session import NavigatorSession
 from tasks.SixRealms.assets import SixRealmsAssets
 from tasks.base_task import BaseTask
 
+# 结算类全屏覆盖层（抽卡结果、活动奖励等）只显示「点击继续」，既没有模板可用，
+# 也没有返回键，DEFAULT_UNKNOWN_CLOSERS 里的模板全部命中不了，只能 OCR 兜底；
+# 否则 close_unknown_pages 只会记录 'None'，goto_page 30s 后抛 GamePageUnknownError。
+O_UNKNOWN_CONTINUE = RuleOcr(
+    roi=(520, 650, 240, 70), area=(560, 660, 160, 55),
+    mode="Full", method="Default", keyword='点击继续', name='unknown_continue')
+
 
 class GameUi(BaseTask, GameUiAssets):
     """页面识别、导航与未知页恢复的统一入口。"""
 
     REPEATED_TRANSITION_FAILURE_THRESHOLD = 3
+
+    # 点击跳转边后等待目标页面出现的最长时间（秒）。
+    # MuMu 6.0/Android 15 多虚拟显示下，庭院 -> 阴阳寮、神社 -> 阴阳寮 这类带活动资源的
+    # 场景加载实测要 10~30s；原来的 4s 会让跳转被判失败，随后未知页兜底会点返回，
+    # 反而把正在进行的加载打断，形成 page_main -> page_guild / page_shirin -> page_guild 死循环。
+    # 15s 仍然不够（日志里 25.2s、34.0s 才到达），因此放宽到 40s。
+    DESTINATION_WAIT_TIMEOUT = 40.0
+
+    # 全局未知页 OCR 关闭动作，优先级高于模板关闭动作。
+    DEFAULT_UNKNOWN_OCR_CLOSERS = [
+        O_UNKNOWN_CONTINUE,
+    ]
 
     # 全局未知页关闭动作，所有任务共享。
     DEFAULT_UNKNOWN_CLOSERS = [
@@ -476,17 +495,19 @@ class GameUi(BaseTask, GameUiAssets):
             context="goto_page",
         )
 
-    def _wait_for_destination(self, destination: Page, timeout: float = 4.0) -> bool:
+    def _wait_for_destination(self, destination: Page, timeout: float = None) -> bool:
         """等待下一页面稳定出现。
 
         Args:
             destination: 目标页面。
-            timeout: 等待超时时间。
+            timeout: 等待超时时间，默认取 DESTINATION_WAIT_TIMEOUT。
 
         Returns:
             是否在超时前稳定识别到目标页面。
         """
 
+        if timeout is None:
+            timeout = self.DESTINATION_WAIT_TIMEOUT
         timer = Timer(timeout).start()
         while not timer.reached():
             if self.confirm_page(destination, skip_first_screenshot=False):
@@ -717,8 +738,16 @@ class GameUi(BaseTask, GameUiAssets):
         if self.device.app_lost_login():
             raise GameNotRunningError('Client dropped back to login')
 
+        # 庭院镜头被拖偏：场景物整体平移、I_CHECK_MAIN 掉到 0.5~0.88，但底栏固定 UI 仍在原位。
+        # 关闭动作全是点按钮，修不好反而会把偏态一路带进后续任务（2026-10-31 19:58~20:13 连败 5 次），
+        # 这里先把镜头拖回来，恢复成功就当已回到 page_main。
+        if self._recover_panned_main_page():
+            return True
+
         logger.warning("Try switch to a supported page")
-        for action in [*self.navigator.local_unknown_closers, *self.DEFAULT_UNKNOWN_CLOSERS]:
+        for action in [*self.navigator.local_unknown_closers,
+                       *self.DEFAULT_UNKNOWN_OCR_CLOSERS,
+                       *self.DEFAULT_UNKNOWN_CLOSERS]:
             action_name = self._action_name(action)
             # 若最后3次执行的都是该动作，则跳过该动作尝试其他动作
             if len(self.navigator.unknown_close_history) >= 3 and \
@@ -748,6 +777,62 @@ class GameUi(BaseTask, GameUiAssets):
         app_check()
         minicap_check()
         rotation_check()
+        return False
+
+    # 庭院镜头被拖偏时 page_main 主判定的分数下限（与 I_CHECK_MAIN.threshold 一致）
+    MAIN_PAGE_SCORE_MIN = 0.95
+    # 单次拖拽的水平距离（像素）与最多拖拽次数
+    MAIN_PAGE_DRAG_DISTANCE = 600
+    MAIN_PAGE_DRAG_MAX_ATTEMPTS = 5
+
+    def _drag_main_camera(self, dx: int, duration: float = 0.4) -> None:
+        """在庭院地面带做一次慢速水平拖拽。
+
+        注意：400ms/160px 的短 swipe 会被游戏无视，必须 ~1s/600px 的慢拖才生效；
+        ADB 控制下 control.swipe 内部会把 duration ×2.5，所以这里传 0.4s。
+        只用 y≈380 的地面带，避开灯笼/町中/加成等可点元素。
+        """
+        y = 380
+        x1 = 640 - dx // 2
+        x2 = 640 + dx // 2
+        self.device.swipe((x1, y), (x2, y), duration=duration, control_name='MAIN_PAN')
+        time.sleep(0.5)
+
+    def _recover_panned_main_page(self) -> bool:
+        """庭院镜头被拖偏时的恢复。
+
+        判据：底栏固定 UI（商店/式神录/好友/图鉴）仍有 ≥3 个在原位命中，但
+        I_CHECK_MAIN 分数低于阈值——这是「镜头平移」而不是别的页面。
+        做法：慢速水平拖拽，每拖一次重新打分；分数变差就换方向。
+        实测 2026-10-31：0.8664 →(右拖 600px)→ 0.9872 →(再拖)→ 0.9944。
+        """
+        probes = (self.I_MAIN_GOTO_MALL, self.I_MAIN_GOTO_SHIKIGAMI_RECORDS,
+                  self.I_MAIN_GOTO_FRIENDS, self.I_MAIN_GOTO_COLLECTION)
+        if sum(1 for probe in probes if self.appear(probe)) < 3:
+            return False
+
+        self.screenshot()
+        if self.appear(self.I_CHECK_MAIN):
+            return True
+        score = float(self.I_CHECK_MAIN.last_score)
+        if score < 0.35:
+            # 分数太低，不像「庭院被拖偏」，别在别的页面上乱拖
+            return False
+
+        logger.warning(f'Main page camera shifted (score={score:.4f}), drag back')
+        direction = 1
+        best = score
+        for attempt in range(self.MAIN_PAGE_DRAG_MAX_ATTEMPTS):
+            self._drag_main_camera(direction * self.MAIN_PAGE_DRAG_DISTANCE)
+            self.screenshot()
+            if self.appear(self.I_CHECK_MAIN):
+                logger.info(f'Main page camera restored (attempt={attempt + 1})')
+                return True
+            score = float(self.I_CHECK_MAIN.last_score)
+            if score < best - 0.02:
+                direction = -direction
+            best = max(best, score)
+        logger.warning('Main page camera still shifted')
         return False
 
     def _finalize_arrival(self, destination: Page, confirm_wait: float, start_time: float) -> bool:

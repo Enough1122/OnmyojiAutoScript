@@ -367,10 +367,20 @@ class ScriptTask(GameUi, GeneralInvite, GeneralRoom, BondlingBattle, SwitchSoul,
         """
         self.lock_team()
         self._switch_soul_search()
+        recover = 0
         while 1:
             # 检查是不是在探查界面，
             if not self.in_search_ui(screenshot=True):
+                # 不在探查界面（被弹回探索/庭院，或还停在式神录）：先回契灵之境。
+                # 原来的 continue 会在这里空转，直到战斗等待 5 分钟超时才报 GameStuckError。
+                recover += 1
+                if recover > 3:
+                    logger.error('Cannot back to bondling search page, exit')
+                    return False
+                logger.warning('Not in bondling search page, goto bondling page')
+                self.goto_page(page_bondling_fairyland)
                 continue
+            recover = 0
             # 检查是否打满limit_cnt次
             if limit_cnt is not None and limit_cnt <= 0:
                 return True
@@ -721,22 +731,46 @@ class ScriptTask(GameUi, GeneralInvite, GeneralRoom, BondlingBattle, SwitchSoul,
     def click_search(self) -> bool:
         """
         点击探查
-        :return: 如果五个球满了 就返回False。如果进入战斗不出现点击按钮那就是返回True
+        :return: True 表示已进入追踪加载/战斗；False 表示探查按钮点不动（多半是次数用完）
+
+        注意：点击探查后游戏会先进入全屏「正在追踪……」加载（实测 10~15 秒），加载期间
+        画面被压暗、压暗的旧画面仍然会被 I_BF_SEARSH 命中。所以：
+        1) 不能再用「探查按钮还在」判断点击没生效；
+        2) 更不能连续重复点——原实现 5 秒内点 3 次就走进 count>=3 的 "Full five ball"，
+           任务被当成成功结束，实际一场战斗都没打（2026-10-31 21:39 实机复现）。
+        正确做法：点一次后等按钮真正消失（=已进入追踪/战斗），最多等 25 秒再决定补点。
         """
-        count = 0
-        while 1:
+        for _ in range(2):
             self.screenshot()
-            if count >= 3:
-                return False
             if not self.appear(self.I_BF_SEARSH):
                 return True
             if self.appear_then_click(self.I_UI_CONFIRM, interval=1):
                 continue
             if self.appear_then_click(self.I_UI_CONFIRM_SAMLL, interval=1):
                 continue
-            if self.appear_then_click(self.I_BF_SEARSH, interval=2):
-                count += 1
+            self.click(self.I_BF_SEARSH)
+            if self._wait_search_start():
+                return True
+        return False
+
+    def _wait_search_start(self, timeout: float = 40.0) -> bool:
+        """等探查点击后的追踪加载/战斗出现：探查按钮连续两帧不命中即视为已进入。"""
+        timer = Timer(timeout)
+        timer.start()
+        gone = 0
+        while not timer.reached():
+            self.screenshot()
+            if self.appear(self.I_BF_SEARSH):
+                gone = 0
+            else:
+                gone += 1
+                if gone >= 2:
+                    return True
+            if self.appear_then_click(self.I_UI_CONFIRM, interval=1):
                 continue
+            if self.appear_then_click(self.I_UI_CONFIRM_SAMLL, interval=1):
+                continue
+            sleep(0.3)
         return False
 
     def check_then_accept(self) -> bool:
@@ -831,6 +865,13 @@ class ScriptTask(GameUi, GeneralInvite, GeneralRoom, BondlingBattle, SwitchSoul,
         self.goto_shikigami_records(self.I_GOTO_SHIKIGAMI_COMMON)
         _do_switch_soul(ts, g, te)
         self.exit_shikigami_records()
+        # exit_shikigami_records 只认「式神录判定消失」，退出时若加载慢会多按一次返回，
+        # 越过契灵之境退回探索页（实测 2026-10-31 21:27 手动复现），随后探查就点不动了。
+        # 这里兜底确认页面，必要时重新进契灵之境。
+        self.screenshot()
+        if not self.appear(self.I_CHECK_BONDLING_FAIRYLAND):
+            logger.warning('Not at bondling page after switching soul, goto bondling page')
+            self.goto_page(page_bondling_fairyland)
 
 
     def _switch_soul_search(self):

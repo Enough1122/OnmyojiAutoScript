@@ -416,6 +416,16 @@ class ConfigModel(ConfigBase):
             desktop_launch_instance(self)
             value = False
 
+        # next_run 只该由脚本自己写（调度器 task_delay / PUT /sync_next_run），但 OASX 图形客户端
+        # 保存任务面板时会把日期控件拼出来的过去日期一起 PUT 回来（2026-10-31 实测三次：
+        # 2026-09-01 19:20:38 / 2026-07-01 19:41:01 / 2026-10-01 19:52:06，时分秒是真值、年月日是错的）。
+        # 脚本随后把 past next_run 当 pending 立刻重跑 → 3 连败 → 人工接管退出。
+        # 这里拦掉「非哨兵且已经过去」的 next_run 写入（DEFAULT_TIME 是 2023-01-01 哨兵，放行）。
+        if (argument == 'next_run' and isinstance(value, datetime)
+                and value != DEFAULT_TIME and value < datetime.now()):
+            logger.warning(f'Reject past next_run: {task}.{group}.next_run={value}')
+            return False
+
         # 设置参数
         try:
             setattr(group_object, argument, value)

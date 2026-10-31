@@ -65,7 +65,10 @@ def retry(func):
                 logger.error(e)
 
                 def init():
-                    pass
+                    # 平安志等外部工具会发 adb root/unroot,导致 guest 的 adbd 重启、
+                    # 正在传的 screencap 半途断掉(半帧/空帧)。不重连就会连续拿到坏图,
+                    # 三次重试后直接 RequestHumanTakeover(2026-10-31 白天 38 次掉线)。
+                    self.adb_reconnect()
             # Unknown
             except Exception as e:
                 logger.exception(e)
@@ -88,6 +91,11 @@ def load_screencap(data):
         np.ndarray:
     """
     # Load data
+    if len(data) < 12:
+        # adbd 被外部工具(adb root/unroot)踢掉时 screencap 会返回空 stream,
+        # 直接 unpack 会抛 ValueError 落到「Unknown」分支(不重连),这里归一成
+        # ImageTruncated,让上面的重试逻辑做 adb_reconnect。
+        raise ImageTruncated(f'Empty screencap data: {len(data)} bytes')
     header = np.frombuffer(data[0:12], dtype=np.uint32)
     channel = 4  # screencap sends an RGBA image
     width, height, _ = header  # Usually to be 1280, 720, 1

@@ -42,14 +42,27 @@ class SwitchSoul(BaseTask, SwitchSoulAssets):
     def exit_shikigami_records(self) -> None:
         """
         退出式神录的界面
+
+        只按一次返回，然后等返回动画走完再判断。原实现 interval=3.5 会在加载慢时
+        连按两次——第一次已回到契灵之境，第二次就越过它退回探索页，后面的「探查」
+        就点不到了(2026-10-31 22:04 实机复现：点完探查 5 分钟一直在等 BATTLE_STATUS_S，
+        最后 GameStuckError)。
         :return:
         """
-        while 1:
+        for attempt in range(3):
             self.screenshot()
             if not self.appear(self.I_SOU_CHECK_IN):
                 break
-            if self.appear_then_click(self.I_RECORD_SOUL_BACK, interval=3.5):
-                continue
+            self.click(self.I_RECORD_SOUL_BACK)
+            # 等返回动画:式神录标志消失即认为已退出,最多等 10 秒再决定是否补一次
+            timer = Timer(10).start()
+            while not timer.reached():
+                sleep(0.4)
+                self.screenshot()
+                if not self.appear(self.I_SOU_CHECK_IN):
+                    break
+            else:
+                logger.warning(f'Shikigami records still here, retry back ({attempt + 1}/3)')
         logger.info('Exit shikigami records')
 
 
