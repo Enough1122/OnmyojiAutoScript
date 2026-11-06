@@ -9,6 +9,7 @@ from lxml import etree
 
 from module.base.decorator import Config
 from module.device.connection import Connection
+from module.device.method.emulator_rescue import emulator_rescue
 from module.device.method.minitouch import smooth_path
 from module.device.method.utils import (RETRY_TRIES, retry_sleep, remove_prefix, handle_adb_error,
                                         ImageTruncated, PackageNotInstalled)
@@ -68,6 +69,11 @@ def retry(func):
                     # 平安志等外部工具会发 adb root/unroot,导致 guest 的 adbd 重启、
                     # 正在传的 screencap 半途断掉(半帧/空帧)。不重连就会连续拿到坏图,
                     # 三次重试后直接 RequestHumanTakeover(2026-10-31 白天 38 次掉线)。
+                    # MuMu 6.0 每次启动 app / 旋转都会重建虚拟屏,缓存里的 screencap
+                    # display id 随之失效(实测返回 Status: -2、0 字节)。只重连而不
+                    # 失效 display 缓存时,5 次重试全用旧 id,照样 RequestHumanTakeover
+                    # (2026-11-01 10:52 重启 app 后连吃 5 个空帧就是这么掉的)。
+                    self._reset_mumu_display_ids()
                     self.adb_reconnect()
             # Unknown
             except Exception as e:
@@ -75,6 +81,18 @@ def retry(func):
 
                 def init():
                     pass
+
+        # 所有重试都失败：最后一级兜底，重启 MuMu 实例。
+        # adbd 僵死时 PC 侧的 disconnect/connect 永远救不回来（2026-11-04 19:47 实测：
+        # 16416 offline，7555/5556 虽显示 device 但 shell 一样超时），只能把实例进程
+        # 杀掉重拉。只在 Windows + 本机 MuMu 下生效，其他设备保持原行为。
+        try:
+            if emulator_rescue(self.serial, self.adb_binary):
+                self._reset_mumu_display_ids()
+                self.adb_reconnect()
+                return func(self, *args, **kwargs)
+        except Exception as e:
+            logger.error(f'Emulator rescue failed: {e}')
 
         logger.critical(f'Retry {func.__name__}() failed')
         raise RequestHumanTakeover

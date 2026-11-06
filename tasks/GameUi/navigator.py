@@ -52,6 +52,13 @@ class GameUi(BaseTask, GameUiAssets):
     # 15s 仍然不够（日志里 25.2s、34.0s 才到达），因此放宽到 40s。
     DESTINATION_WAIT_TIMEOUT = 40.0
 
+    # 跳转边点击后目标页迟迟不出现、而当前页仍是出发页时，大概率是这次点击被上一层
+    # 的退场动画吞掉了（礼包屋领奖后立刻点返回，2026-11-03 01:14:59 实测被吞，白等 40s
+    # 后判失败 → Game page unknown）。因此每隔 DESTINATION_RETRY_INTERVAL 秒重新确认
+    # 仍在出发页就补点一次动作，最多补 DESTINATION_ACTION_RETRIES 次。
+    DESTINATION_RETRY_INTERVAL = 10.0
+    DESTINATION_ACTION_RETRIES = 2
+
     # 全局未知页 OCR 关闭动作，优先级高于模板关闭动作。
     DEFAULT_UNKNOWN_OCR_CLOSERS = [
         O_UNKNOWN_CONTINUE,
@@ -495,12 +502,17 @@ class GameUi(BaseTask, GameUiAssets):
             context="goto_page",
         )
 
-    def _wait_for_destination(self, destination: Page, timeout: float = None) -> bool:
+    def _wait_for_destination(self, destination: Page, timeout: float = None,
+                              transition: Transition = None) -> bool:
         """等待下一页面稳定出现。
 
         Args:
             destination: 目标页面。
             timeout: 等待超时时间，默认取 DESTINATION_WAIT_TIMEOUT。
+            transition: 触发这次等待的导航边。传入后，若等到
+                DESTINATION_RETRY_INTERVAL 秒还没到目标页、且当前页仍是边的出发页，
+                会补点一次边上的动作（点击被退场动画吞掉时能自愈），
+                最多补 DESTINATION_ACTION_RETRIES 次。
 
         Returns:
             是否在超时前稳定识别到目标页面。
@@ -509,10 +521,29 @@ class GameUi(BaseTask, GameUiAssets):
         if timeout is None:
             timeout = self.DESTINATION_WAIT_TIMEOUT
         timer = Timer(timeout).start()
+        retry_timer = Timer(self.DESTINATION_RETRY_INTERVAL).start()
+        retries = 0
         while not timer.reached():
             if self.confirm_page(destination, skip_first_screenshot=False):
                 self.navigator.current_page = destination
                 return True
+            if (
+                transition is not None
+                and retries < self.DESTINATION_ACTION_RETRIES
+                and retry_timer.reached()
+            ):
+                retry_timer.reset()
+                # 只有在出发页还稳定存在时才补点，避免打断正在进行的场景加载。
+                if self.confirm_page(transition.source, skip_first_screenshot=False):
+                    retries += 1
+                    logger.info(
+                        "Destination not reached yet, retry action "
+                        f"{self._action_name(transition.action)} "
+                        f"({retries}/{self.DESTINATION_ACTION_RETRIES}): {transition.key}"
+                    )
+                    self._execute_action(
+                        transition.action, interval=0.8, skip_first_screenshot=False
+                    )
         return False
 
     def _execute_transition(self, transition: Transition) -> bool:
@@ -576,7 +607,7 @@ class GameUi(BaseTask, GameUiAssets):
             )
             return False
 
-        if self._wait_for_destination(destination):
+        if self._wait_for_destination(destination, transition=transition):
             self._run_hooks(source.on_leave_success)
             self._run_hooks(transition.on_leave_success)
             self._run_hooks(destination.on_enter_success)

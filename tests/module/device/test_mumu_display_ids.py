@@ -128,3 +128,46 @@ def test_a_reset_drops_the_cached_display():
     adb._reset_mumu_display_ids()
     assert adb._mumu_display_ids() == (3, LONG_ID)
     assert len(calls) == 6
+
+
+def test_truncated_screenshot_invalidates_the_cached_display(monkeypatch):
+    """Empty frames must drop the cached display id.
+
+    MuMu 6.0 rebuilds the app's virtual display on restart/rotation, so a
+    `screencap -d <id>` value probed a moment earlier dies (`Status: -2`, 0
+    bytes). Without dropping the cache every retry keeps using the dead id
+    and the script ends in RequestHumanTakeover (2026-11-01 10:52).
+    """
+    import module.device.method.adb as adb_module
+    from module.exception import RequestHumanTakeover
+    from module.device.method.utils import RETRY_TRIES
+
+    adb = object.__new__(Adb)
+    adb._mumu_display_ids_cache = (10, '4619827203584079877')
+    adb._mumu_display_ids_retry_at = 0.0
+    adb._mumu_display_ids_generation = 0
+    adb._mumu_display_ids = lambda: None
+
+    resets = []
+    reconnects = []
+
+    def fake_reset():
+        resets.append(adb._mumu_display_ids_cache)
+        adb._mumu_display_ids_cache = None
+
+    adb._reset_mumu_display_ids = fake_reset
+    adb.adb_reconnect = lambda: reconnects.append(1)
+    adb.adb_shell_nc = lambda cmd: b''
+    monkeypatch.setattr(adb_module, 'retry_sleep', lambda trial: None)
+
+    try:
+        adb.screenshot_adb_nc()
+    except RequestHumanTakeover:
+        pass
+    else:
+        raise AssertionError('empty screenshots should end in RequestHumanTakeover')
+
+    assert adb._mumu_display_ids_cache is None
+    # init() runs before every retry except the first attempt
+    assert len(resets) == RETRY_TRIES - 1
+    assert len(reconnects) == RETRY_TRIES - 1

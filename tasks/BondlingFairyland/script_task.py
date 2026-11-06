@@ -8,6 +8,7 @@ import random
 from cached_property import cached_property
 from datetime import datetime
 from datetime import timedelta, time
+from module.atom.ocr import RuleOcr
 from module.base.timer import Timer
 from module.exception import TaskEnd
 from module.logger import logger
@@ -27,6 +28,20 @@ from tasks.RichMan.assets import RichManAssets
 
 class BondlingNumberMax(Exception):
     pass
+
+
+class BondlingPlateLow(Exception):
+    """百物式盘不足，脚本主动放弃挑战（按任务失败收尾）"""
+    pass
+
+
+# 「百物式盘较少，是否继续挑战」确认弹窗上的「获取式盘」按钮。
+# 2026-11-03：此前不认这个弹窗，点击落在弹窗后面的挑战按钮上不生效，
+# 6 次后误判成「契灵数量已达上限 500」，整轮失败并最终三连败退出。
+# 现在的口径：见到弹窗就点「获取式盘」= 放弃这次挑战，并把任务按失败收尾。
+O_BALL_PLATE_LOW_CANCEL = RuleOcr(
+    roi=(445, 405, 210, 68), area=(462, 418, 190, 42),
+    mode="Full", method="Default", keyword='获取式盘', name='bondling_plate_low_cancel')
 
 
 """ 契灵 """
@@ -69,22 +84,28 @@ class ScriptTask(GameUi, GeneralInvite, GeneralRoom, BondlingBattle, SwitchSoul,
             self.goto_page(page_main)
             self.set_next_run(task='BondlingFairyland', finish=True, success=True)
             raise TaskEnd
-        match cong.bondling_config.user_status:
-            case UserStatus.handoff1:
-                self.limit_count //= 2
-                self.switch_ball()
-            case UserStatus.handoff2:
-                self.limit_count //= 2
-                self.run_member()
-                self.current_count = 0
-                self.goto_page(page_bondling_fairyland)
-                self.switch_ball()
-            case UserStatus.LEADER | UserStatus.ALONE:
-                self.switch_ball()
-            case UserStatus.MEMBER:
-                self.run_member()
-            case _:
-                logger.error(f'Unknown user status: {cong.bondling_config.user_status}')
+        try:
+            match cong.bondling_config.user_status:
+                case UserStatus.handoff1:
+                    self.limit_count //= 2
+                    self.switch_ball()
+                case UserStatus.handoff2:
+                    self.limit_count //= 2
+                    self.run_member()
+                    self.current_count = 0
+                    self.goto_page(page_bondling_fairyland)
+                    self.switch_ball()
+                case UserStatus.LEADER | UserStatus.ALONE:
+                    self.switch_ball()
+                case UserStatus.MEMBER:
+                    self.run_member()
+                case _:
+                    logger.error(f'Unknown user status: {cong.bondling_config.user_status}')
+        except BondlingPlateLow:
+            logger.warning('Bondling plate low: give up, mark task failed')
+            self.goto_page(page_main)
+            self.set_next_run(task='BondlingFairyland', finish=True, success=False)
+            raise TaskEnd
 
     def run_leader(self):
         """  点击 求援， 组队模式  """
@@ -102,6 +123,7 @@ class ScriptTask(GameUi, GeneralInvite, GeneralRoom, BondlingBattle, SwitchSoul,
                     if self.appear_then_click(self.I_UI_CONFIRM, interval=1):
                         sleep(1)
                         continue
+                    self.handle_plate_low_dialog()
                     if click_count >= 6:
                         logger.error('Click fire failed')
                         logger.error(
@@ -308,12 +330,18 @@ class ScriptTask(GameUi, GeneralInvite, GeneralRoom, BondlingBattle, SwitchSoul,
                 break
 
         # 退出的时候如果是在结契的界面，要退回到探查界面
+        back_click = 0
         while 1:
             self.screenshot()
             if self.in_search_ui():
                 break
+            self.handle_plate_low_dialog()
+            if back_click >= 4:
+                logger.warning('Still in catch ui after 4 back clicks, stop recovery loop')
+                break
             if self.in_catch_ui():
-                self.appear_then_click(self.I_BACK_Y, interval=1)
+                if self.appear_then_click(self.I_BACK_Y, interval=1):
+                    back_click += 1
         logger.info('BondlingFairyland task finished')
 
         self.goto_page(page_main)
@@ -634,6 +662,15 @@ class ScriptTask(GameUi, GeneralInvite, GeneralRoom, BondlingBattle, SwitchSoul,
         limit_time = self.config.bondling_fairyland.bondling_config.limit_time
         return timedelta(hours=limit_time.hour, minutes=limit_time.minute, seconds=limit_time.second)
 
+    def handle_plate_low_dialog(self) -> None:
+        """
+        「百物式盘较少，是否继续挑战」弹窗：点「获取式盘」放弃这次挑战，
+        抛 BondlingPlateLow 交给 run() 按任务失败收尾。
+        """
+        if self.ocr_appear_click(O_BALL_PLATE_LOW_CANCEL, interval=0.3):
+            logger.warning('Bondling plate low dialog: click 获取式盘, give up this challenge')
+            raise BondlingPlateLow
+
     def run_alone(self):
         """
         单人 挑战， 主要是结契时的挑战
@@ -641,6 +678,7 @@ class ScriptTask(GameUi, GeneralInvite, GeneralRoom, BondlingBattle, SwitchSoul,
         click_count = 0
         while 1:
             self.screenshot()
+            self.handle_plate_low_dialog()
             if not self.appear(self.I_BALL_FIRE, threshold=0.7):
                 break
             if self.appear_then_click(self.I_BALL_FIRE, interval=1):

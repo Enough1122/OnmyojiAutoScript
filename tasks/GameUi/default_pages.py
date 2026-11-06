@@ -129,7 +129,13 @@ page_touch_fish.connect(
 
 page_shirin = Page(GameUiAssets.I_CHECK_SHRIN, category="global")
 page_guild.connect(page_shirin, GameUiAssets.I_GUILD_TO_SHRIN, key="page_guild->page_shirin")
-page_shirin.connect(page_guild, GlobalGameAssets.I_UI_BACK_YELLOW, key="page_shirin->page_guild")
+# 神社「集体任务」记录面板打开时会盖住左上角的黄色返回按钮，必须先点面板右上角的红叉把它关掉，
+# 否则返回按钮的点击会被面板吞掉，页面永远停在这里（page_shirin->page_guild 反复失败 → Game page unknown）。
+page_shirin.connect(
+    page_guild,
+    sequence(GameUiAssets.I_CM_PANEL_CLOSE, GlobalGameAssets.I_UI_BACK_YELLOW, success_index=1),
+    key="page_shirin->page_guild",
+)
 
 page_team = Page(GameUiAssets.I_CHECK_TEAM, category="global")
 page_team.add_enter_failure_hooks(conditional_action(condition=GameUiAssets.I_CHECK_MAIN,

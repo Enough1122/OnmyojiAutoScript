@@ -165,6 +165,8 @@ class GameUiAssets:
 	I_CHECK_SHRIN = RuleImage(roi_front=(80,92,33,97), roi_back=(56,73,84,138), threshold=0.8, method="Template matching", file="./tasks/GameUi/page/page_check_shrin.png")
 	# 阴阳寮前往神社 
 	I_GUILD_TO_SHRIN = RuleImage(roi_front=(877,629,49,53), roi_back=(840,602,302,113), threshold=0.8, method="Template matching", file="./tasks/GameUi/page/page_guild_to_shrin.png")
+	# 阴阳寮神社「集体任务」记录面板右上角关闭按钮（红叉）
+	I_CM_PANEL_CLOSE = RuleImage(roi_front=(1128,92,58,58), roi_back=(1128,92,58,58), threshold=0.8, method="Template matching", file="./tasks/GameUi/page/page_cm_panel_close.png")
 	# 黄色返回按钮 
 	I_BACK_Y = RuleImage(roi_front=(15,4,57,52), roi_back=(1,2,100,91), threshold=0.8, method="Template matching", file="./tasks/GameUi/page/page_back_y.png")
 	# 黄色返回按钮-大 

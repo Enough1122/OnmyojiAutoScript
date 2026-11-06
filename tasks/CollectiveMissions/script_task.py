@@ -14,8 +14,20 @@ from module.base.timer import Timer
 from module.atom.ocr import RuleOcr
 
 from tasks.GameUi.game_ui import GameUi
+from tasks.GameUi.assets import GameUiAssets
 from tasks.GameUi.page import page_main, page_guild
 from tasks.CollectiveMissions.assets import CollectiveMissionsAssets
+
+# 新版阴阳寮「集体任务」界面：三张任务卡下方的「已达上限」没有模板可用，只能用 OCR。
+# 坐标取自 1280x720 实拍截图（log/error/1793071613043）。三张里至少两张命中就说明今天
+# 已经捐不动了，任务必须直接收尾，否则会一直点捐献、最后死在 60s 的 stuck 检测上。
+O_CM_LIMIT_1 = RuleOcr(roi=(190, 470, 300, 50), area=(190, 470, 300, 50),
+                       mode="Full", method="Default", keyword='已达上限', name='cm_limit_1')
+O_CM_LIMIT_2 = RuleOcr(roi=(620, 470, 300, 50), area=(620, 470, 300, 50),
+                       mode="Full", method="Default", keyword='已达上限', name='cm_limit_2')
+O_CM_LIMIT_3 = RuleOcr(roi=(955, 470, 300, 50), area=(955, 470, 300, 50),
+                       mode="Full", method="Default", keyword='已达上限', name='cm_limit_3')
+O_CM_LIMITS = [O_CM_LIMIT_1, O_CM_LIMIT_2, O_CM_LIMIT_3]
 
 
 class MC(str, Enum):
@@ -52,10 +64,10 @@ class ScriptTask(GameUi, CollectiveMissionsAssets):
         self.ui_click(self.I_CM_CM, self.I_CM_RECORDS)
         logger.info('Start to detect missions')
         # 判断今天是否已经完成了， 还是多少次数的任务
-        self.screenshot()
-        current, remain, total = self.O_CM_NUMBER.ocr(self.device.image)
-        if current == total == 30:
-            logger.warning('Today\'s missions have been completed')
+        if self._today_completed() or self._limit_reached():
+            logger.warning('Today\'s collective missions are already completed, skip')
+            # 不能把记录面板开着就收尾：面板会盖住神社的返回按钮，后续任务导航会卡死在这里。
+            self._close_records()
             self.set_next_run(task='CollectiveMissions', success=False, finish=True)
             raise TaskEnd('CollectiveMissions')
         #切换为目标任务
@@ -92,6 +104,46 @@ class ScriptTask(GameUi, CollectiveMissionsAssets):
         self.set_next_run(task='CollectiveMissions', success=True, finish=True)
         raise TaskEnd('CollectiveMissions')
 
+
+    def _close_records(self) -> None:
+        """
+        关闭「集体任务」记录面板（右上角红叉）。
+        面板开着的时候会挡住神社左上角的黄色返回按钮，后面的页面导航会一直卡在 page_shirin。
+        """
+        for _ in range(6):
+            self.screenshot()
+            if not self.appear(GameUiAssets.I_CM_PANEL_CLOSE):
+                return
+            self.appear_then_click(GameUiAssets.I_CM_PANEL_CLOSE, interval=1)
+            time.sleep(0.5)
+
+    def _today_completed(self) -> bool:
+        """
+        今日已完成次数是否到了 30/30。
+        新版界面面板滑入的过程中 OCR 会读成 0/30（实测 11:25:23 就是这种情况），所以重试几次。
+        """
+        for _ in range(3):
+            self.screenshot()
+            current, remain, total = self.O_CM_NUMBER.ocr(self.device.image)
+            logger.info(f'Today\'s mission number: {current}/{total}')
+            if current == total == 30:
+                return True
+            time.sleep(0.5)
+        return False
+
+    def _limit_reached(self) -> bool:
+        """
+        三张任务卡里至少两张显示「已达上限」→ 今天已经捐不动了。
+        """
+        self.screenshot()
+        hit = 0
+        for ocr in O_CM_LIMITS:
+            if self.ocr_appear(ocr):
+                hit += 1
+        if hit >= 2:
+            logger.warning(f'Collective missions reached limit, {hit}/3 cards say 已达上限')
+            return True
+        return False
 
     def detect_one(self, ocr_1: RuleOcr, ocr_2: RuleOcr) -> MC:
         """
@@ -264,6 +316,9 @@ class ScriptTask(GameUi, CollectiveMissionsAssets):
         logger.info('Swipe to the most matter')
         # 还有一点很重要的，捐赠会有双倍的，需要领两次
         reward_number = 0
+        # 兜底：材料/次数到上限时面板会直接关掉，原来的死循环只能等 60s 的 stuck 检测
+        # 把任务打成 GameStuckError，这里主动收尾（每次成功动作都会 reset）。
+        donate_timer = Timer(40).start()
         while 1:
             self.screenshot()
 
@@ -271,9 +326,17 @@ class ScriptTask(GameUi, CollectiveMissionsAssets):
                 break
             if self.ui_reward_appear_click(False):
                 reward_number += 1
+                donate_timer.reset()
                 continue
             if self.appear_then_click(self.I_CM_PRESENT, interval=1):
+                donate_timer.reset()
                 continue
+            if self.ocr_appear(O_CM_LIMIT_1):
+                logger.warning('Donate reached limit, stop donating')
+                break
+            if donate_timer.reached():
+                logger.warning('Donate reward timeout, stop donating')
+                break
         self.ui_reward_appear_click(True)
         logger.info('Donate finished')
         return True
