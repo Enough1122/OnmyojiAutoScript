@@ -14,6 +14,13 @@ server.py,子进程继承 launcher 的 stdout。而 launcher 一旦退出(正常
 
 修法:把 stdout/stderr 重定向到一个**独立打开的文件句柄**,这个句柄的生命周期
 由文件本身决定,不再受 launcher 进程退出影响。
+
+2026-11-06 追加:从 DSH 的 pwsh 工具里拉起时,server 与脚本实例会在调用结束后
+约一分钟「一起静默消失」(日志无 traceback、事件查看器无记录)—— 是工具调用所在的
+Windows Job Object 被关闭时连带回收了子进程。因此 server 改用
+CREATE_BREAKAWAY_FROM_JOB 启动以跳出该 Job;若系统拒绝 breakaway
+(Job 未开 BREAKAWAY_OK),自动退回普通 detached 模式并打印提示。
+从资源管理器双击 bat 启动不受此影响。
 """
 import os
 import subprocess
@@ -91,14 +98,25 @@ def main(config):
 
     log(f"console log -> {out_path}")
 
-    server_proc = subprocess.Popen(
-        [PYTHON, "server.py"],
-        cwd=OAS_DIR,
-        stdout=out,
-        stderr=subprocess.STDOUT,
-        stdin=subprocess.DEVNULL,
-        creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS,
-    )
+    def spawn_server(flags):
+        return subprocess.Popen(
+            [PYTHON, "server.py"],
+            cwd=OAS_DIR,
+            stdout=out,
+            stderr=subprocess.STDOUT,
+            stdin=subprocess.DEVNULL,
+            creationflags=flags,
+        )
+
+    detach_flags = subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS
+    breakaway_flag = getattr(subprocess, "CREATE_BREAKAWAY_FROM_JOB", 0x01000000)
+    try:
+        server_proc = spawn_server(detach_flags | breakaway_flag)
+        log("spawned server with CREATE_BREAKAWAY_FROM_JOB")
+    except OSError as exc:
+        log(f"breakaway from job refused ({exc}); falling back to plain detached")
+        log("hint: 若从 DSH/CI 等带 Job Object 的宿主拉起，请改用计划任务或双击 bat 启动")
+        server_proc = spawn_server(detach_flags)
     log(f"server started (PID={server_proc.pid})")
 
     # 等待端口就绪
