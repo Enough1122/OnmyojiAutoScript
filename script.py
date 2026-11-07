@@ -55,6 +55,9 @@ class Script:
         self.config_name = config_name
         # Skip first restart
         self.is_first_task = True
+        # 「跳过启动时第一个 Restart」只允许生效一次。见 loop() 里的注释：
+        # 若 Restart 是运行期被 task_call 拉进队列的（游戏掉了），再跳过就卡死。
+        self._restart_skip_used = False
         # Failure count of tasks
         # Key: str, task name, value: int, failure count
         self.failure_record = {}
@@ -675,7 +678,14 @@ class Script:
             # Get task
             task = self.get_next_task()
             # Skip first restart
-            if self.is_first_task and task == 'Restart':
+            # 只在**真的**是调度器刚启动、且第一次遇到 Restart 时跳过。
+            # 若 Restart 是被 GotoMain 里的 GameNotRunningError 现拉的 task_call
+            # （next_run=now，队列里唯一 pending），再跳过就永远没人把游戏拉起来：
+            # 每轮 get_next 又得到 Restart，continue 又绕过下面把 is_first_task
+            # 置 False 的那行，于是 5 秒一次无限重扫，表现为「进程活着但日志零增长」。
+            # 所以跳过只允许发生一次。
+            if self.is_first_task and task == 'Restart' and not self._restart_skip_used:
+                self._restart_skip_used = True
                 logger.info('Skip task `Restart` at scheduler start')
                 self.config.task_delay(task='Restart', success=True, server=True)
                 del_cached_property(self, 'config')
