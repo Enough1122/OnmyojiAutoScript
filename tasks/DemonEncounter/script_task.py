@@ -81,7 +81,14 @@ class ScriptTask(GameUi, GeneralBattle, DemonEncounterAssets, SwitchSoul):
         else:
             group, team = getattr(self.conf.demon_soul_config, self.boss_type).split(",")
         if group and team:
-            self.run_switch_soul_by_name(group, team)
+            # 配置里写 "组号,队伍号"(如 6,2) 时走索引路径;写名字时走 OCR 名字匹配。
+            # 原实现无条件调用 run_switch_soul_by_name,数字会被当成要匹配的分组名,
+            # 永远匹配不到 → 一直下滑 → GameTooManyClickError。
+            if group.strip().isdigit() and team.strip().isdigit():
+                self.click_preset()
+                self.switch_souls((int(group), int(team)))
+            else:
+                self.run_switch_soul_by_name(group, team)
             return
         logger.error(f'Unknown switch soul conf: group[{group}], team[{team}]')
 

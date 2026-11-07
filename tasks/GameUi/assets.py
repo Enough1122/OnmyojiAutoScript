@@ -205,7 +205,7 @@ class GameUiAssets:
 	# 百鬼夜行标志 
 	I_CHECK_KYAKKIYAKOU = RuleImage(roi_front=(1062,564,84,73), roi_back=(68,519,1185,141), threshold=0.8, method="Template matching", file="./tasks/GameUi/page/page_check_kyakkiyakou.png")
 	# 逢魔之时新页面标志 
-	I_CHECK_DEMON_ENCOUNTER_2 = RuleImage(roi_front=(501,441,53,122), roi_back=(358,326,370,288), threshold=0.8, method="Template matching", file="./tasks/GameUi/page/page_check_demon_encounter_2.png")
+	I_CHECK_DEMON_ENCOUNTER_2 = RuleImage(roi_front=(985,462,220,58), roi_back=(880,380,400,320), threshold=0.8, method="Template matching", file="./tasks/GameUi/page/page_check_demon_encounter_2.png")
 	# 町中前往娱乐区域 
 	I_TOWN_GOTO_ENTERTAINMENT = RuleImage(roi_front=(201,144,35,26), roi_back=(201,144,35,26), threshold=0.8, method="Template matching", file="./tasks/GameUi/page/page_town_goto_entertainment.png")
 	# 娱乐区域页面标志 

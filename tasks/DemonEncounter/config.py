@@ -93,6 +93,8 @@ def convert_to_general_battle_config(boss_type: str, demon_battle_conf: 'DemonBa
 
 
 class DemonBattleConfig(BaseModel):
+    demon_kiryou_utahime_enable: bool = Field(default=False, description='是否切换鬼灵歌姬预设')
+    demon_kiryou_utahime: str = Field(default="-1,-1", description="鬼灵歌姬预设")
     demon_shinkirou_enable: bool = Field(default=False, description='是否切换蜃气楼预设')
     demon_shinkirou: str = Field(default="-1,-1", description="蜃气楼预设")
     demon_tsuchigumo_enable: bool = Field(default=False, description='是否切换土蜘蛛预设')
@@ -108,6 +110,8 @@ class DemonBattleConfig(BaseModel):
 
 
 class BestDemonBattleConfig(BaseModel):
+    best_demon_kiryou_utahime_enable: bool = Field(default=False, description='是否切换极鬼灵歌姬预设')
+    best_demon_kiryou_utahime: str = Field(default="-1,-1", description="极鬼灵歌姬预设")
     best_demon_shinkirou_enable: bool = Field(default=False, description='是否切换极蜃气楼预设')
     best_demon_shinkirou: str = Field(default="-1,-1", description="极蜃气楼预设")
     best_demon_tsuchigumo_enable: bool = Field(default=False, description='是否切换极土蜘蛛预设')
