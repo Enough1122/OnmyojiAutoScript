@@ -336,11 +336,27 @@ class ScriptTask(GeneralBattle, GameUi, SwitchSoul, AbyssShadowsAssets):
         :return 
         '''
         click_times = 0
+        open_times = 0
         while 1:
             self.screenshot()
             # 区域图片与入口图片不一致，使用点击进去
             
             if self.appear(self.I_ABYSS_DRAGON):
+                # 2026-11-07 新增: 本轮狭间暗域未开启时, 点四张书页没有任何反应
+                # (屏幕中央飘字'狭间暗域未开启'), 必须先点右下角'开启'按钮(1133,602,74,58)。
+                # 开关 abyss_shadows.open_abyss_enable 默认关闭(点击会消耗寮资源), 关闭时直接返回失败顺延。
+                if self.appear(self.I_OPEN_ABYSS_SHADOWS, threshold=0.8):
+                    if not self.config.abyss_shadows.open_abyss_enable:
+                        logger.warning("Abyss shadows is not opened this round, "
+                                       "set abyss_shadows.open_abyss_enable to click the open button")
+                        return False
+                    if open_times >= 3:
+                        logger.warning("Click open abyss shadows 3 times but still not opened, give up")
+                        return False
+                    if self.click(self.I_OPEN_ABYSS_SHADOWS, interval=2):
+                        open_times += 1
+                        logger.info(f"Abyss shadows not opened, click open button {open_times} times")
+                    continue
                 match area_name:
                     case AreaType.DRAGON: is_click = self.click(self.C_ABYSS_DRAGON,interval=2)
                     case AreaType.PEACOCK: is_click = self.click(self.C_ABYSS_PEACOCK,interval=2)
@@ -545,6 +561,10 @@ class ScriptTask(GeneralBattle, GameUi, SwitchSoul, AbyssShadowsAssets):
         # 点击返回
         while 1:
             self.screenshot()
+            # 狭间战斗界面的返回箭头是另一套皮肤, 通用 I_EXIT(gb_exit) 在这里只 0.70, 匹配不到
+            # 会一直空转到 stuck 超时(60s)后抛 GameStuckError, 2026-11-07 连挂三场即因此。
+            if self.appear_then_click(self.I_ABYSS_BATTLE_BACK, interval=2):
+                continue
             if self.appear_then_click(self.I_EXIT, interval=2):
                 continue
             if self.appear_then_click(self.I_UI_CONFIRM, interval=2):

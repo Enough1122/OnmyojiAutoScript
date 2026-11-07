@@ -28,6 +28,8 @@ class AbyssShadowsCombatTime(BaseModel):
 
 class AbyssShadows(ConfigBase):
     scheduler: Scheduler = Field(default_factory=Scheduler)
+    # 本轮狭间暗域未开启时, 是否自动点击右下角'开启'按钮(会消耗寮资源), 默认不点只记失败顺延
+    open_abyss_enable: bool = Field(default=False, description="狭间暗域未开启时自动点击开启按钮")
     abyss_shadows_time: AbyssShadowsTime = Field(default_factory=AbyssShadowsTime)
     abyss_shadows_combat_time: AbyssShadowsCombatTime = Field(default_factory=AbyssShadowsCombatTime)
     general_battle_config: GeneralBattleConfig = Field(default_factory=GeneralBattleConfig)

@@ -68,6 +68,8 @@ class AbyssShadowsAssets:
 	I_ABYSS_MAP = RuleImage(roi_front=(306,147,170,48), roi_back=(306,147,170,48), threshold=0.8, method="Template matching", file="./tasks/AbyssShadows/res/res_abyss_map.png")
 	# 战报退出按钮 
 	I_ABYSS_MAP_EXIT = RuleImage(roi_front=(1154,96,32,32), roi_back=(1154,96,32,32), threshold=0.8, method="Template matching", file="./tasks/AbyssShadows/res/res_abyss_map_exit.png")
+	# 狭间战斗内左上角返回箭头(与通用战斗 gb_exit 皮肤不同, 2026-11-07 新增)
+	I_ABYSS_BATTLE_BACK = RuleImage(roi_front=(21,19,29,27), roi_back=(21,19,29,27), threshold=0.8, method="Template matching", file="./tasks/AbyssShadows/res/res_abyss_battle_back.png")
 	# 挑战按钮 
 	I_ABYSS_FIRE = RuleImage(roi_front=(1121,605,77,50), roi_back=(1121,605,77,50), threshold=0.8, method="Template matching", file="./tasks/AbyssShadows/res/res_abyss_fire.png")
 	# 前往 
