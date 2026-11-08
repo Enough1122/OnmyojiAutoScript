@@ -203,6 +203,8 @@ page_town.connect(page_demon_encounter, GameUiAssets.I_TOWN_GOTO_DEMON_ENCOUNTER
 page_demon_encounter_realworld = Page(GameUiAssets.I_CHECK_DEMON_ENCOUNTER_REALWORLD, category="global")
 page_demon_encounter_realworld.connect(page_demon_encounter, GlobalGameAssets.I_UI_BACK_YELLOW, key="page_demon_encounter_realworld->page_demon_encounter")
 page_demon_encounter.connect(page_demon_encounter_realworld, GameUiAssets.I_DEMON_ENCOUNTER_REALWORLD_GOTO, key="page_demon_encounter->page_demon_encounter_realworld")
+# 现世逢魔开启时段（17:00-23:00）点庭院门口的逢魔入口会直接落到现世地图，不经过中间选择页。
+page_town.connect(page_demon_encounter_realworld, GameUiAssets.I_TOWN_GOTO_DEMON_ENCOUNTER, key="page_town->page_demon_encounter_realworld")
 
 page_hunt = Page(GameUiAssets.I_CHECK_HUNT, category="global")
 page_hunt.connect(page_town, GlobalGameAssets.I_UI_BACK_YELLOW, key="page_hunt->page_town")
