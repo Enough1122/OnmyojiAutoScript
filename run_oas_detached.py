@@ -139,15 +139,18 @@ def main(config):
         return 1
     log("port 22267 ready")
 
-    # 强制 ADB_nc 截图
+    # 强制 nemu_ipc 截图
+    # MuMu 15.0 多虚拟显示下 `screencap -d <long_id>` 一律返回 56 字节
+    # (Failed to take screenshot. Status: -2)，而 `screencap` 不带 -d 只会拍到
+    # display 0 的安卓桌面。只有 nemu_ipc 能拿到游戏画面（2026-11-09 实测）。
     try:
         import requests
         r = requests.put(
             f"http://127.0.0.1:{SERVER_PORT}/{config}/Script/device/screenshot_method/value",
-            params={"types": "string", "value": "ADB_nc"},
+            params={"types": "string", "value": "nemu_ipc"},
             timeout=5,
         )
-        log(f"screenshot_method=ADB_nc -> {r.text}")
+        log(f"screenshot_method=nemu_ipc -> {r.text}")
     except Exception as e:
         log(f"failed to set screenshot method: {e}")
 

@@ -24,10 +24,11 @@ from win32con import SRCCOPY
 
 from module.base.cBezier import human_track
 from module.exception import RequestHumanTakeover, ScriptError
-from module.base.decorator import Config
+from module.base.decorator import Config, del_cached_property
 from module.base.timer import timer
 from module.logger import logger
-from module.device.handle import Handle, window_scale_rate, EmulatorFamily
+from module.device.handle import (Handle, window_scale_rate, EmulatorFamily,
+                                   WindowNode, handle_title2num)
 from module.device.method.desktop_impl import dpi_awareness
 
 
@@ -44,6 +45,38 @@ class Window(Handle):
         logger.info("Window init")
         super().__init__(*args, **kwargs)
 
+    def _refresh_emulator_handle(self) -> bool:
+        """模拟器窗口换了 hwnd 后重新取句柄树，返回是否刷新成功。
+
+        MuMu 的虚拟机进程重启会换掉 MuMuNxDevice 顶层窗口的 hwnd，而 Handle 只在
+        Device 初始化时枚举一次句柄树，截图句柄是 cached_property。旧 hwnd 一失效，
+        GetWindowRect/GetWindowDC 就抛 (1400, '无效的窗口句柄')，百鬼走窗口位图
+        截图（hya_screenshot_method=window_background），这个异常没人接住，直接
+        把整个 oas_daily 脚本进程带走（2026-11-09 02:40:31）。
+        """
+        try:
+            window_list = Handle.all_windows()
+            title = self.auto_handle_title(window_list)
+        except Exception as e:
+            logger.warning(f'Refresh handle failed while listing windows: {e}')
+            return False
+        if not title:
+            logger.warning('Refresh handle failed: emulator window not found')
+            return False
+        num = handle_title2num(title)
+        if not num or not IsWindow(num):
+            logger.warning(f'Refresh handle failed: window {title!r} has no valid hwnd')
+            return False
+        logger.info(f'Emulator window handle changed, rebind root hwnd '
+                    f'{self.root_handle_num} -> {num} ({title})')
+        self.root_handle_title = title
+        self.root_handle_num = num
+        self.root_node = WindowNode(name=title, num=num)
+        Handle.handle_tree(num, self.root_node)
+        for prop in ('screenshot_handle_num', 'screenshot_size'):
+            del_cached_property(self, prop)
+        return True
+
     def screenshot_window_background(self):
         """
         后台截屏
@@ -51,6 +84,58 @@ class Window(Handle):
         """
         if getattr(self, 'is_desktop_window', False):
             return self.screenshot_desktop_bitblt()
+        try:
+            image = self._screenshot_window_bitblt()
+            if not self._image_is_blank(image):
+                return image
+            # MuMu 5.0/6.0 把渲染放在独立的 renderer 里，BitBlt 抓到的只是窗口底色
+            # （整块纯色），但句柄本身是有效的，重取句柄没用。
+            logger.warning('Window screenshot is blank (solid color), the emulator renders '
+                           'outside the window DC, use adb instead')
+        except Exception as e:
+            # win32gui 对废句柄抛 pywintypes.error(1400, 'GetWindowRect', ...)，
+            # 顶层没有收口，逃出去就是整个脚本进程退出。这里重取句柄再试一次。
+            logger.warning(f'Window screenshot failed ({e}), refreshing emulator handle')
+            if self._refresh_emulator_handle():
+                try:
+                    image = self._screenshot_window_bitblt()
+                    if not self._image_is_blank(image):
+                        return image
+                    logger.warning('Window screenshot still blank after handle refresh')
+                except Exception as e2:
+                    logger.error(f'Window screenshot still failed after handle refresh: {e2}')
+            else:
+                logger.error('Window screenshot failed and emulator handle cannot be refreshed')
+        # 退到 adb 截图：MuMu 5.0/6.0 的 external_renderer_ipc 在 display_id=0 上取的是
+        # 安卓桌面（游戏在 mumuscreen004/005 虚拟显示上，传 1/2/3 一律 result=4），
+        # 拿到的画面虽不是纯色但也不是游戏，模板同样匹配不上，所以这里只用 adb。
+        logger.warning('Falling back to adb screenshot for this frame')
+        return self.screenshot_adb()
+
+    @staticmethod
+    def _image_is_blank(image, sample_step: int = 8, std_threshold: float = 12.0) -> bool:
+        """判断截图是不是整块纯色（只看画面主体，忽略标题栏和边框）。
+
+        MuMu 5.0 起窗口内容不进 DWM 位图，BitBlt/PrintWindow 只能拿到一层底色
+        （2026-11-09 实测：整图因为带标题栏还有 std=15.8，但去掉边框后中心区域
+        只有 1 种颜色、std=4.5），而 image_black() 只看四个角，纯色图侥幸通过
+        黑屏检查，于是百鬼的 while 循环一直匹配不到任何模板，空转三分钟后被判
+        GameStuckError。这里裁掉四周 10% 后抽样算标准差做判据。
+        """
+        if image is None:
+            return True
+        try:
+            height, width = image.shape[:2]
+            top, bottom = int(height * 0.1), int(height * 0.9)
+            left, right = int(width * 0.1), int(width * 0.9)
+            if bottom <= top or right <= left:
+                return True
+            sample = image[top:bottom:sample_step, left:right:sample_step]
+            return float(array(sample, dtype='float32').std()) < std_threshold
+        except Exception:
+            return False
+
+    def _screenshot_window_bitblt(self):
         widthScreen, heightScreen = self.screenshot_size
         # 返回句柄窗口的设备环境，覆盖整个窗口，包括非客户区，标题栏，菜单，边框
         hwndDc = GetWindowDC(self.screenshot_handle_num)

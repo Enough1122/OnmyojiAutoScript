@@ -119,6 +119,8 @@ class ScriptTask(GameUi, HyaSlave, SwitchOnmyoji):
 
     def run(self):
         hya_count: int = 0
+        self._hya_no_enter: int = 0
+        self._hya_entered: bool = False
         self.limit_count: int = self._config.hyakkiyakou_config.hya_limit_count
         limit_time = self._config.hyakkiyakou_config.hya_limit_time
         self.limit_time: timedelta = timedelta(hours=limit_time.hour, minutes=limit_time.minute,
@@ -135,7 +137,20 @@ class ScriptTask(GameUi, HyaSlave, SwitchOnmyoji):
                 logger.info('Hyakkiyakou time limit out')
                 break
 
+            self._hya_entered = False
             self.one()
+            if not self._hya_entered:
+                self._hya_no_enter += 1
+                logger.warning(
+                    f'Hyakki round {hya_count + 1} never entered the minigame '
+                    f'({self._hya_no_enter}/3)')
+                if self._hya_no_enter >= 3:
+                    logger.error('Hyakkiyakou failed to enter 3 times, give up this round '
+                                 'instead of spending more tickets')
+                    self.set_next_run(task='Hyakkiyakou', success=False)
+                    raise TaskEnd
+            else:
+                self._hya_no_enter = 0
             hya_count += 1
             logger.info(f'count: {hya_count}/{self.limit_count}')
             logger.info(f'time: {(datetime.now() - self.start_time).total_seconds():.1f}s/{self.limit_time.total_seconds()}s')
@@ -265,14 +280,30 @@ class ScriptTask(GameUi, HyaSlave, SwitchOnmyoji):
         self.hya_fs_check_timer.reset()
         if self._config.debug_config.hya_show:
             self.debugger.show_start()
+        # 刚点完「开始」的头几秒画面还停在入口页，而 I_HEND 检的就是入口页那张
+        # 「百鬼夜行」竖排标题 —— 直接判结束会把票打空：2026-11-08 03:05 连跑 4 轮，
+        # 每轮点完开始 1 秒内就 End，一局没打、每轮消耗一张门票，最后还把脚本跑挂。
+        # 门闩：没见过撒豆界面 I_CHECK_RUN 且开场不足 _entry_grace 秒时不算结束，
+        # 补点一次「开始」；超过 _entry_grace 还没见到就按原来的处理放行，不会死循环。
+        _enter_time = datetime.now()
+        _entry_grace = 15
         while 1:
             self.fast_screenshot(screenshot=self._config.debug_config.hya_screenshot_method)
             if self.appear(self.I_HEND):
-                break
+                _elapsed = (datetime.now() - _enter_time).total_seconds()
+                if init_bean_flag or _elapsed >= _entry_grace:
+                    break
+                logger.warning(
+                    f'Hyakki HEND matched at {_elapsed:.1f}s but never saw I_CHECK_RUN, '
+                    f'still on entry page, click start again')
+                self.appear_then_click(self.I_HSTART, interval=2)
+                time.sleep(0.3)
+                continue
             if not self.appear(self.I_CHECK_RUN):
                 continue
             if not init_bean_flag:
                 init_bean_flag = True
+                self._hya_entered = True
                 self.bean_05to10()
                 time.sleep(0.5)
             #修改：在这里不再区分freeze，而是将状态传到decision用于执行冻结策略

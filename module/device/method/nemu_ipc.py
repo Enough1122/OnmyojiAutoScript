@@ -507,7 +507,34 @@ class NemuIpc():
         logger.info('nemu_ipc released')
 
     def screenshot_nemu_ipc(self):
-        image = self.nemu_ipc.screenshot()
+        ipc = self.nemu_ipc
+        # MuMu 15.0 开了多虚拟显示后，游戏渲染在 mumuscreen004/005 这类虚拟显示上，
+        # display_id=0 永远是安卓桌面：拿到的画面既不是纯色、黑屏检查也过，可模板一个
+        # 都匹配不上（2026-11-09 百鬼就是这样空转三分钟被判 GameStuckError，还在烧票）。
+        # 这里跟随 adb 侧已经探测好的 display id；探测不到（游戏没起/single display）
+        # 才退回 0，与老版本 MuMu 行为一致。
+        want = 0
+        try:
+            ids = self._mumu_display_ids()
+            if ids:
+                want = ids[0]
+        except Exception as e:
+            logger.warning(f'Failed to get MuMu display id for nemu ipc: {e}')
+        if getattr(ipc, 'display_id', 0) != want:
+            logger.info(f'Nemu ipc display id {ipc.display_id} -> {want}')
+            ipc.display_id = want
+            ipc.width = 0
+            ipc.height = 0
+        try:
+            image = ipc.screenshot()
+        except Exception as e:
+            if want == 0:
+                raise
+            logger.warning(f'Nemu ipc screenshot failed on display {want} ({e}), retry on display 0')
+            ipc.display_id = 0
+            ipc.width = 0
+            ipc.height = 0
+            image = ipc.screenshot()
 
         image = cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
         cv2.flip(image, 0, dst=image)

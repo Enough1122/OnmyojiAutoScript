@@ -92,15 +92,19 @@ async def start_script_via_ws(config):
 
 
 def force_adb_screenshot(config):
-    """Force screenshot method to ADB_nc to avoid window_background issue"""
+    """Force screenshot method to nemu_ipc.
+
+    MuMu 15.0 的多虚拟显示下 `screencap -d` 恒返回 56 字节(Status: -2)，
+    不带 -d 只拍到 display 0 桌面；只有 nemu_ipc 能取到游戏画面。
+    """
     try:
         r = requests.put(
             f"{SERVER_URL}/{config}/Script/device/screenshot_method/value",
-            params={"types": "string", "value": "ADB_nc"},
+            params={"types": "string", "value": "nemu_ipc"},
             timeout=5
         )
         if r.text == "true":
-            log("Forced screenshot method to ADB_nc ✓")
+            log("Forced screenshot method to nemu_ipc ✓")
             return True
     except Exception as e:
         log(f"Failed to set screenshot method: {e}")

@@ -287,9 +287,37 @@ class Adb(Connection):
             cmd += ['-d', str(ids[0])]
         return cmd
 
+    def _nemu_screenshot_for_multi_display(self):
+        """MuMu 15.0 多虚拟显示：adb 截图这条路整体不可用，改走 nemu_ipc。
+
+        2026-11-09 实测（MuMuPlayer 15.0-1 / Android 15）：
+        - `screencap -p -d <long_id>` 对任何虚拟屏都只回 56 字节
+          (`Failed to take screenshot. Status: -2`)，就是日志里反复出现的
+          `ImageTruncated: Empty screencap data: 0 bytes`；
+        - `screencap -p` 不带 -d 能出图，但抓的是 display 0 的安卓桌面
+          （launcher），模板一个都匹配不上，任务会一路 Wait too long；
+        - 只有 nemu_ipc（external_renderer_ipc.dll）能拿到游戏画面，
+          实测 6.5ms/帧，比 adb 还快。
+
+        Returns:
+            np.ndarray | None: 成功返回 BGR 图，失败返回 None 交给原 adb 路径。
+        """
+        try:
+            if not self._mumu_display_ids():
+                return None
+            image = self.screenshot_nemu_ipc()
+            if image is not None and image.shape[0] > 0:
+                return image
+        except Exception as e:
+            logger.warning(f'nemu ipc screenshot for multi-display failed: {e}')
+        return None
+
     @retry
     @Config.when(DEVICE_OVER_HTTP=False)
     def screenshot_adb(self):
+        image = self._nemu_screenshot_for_multi_display()
+        if image is not None:
+            return image
         cmd = ['screencap', '-p']
         ids = self._mumu_display_ids()
         if ids:
@@ -303,6 +331,9 @@ class Adb(Connection):
     @retry
     @Config.when(DEVICE_OVER_HTTP=True)
     def screenshot_adb(self):
+        image = self._nemu_screenshot_for_multi_display()
+        if image is not None:
+            return image
         cmd = ['screencap']
         ids = self._mumu_display_ids()
         if ids:
@@ -315,6 +346,9 @@ class Adb(Connection):
 
     @retry
     def screenshot_adb_nc(self):
+        image = self._nemu_screenshot_for_multi_display()
+        if image is not None:
+            return image
         cmd = ['screencap']
         ids = self._mumu_display_ids()
         if ids:
