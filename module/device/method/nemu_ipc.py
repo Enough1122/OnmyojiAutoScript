@@ -530,10 +530,30 @@ class NemuIpc():
         except Exception as e:
             if want == 0:
                 raise
-            logger.warning(f'Nemu ipc screenshot failed on display {want} ({e}), retry on display 0')
-            ipc.display_id = 0
-            ipc.width = 0
-            ipc.height = 0
+            # MuMu 重排虚拟显示后逻辑 id 会变（2026-11-09 15:29 游戏重启后 11 -> 14，
+            # mumuscreen006 -> mumuscreen008）。adb 侧的 _mumu_display_ids 只在 app
+            # start/stop 与 adb 重连时作废，重启瞬间探到的可能是过渡期编号，之后
+            # nemu_capture_display 就一直 result=4。这里先作废缓存重探一次，用新 id
+            # 再试，别急着退 display 0 —— display 0 是安卓桌面，退过去照样匹配不上模板。
+            logger.warning(f'Nemu ipc screenshot failed on display {want} ({e}), re-detecting display id')
+            self._reset_mumu_display_ids()
+            fresh = 0
+            try:
+                ids = self._mumu_display_ids()
+                if ids:
+                    fresh = ids[0]
+            except Exception as e2:
+                logger.warning(f'Failed to re-detect MuMu display id: {e2}')
+            if fresh and fresh != want:
+                logger.info(f'Nemu ipc display id {want} -> {fresh} after re-detect (stale cache)')
+                ipc.display_id = fresh
+                ipc.width = 0
+                ipc.height = 0
+            else:
+                logger.warning(f'Nemu ipc screenshot still failed on display {want} ({e}), retry on display 0')
+                ipc.display_id = 0
+                ipc.width = 0
+                ipc.height = 0
             image = ipc.screenshot()
 
         image = cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
