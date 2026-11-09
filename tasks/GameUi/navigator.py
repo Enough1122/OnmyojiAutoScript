@@ -909,7 +909,12 @@ class GameUi(BaseTask, GameUiAssets):
         destination = self.navigator.resolve_page(destination) or self.navigator.add_page(destination)
         logger.hr(f"UI goto {destination}")
         start_time = time.time()
-        progress_timer = Timer(timeout).start()
+        # 时间预算必须大于单条边的到达等待，否则「等目标页」本身就会被判成「无进展」。
+        # 2026-11-09 09:04:32 狩猎战打完点返回：_wait_for_destination 等满 40s 才判边失败，
+        # 而这里的 progress_timer 默认只有 30s，于是在 09:05:12 边一失败就立刻撞上
+        # progress_timer.reached() → Game page unknown，边的重试与未知页兜底一次都没跑。
+        effective_timeout = max(float(timeout), self.DESTINATION_WAIT_TIMEOUT + 15.0)
+        progress_timer = Timer(effective_timeout).start()
         last_progress_signature: tuple[str, str] | None = None
         last_detected_page_key: str | None = None
         repeated_failure_transition_key: str | None = None
