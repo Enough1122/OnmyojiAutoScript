@@ -515,7 +515,15 @@ class Script:
             return True
 
         logger.info("Goto main page during wait")
-        self.run("GotoMain")
+        if not self.run("GotoMain"):
+            # GotoMain 失败时（异常已在 run() 内部处理并 task_call('Restart')），
+            # 绝不能无视返回值继续 wait_until：wait_until 开头的 start_watching()
+            # 会把刚写盘的 mtime 当成基线，于是 should_reload 永远为 False，
+            # Restart 一直 pending 却再也不会被取到，调度器一路睡到 next_run。
+            # 表现就是「进程活着、CPU 冻结、日志零增长、restart 逾期」。
+            # 2026-11-09 09:05:15 与 22:04:57 两次僵死都是这个形态。
+            self.device.release_during_wait()
+            return False
         self.device.release_during_wait()
         return self.wait_until(next_run)
 

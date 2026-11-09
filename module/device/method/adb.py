@@ -187,13 +187,20 @@ class Adb(Connection):
     # (mumuscreenNNN), while `screencap` and `input` default to display 0 (the
     # desktop). Detect the display the game is running on and target it.
     _mumu_display_ids_cache = None
+    _mumu_display_ids_at = 0.0
     _mumu_display_ids_retry_at = 0.0
     _mumu_display_ids_generation = 0
     _MUMU_DISPLAY_RETRY_SEC = 20
     _MUMU_DISPLAY_TIMEOUT = 3
+    # 缓存寿命。MuMu 每次重启/reflow 虚拟显示都会换 display id —— 2026-11-09 一天内
+    # 就出现过 11 -> 14 -> 15。只靠 app start/stop 与 adb 重连作废的话，重启过渡期
+    # 探到的旧编号会被一直用下去，nemu_capture_display 随后全程 result=4。
+    # 给它一个短 TTL 兜底：最坏一分钟就自愈，不必等到某次截图彻底失败。
+    _MUMU_DISPLAY_TTL = 60.0
 
     def _reset_mumu_display_ids(self):
         self._mumu_display_ids_cache = None
+        self._mumu_display_ids_at = 0.0
         self._mumu_display_ids_retry_at = 0.0
         self._mumu_display_ids_generation += 1
 
@@ -206,7 +213,12 @@ class Adb(Connection):
                 is not running yet).
         """
         if self._mumu_display_ids_cache is not None:
-            return self._mumu_display_ids_cache
+            if time.monotonic() - self._mumu_display_ids_at < self._MUMU_DISPLAY_TTL:
+                return self._mumu_display_ids_cache
+            # 过期：作废重探。不碰 _mumu_display_ids_retry_at，探不到时仍按
+            # _MUMU_DISPLAY_RETRY_SEC 退避，不会每帧都打 dumpsys。
+            self._mumu_display_ids_cache = None
+            self._mumu_display_ids_generation += 1
         # A provisional miss (dumpsys broken, or the game display not up yet) is
         # retried on the next call; only the definitive "no virtual display at
         # all" result is remembered, and only for a short window, so a plain
@@ -271,6 +283,7 @@ class Adb(Connection):
                 return None
             logger.info(f'MuMu multi-display: game on display {display_id} ({name}), screencap id {long_id}')
             self._mumu_display_ids_cache = (display_id, long_id)
+            self._mumu_display_ids_at = time.monotonic()
             return self._mumu_display_ids_cache
         except Exception as e:
             logger.warning(f'Failed to detect MuMu multi-display setup: {e}')
