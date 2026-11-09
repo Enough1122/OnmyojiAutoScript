@@ -438,6 +438,10 @@ class ScriptTask(GameUi, CollectiveMissionsAssets):
         logger.info('Finish to feed soul')
         # 还有一点很重要的，捐赠会有双倍的，需要领两次
         reward_number = 0
+        # 兜底：喂 N 卡有时只给一次奖励（或面板直接关掉），原来这里只有「领满两次」一个出口，
+        # 于是 60s 后必被 stuck 检测打成 GameStuckError（2026-11-10 02:03:49 与 02:06:07 连着两次）。
+        # 每次成功动作都 reset，40s 内没有新动作就主动收尾。
+        donate_timer = Timer(40).start()
         while 1:
             self.screenshot()
 
@@ -445,9 +449,17 @@ class ScriptTask(GameUi, CollectiveMissionsAssets):
                 break
             if self.ui_reward_appear_click(False):
                 reward_number += 1
+                donate_timer.reset()
                 continue
             if self.appear_then_click(self.I_FEED_SUBMIT, interval=1):
+                donate_timer.reset()
                 continue
+            if self.ocr_appear(O_CM_LIMIT_1):
+                logger.warning('Feed reached limit, stop donating')
+                break
+            if donate_timer.reached():
+                logger.warning('Feed reward timeout, stop donating')
+                break
         self.ui_reward_appear_click(True)
         logger.info('Donate finished')
         return True
