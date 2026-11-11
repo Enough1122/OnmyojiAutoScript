@@ -98,11 +98,24 @@ class GeneralBattle(BattleWait, GeneralBuff):
             logger.info(f"Click {self.I_PREPARE_HIGHLIGHT.name}")
 
         # 点击返回
+        # exit_four（打九退四）时上面会跳过「点准备」，但客户端有时已经自动开战，
+        # 此时返回箭头 I_EXIT 根本不存在，旧代码会一路空转到 device.py 的 60 秒
+        # stuck 超时再抛 GameStuckError（2026-11-12 00:17 与 00:22 连挂两次）。
+        # 这里先认「已进战斗」的三个特征，命中就先当正常战斗打完再退出。
+        back_timer = Timer(6).start()
         while 1:
             self.screenshot()
             if self.appear_then_click(self.I_EXIT, interval=1.5):
+                back_timer.reset()
                 continue
             if self.appear(self.I_UI_CONFIRM):
+                break
+            if self.is_in_battle_soft() or self.appear(self.I_REWARD) or self.appear(self.I_WIN):
+                logger.warning('Battle already started before exit, settle it instead of waiting for I_EXIT')
+                self.run_general_battle(config)
+                return True
+            if back_timer.reached():
+                logger.warning(f'Neither {self.I_EXIT.name} nor battle page found, give up this back action')
                 break
         logger.info(f"Click {self.I_EXIT.name}")
 
