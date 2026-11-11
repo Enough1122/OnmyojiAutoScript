@@ -95,10 +95,10 @@ class GeneralBuff(BaseTask, GeneralBuffAssets):
             return None
         self.set_switch_area(area)
         if is_open:
-            if not self.ui_click(click=self.I_CLOSE_RED, stop=self.I_OPEN_YELLOW, interval=1, timeout=10):
+            if not self.ui_click(click=self.I_CLOSE_RED, stop=self.I_OPEN_YELLOW, interval=1.5, timeout=10):
                 logger.warning('Open gold 50 buff failed')
         else:
-            if not self.ui_click(click=self.I_OPEN_YELLOW, stop=self.I_CLOSE_RED, interval=1, timeout=10):
+            if not self.ui_click(click=self.I_OPEN_YELLOW, stop=self.I_CLOSE_RED, interval=1.5, timeout=10):
                 logger.warning('Close gold 50 buff failed')
 
     def gold_100(self, is_open: bool = True):
@@ -115,10 +115,10 @@ class GeneralBuff(BaseTask, GeneralBuffAssets):
             return None
         self.set_switch_area(area)
         if is_open:
-            if not self.ui_click(click=self.I_CLOSE_RED, stop=self.I_OPEN_YELLOW, interval=1, timeout=10):
+            if not self.ui_click(click=self.I_CLOSE_RED, stop=self.I_OPEN_YELLOW, interval=1.5, timeout=10):
                 logger.warning('Open gold 100 buff failed')
         else:
-            if not self.ui_click(click=self.I_OPEN_YELLOW, stop=self.I_CLOSE_RED, interval=1, timeout=10):
+            if not self.ui_click(click=self.I_OPEN_YELLOW, stop=self.I_CLOSE_RED, interval=1.5, timeout=10):
                 logger.warning('Close gold 100 buff failed')
 
     def exp_50(self, is_open: bool = True):
@@ -132,8 +132,11 @@ class GeneralBuff(BaseTask, GeneralBuffAssets):
             self.screenshot()
             area = self.get_area(self.O_EXP_50)
             if not area:
-                logger.warning('No exp 50 buff')
-                continue
+                # 2026-11-12 03:29 实测：加成面板里「经验增加50%」这一行可能整个不显示
+                # （当期只有「金币增加100%」「经验增加100%」），原来这里 continue 会一直
+                # 空转到 device.stuck_timer 判 GameStuckError。没这一行就当没这个 buff。
+                logger.warning('No exp 50 buff in panel, skip')
+                return None
             self.set_switch_area(area)
 
             if not self.appear(self.I_OPEN_YELLOW) and not self.appear(self.I_CLOSE_RED):
@@ -143,10 +146,10 @@ class GeneralBuff(BaseTask, GeneralBuffAssets):
                 break
 
         if is_open:
-            if not self.ui_click(click=self.I_CLOSE_RED, stop=self.I_OPEN_YELLOW, interval=1, timeout=10):
+            if not self.ui_click(click=self.I_CLOSE_RED, stop=self.I_OPEN_YELLOW, interval=1.5, timeout=10):
                 logger.warning('Open exp 50 buff failed')
         else:
-            if not self.ui_click(click=self.I_OPEN_YELLOW, stop=self.I_CLOSE_RED, interval=1, timeout=10):
+            if not self.ui_click(click=self.I_OPEN_YELLOW, stop=self.I_CLOSE_RED, interval=1.5, timeout=10):
                 logger.warning('Close exp 50 buff failed')
 
     def exp_100(self, is_open: bool = True):
@@ -160,8 +163,8 @@ class GeneralBuff(BaseTask, GeneralBuffAssets):
             self.screenshot()
             area = self.get_area(self.O_EXP_100)
             if not area:
-                logger.warning('No exp 100 buff')
-                continue
+                logger.warning('No exp 100 buff in panel, skip')
+                return None
             self.set_switch_area(area)
 
             if not self.appear(self.I_OPEN_YELLOW) and not self.appear(self.I_CLOSE_RED):
@@ -171,10 +174,10 @@ class GeneralBuff(BaseTask, GeneralBuffAssets):
                 break
 
         if is_open:
-            if not self.ui_click(click=self.I_CLOSE_RED, stop=self.I_OPEN_YELLOW, interval=1, timeout=10):
+            if not self.ui_click(click=self.I_CLOSE_RED, stop=self.I_OPEN_YELLOW, interval=1.5, timeout=10):
                 logger.warning('Open exp 100 buff failed')
         else:
-            if not self.ui_click(click=self.I_OPEN_YELLOW, stop=self.I_CLOSE_RED, interval=1, timeout=10):
+            if not self.ui_click(click=self.I_OPEN_YELLOW, stop=self.I_CLOSE_RED, interval=1.5, timeout=10):
                 logger.warning('Close exp 100 buff failed')
 
     def get_area_image(self, target: RuleImage) -> list:
@@ -213,10 +216,10 @@ class GeneralBuff(BaseTask, GeneralBuffAssets):
             return None
         self.set_switch_area(area)
         if is_open:
-            if not self.ui_click(click=self.I_CLOSE_RED, stop=self.I_OPEN_YELLOW, interval=1, timeout=10):
+            if not self.ui_click(click=self.I_CLOSE_RED, stop=self.I_OPEN_YELLOW, interval=1.5, timeout=10):
                 logger.warning('Open awake buff failed')
         else:
-            if not self.ui_click(click=self.I_OPEN_YELLOW, stop=self.I_CLOSE_RED, interval=1, timeout=10):
+            if not self.ui_click(click=self.I_OPEN_YELLOW, stop=self.I_CLOSE_RED, interval=1.5, timeout=10):
                 logger.warning('Close awake buff failed')
 
     def soul(self, is_open: bool = True):
@@ -233,10 +236,10 @@ class GeneralBuff(BaseTask, GeneralBuffAssets):
             return None
         self.set_switch_area(area)
         if is_open:
-            if not self.ui_click(click=self.I_CLOSE_RED, stop=self.I_OPEN_YELLOW, interval=1, timeout=10):
+            if not self.ui_click(click=self.I_CLOSE_RED, stop=self.I_OPEN_YELLOW, interval=1.5, timeout=10):
                 logger.warning('Open soul buff failed')
         else:
-            if not self.ui_click(click=self.I_OPEN_YELLOW, stop=self.I_CLOSE_RED, interval=1, timeout=10):
+            if not self.ui_click(click=self.I_OPEN_YELLOW, stop=self.I_CLOSE_RED, interval=1.5, timeout=10):
                 logger.warning('Close soul buff failed')
 
     def reject_invite(self):
