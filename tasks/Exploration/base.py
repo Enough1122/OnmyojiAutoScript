@@ -16,9 +16,10 @@ from tasks.Exploration.assets import ExplorationAssets
 from tasks.Exploration.config import ChooseRarity, AutoRotate, AttackNumber, UpType
 from tasks.Component.GeneralBattle.general_battle import GeneralBattle
 from tasks.GameUi.game_ui import GameUi
-from tasks.GameUi.page import page_shikigami_records, page_main
+from tasks.GameUi.page import page_shikigami_records, page_main, page_exploration, page_realm_raid
 import tasks.Exploration.page as pages
 from tasks.RealmRaid.script_task import ScriptTask as RealmRaidScriptTask
+from tasks.RealmRaid.assets import RealmRaidAssets
 from tasks.Utils.config_enum import ShikigamiClass
 
 from module.logger import logger
@@ -40,7 +41,8 @@ class Scene(Enum):
 
 
 
-class BaseExploration(GameUi, GeneralBattle, GeneralRoom, GeneralInvite, ReplaceShikigami, SwitchSoul, ExplorationAssets):
+class BaseExploration(GameUi, GeneralBattle, GeneralRoom, GeneralInvite, ReplaceShikigami, SwitchSoul, ExplorationAssets,
+                       RealmRaidAssets):
     minions_cnt = 0
 
     @cached_property
@@ -339,14 +341,52 @@ class BaseExploration(GameUi, GeneralBattle, GeneralRoom, GeneralInvite, Replace
             
         return None
 
+    # 突破票只在每轮探索开始时探一次：探索过程中票数根本不会变（票只来自突破胜利和日常，
+    # 都不在探索里发生），中途反复跳去突破页只会白花 6 秒并把地图进度重置。
+    ticket_probed: bool = False
+    ticket_probe_last: int = -1
+
+    def read_realm_raid_ticket(self) -> int:
+        """跳去突破页读一次突破票，失败返回 -1。
+
+        2026-11-11 起探索大地图右上角已经不再显示突破票：
+        O_REALM_RAID_NUMBER 读到的是顶部跑马灯的数字（实测稳定 247），
+        O_REALM_RAID_NUMBER1 会把 21/30 读成 122/30。
+        突破页的 O_NUMBER(1143,13,80,39) 读数一直准确（20/30、21/30、19/30）。
+        """
+        try:
+            # 从探索大地图直接走 page_exploration -> page_realm_raid，不经庭院，
+            # 省一次来回；回来同理走 page_realm_raid -> page_exploration。
+            self.goto_page(page_realm_raid)
+            cu, res, total = self.O_NUMBER.ocr(self.device.image)
+            logger.info(f'[TicketProbe] raid page: {cu}/{total}')
+            self.goto_page(page_exploration)
+            return cu
+        except Exception as e:
+            logger.warning(f'[TicketProbe] raid page unreachable ({e}), fall back to world map ocr')
+            try:
+                self.goto_page(page_exploration)
+            except Exception:
+                pass
+            return -1
+
     def activate_realm_raid(self, con_scrolls, con) -> None:
         # 判断是否开启突破票检测
         if not con_scrolls.scrolls_enable:
             return
-        if self.appear(self.I_E_EXPLORATION_CLICK) and self.appear(self.I_EXP_CREATE_TEAM):
-            cu, res, total = self.O_REALM_RAID_NUMBER1.ocr(self.device.image)
-        else:
-            cu, res, total = self.O_REALM_RAID_NUMBER.ocr(self.device.image)
+        # 优先去突破页读真票数；读不到才退回大地图 OCR（旧逻辑，可能误读成 247 / 122）
+        cu = self.ticket_probe_last
+        if not self.ticket_probed:
+            cu = self.read_realm_raid_ticket()
+            self.ticket_probed = True
+            if cu >= 0:
+                self.ticket_probe_last = cu
+        if cu < 0:
+            if self.appear(self.I_E_EXPLORATION_CLICK) and self.appear(self.I_EXP_CREATE_TEAM):
+                cu, res, total = self.O_REALM_RAID_NUMBER1.ocr(self.device.image)
+            else:
+                cu, res, total = self.O_REALM_RAID_NUMBER.ocr(self.device.image)
+            logger.info(f'[TicketProbe] world map ocr: {cu}/{total}')
         # 判断突破票数量
         if cu < con_scrolls.scrolls_threshold:
             return

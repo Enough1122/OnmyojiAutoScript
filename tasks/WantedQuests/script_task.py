@@ -140,24 +140,38 @@ class ScriptTask(WQExplore, SecretScriptTask, WantedQuestsAssets):
         """
         self.goto_page(page_main)
         done_timer = Timer(5)
+        # 总超时兜底：这个 while 原本只有两个出口——追到 I_TRACE_DISABLE（成功），
+        # 或者出现 I_UI_BACK_RED 后 5 秒（失败）。如果回到庭院时封印图标与返回按钮
+        # 都不在屏幕上（2026-11-10 19:39:27 就被「加成」浮动按钮盖住，四个判断全不命中），
+        # done_timer 永远不会 start，循环会一路空转到 Device 的 stuck_timer 判
+        # GameStuckError，进而重启游戏。所以加一个只看「有没有做出任何动作」的计时器。
+        work_timer = Timer(45).start()
         while 1:
             self.screenshot()
             if self.appear(self.I_TRACE_DISABLE):
                 break
             if self.appear_then_click(self.I_WQ_SEAL, interval=1):
+                work_timer.reset()
                 continue
             if self.appear_then_click_multi_scale(self.I_WQ_DONE,scale_range=(0.8, 1.2) ,interval=1):
+                work_timer.reset()
                 continue
             if self.appear_then_click(self.I_TRACE_ENABLE, interval=1):
+                work_timer.reset()
                 continue
             if self.special_main and self.click(self.C_SPECIAL_MAIN, interval=3):
                 logger.info('Click special main left to find wanted quests')
+                work_timer.reset()
                 continue
             if self.appear(self.I_UI_BACK_RED):
                 if not done_timer.started():
                     done_timer.start()
             if done_timer.started() and done_timer.reached():
                 self.ui_click_until_disappear(self.I_UI_BACK_RED)
+                return False
+            if work_timer.reached():
+                logger.warning('Wanted quests panel never showed up, give up this round '
+                               'instead of waiting for the stuck timer')
                 return False
         # 已追踪所有任务
         logger.info('All wanted quests are traced')
@@ -179,22 +193,30 @@ class ScriptTask(WQExplore, SecretScriptTask, WantedQuestsAssets):
             self.goto_page(page_main)
         # 打开悬赏封印 界面
         done_timer = Timer(5)
+        # 同 pre_work：面板与返回按钮都不在屏幕上时 done_timer 不会 start，需要总超时兜底。
+        work_timer = Timer(45).start()
         while 1:
             self.screenshot()
             if self.appear(self.I_TRACE_ENABLE) or self.appear(self.I_TRACE_DISABLE):
                 break
             if self.appear_then_click(self.I_WQ_SEAL, interval=1):
+                work_timer.reset()
                 continue
             if self.appear_then_click_multi_scale(self.I_WQ_DONE,scale_range=(0.8, 1.2), interval=1):
+                work_timer.reset()
                 continue
             if self.special_main and self.click(self.C_SPECIAL_MAIN, interval=3):
                 logger.info('Click special main left to find wanted quests')
+                work_timer.reset()
                 continue
             if self.appear(self.I_UI_BACK_RED):
                 if not done_timer.started():
                     done_timer.start()
             if done_timer.started() and done_timer.reached():
                 self.ui_click_until_disappear(self.I_UI_BACK_RED)
+                return False
+            if work_timer.reached():
+                logger.warning('Wanted quests panel never showed up, give up this round')
                 return False
         #
         if not (self.appear(self.I_WQ_INVITE_1) or self.appear(self.I_WQ_INVITE_2) or self.appear(self.I_WQ_INVITE_3)):
