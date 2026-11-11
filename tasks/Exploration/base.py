@@ -13,13 +13,14 @@ from tasks.Component.GeneralRoom.general_room import GeneralRoom
 from tasks.Component.GeneralInvite.general_invite import GeneralInvite
 from tasks.Component.ReplaceShikigami.replace_shikigami import ReplaceShikigami
 from tasks.Exploration.assets import ExplorationAssets
-from tasks.Exploration.config import ChooseRarity, AutoRotate, AttackNumber, UpType
+from tasks.Exploration.config import ChooseRarity, AutoRotate, AttackNumber, UpType, UserStatus
 from tasks.Component.GeneralBattle.general_battle import GeneralBattle
 from tasks.GameUi.game_ui import GameUi
-from tasks.GameUi.page import page_shikigami_records, page_main, page_exploration, page_realm_raid
+from tasks.GameUi.page import page_shikigami_records, page_main, page_exploration, page_realm_raid, page_summon
 import tasks.Exploration.page as pages
 from tasks.RealmRaid.script_task import ScriptTask as RealmRaidScriptTask
 from tasks.RealmRaid.assets import RealmRaidAssets
+from tasks.MemoryScrolls.assets import MemoryScrollsAssets
 from tasks.Utils.config_enum import ShikigamiClass
 
 from module.logger import logger
@@ -42,8 +43,14 @@ class Scene(Enum):
 
 
 class BaseExploration(GameUi, GeneralBattle, GeneralRoom, GeneralInvite, ReplaceShikigami, SwitchSoul, ExplorationAssets,
-                       RealmRaidAssets):
+                       RealmRaidAssets, MemoryScrollsAssets):
     minions_cnt = 0
+    # 小绘卷满 50 的自检节流：任务在 28 章连打时 MemoryScrolls 常被排程饿死（优先级最低，Filter 规则里
+    # 排在 Exploration 之后），exploration 的 next_run 就永远没人改到明天，于是 50 片之后还在刷。
+    # 这里自己每 N 分钟去绘卷页看一次，满了就按 memory_scrolls_finish.next_exploration_time 排明天。
+    scrolls_checked_at = 0.0
+    scrolls_full = False
+    SCROLLS_CHECK_INTERVAL = 900
 
     @cached_property
     def _config(self):
@@ -370,6 +377,83 @@ class BaseExploration(GameUi, GeneralBattle, GeneralRoom, GeneralInvite, Replace
                 pass
             return -1
 
+    def probe_scrolls_full(self) -> None:
+        """自己去看小绘卷是否满 50；满了就把探索排到明天并当场结束本轮。
+
+        为什么要探索自己管这件事：负责查绘卷的 MemoryScrolls 在
+        ConfigManual.SCHEDULER_PRIORITY 里排在最后一个，而 schedule_rule=Filter
+        就是照那张表排序的。Exploration 一开跑就长期占队首，MemoryScrolls
+        永远选不上（2026-11-11 从 14:25 一直被饿到 18:57），exploration 的
+        next_run 就没人改到明天，于是 50 片之后还在继续刷。
+
+        代价是要绕一趟召唤页的绘卷面板（约 15 秒）再回来，探索地图进度会重置，
+        所以用 SCROLLS_CHECK_INTERVAL 节流。
+        """
+        finish_con = self.config.memory_scrolls.memory_scrolls_finish
+        if not finish_con.auto_finish_exploration:
+            return
+        # 只在单人模式自检：组队时队长跑回召唤页会把队友晾在副本里，成员更是不能乱走
+        if self._config.exploration_config.user_status != UserStatus.ALONE:
+            return
+        now = time.time()
+        if self.scrolls_checked_at and now - self.scrolls_checked_at < self.SCROLLS_CHECK_INTERVAL:
+            return
+        self.scrolls_checked_at = now
+
+        try:
+            self.goto_page(page_summon)
+            if not self.wait_until_appear(self.I_MS_ENTER, wait_time=10):
+                logger.warning('[ScrollsProbe] memory scrolls entry not found, skip this check')
+                return
+            scroll_timer = Timer(15)
+            scroll_timer.start()
+            while 1:
+                self.screenshot()
+                if self.appear(self.I_MS_FRAGMENT_S):
+                    break
+                # 周年庆等时期会使用双绘卷
+                if self.appear_then_click(self.I_MS_DOUBLE_SCROLLS_ENTER, interval=1):
+                    continue
+                if self.appear_then_click(self.I_MS_ENTER, interval=1):
+                    continue
+                if scroll_timer.reached():
+                    logger.warning('[ScrollsProbe] memory scrolls panel never showed up, skip this check')
+                    return
+        except Exception as e:
+            logger.warning(f'[ScrollsProbe] open memory scrolls failed ({e}), skip this check')
+            return
+
+        full = self.appear(self.I_MS_FRAGMENT_S_50, threshold=0.95)
+        logger.info(f'[ScrollsProbe] small memory scrolls full: {full}')
+        if not full:
+            try:
+                self.goto_page(page_exploration)
+            except Exception:
+                pass
+            return
+
+        logger.info('Small Memory Scrolls fragments reached 50, end exploration and plan tomorrow')
+        self.scrolls_full = True
+        if self.appear(self.I_RED_CLOSE):
+            self.ui_click_until_disappear(self.I_RED_CLOSE)
+        if self.appear(self.I_UI_CANCEL):
+            self.ui_click_until_disappear(self.I_UI_CANCEL)
+        if self.appear(self.I_UI_CANCEL_SAMLL):
+            self.ui_click_until_disappear(self.I_UI_CANCEL_SAMLL)
+        self.goto_page(page_main)
+        con = self._config.exploration_config
+        if con.buff_gold_50_click or con.buff_gold_100_click or con.buff_exp_50_click or con.buff_exp_100_click:
+            self.open_buff()
+            self.gold_50(is_open=False)
+            self.gold_100(is_open=False)
+            self.exp_50(is_open=False)
+            self.exp_100(is_open=False)
+            self.close_buff()
+        self.custom_next_run(task='Exploration',
+                             custom_time=finish_con.next_exploration_time,
+                             time_delta=1)
+        raise TaskEnd
+
     def activate_realm_raid(self, con_scrolls, con) -> None:
         # 判断是否开启突破票检测
         if not con_scrolls.scrolls_enable:
@@ -424,6 +508,8 @@ class BaseExploration(GameUi, GeneralBattle, GeneralRoom, GeneralInvite, Replace
         if datetime.now() - self.start_time >= self.limit_time:
             logger.info('Exploration time limit out')
             return True
+        # 满了会直接 raise TaskEnd 出去；没满或跳过则继续看突破票
+        self.probe_scrolls_full()
         self.activate_realm_raid(self._config.scrolls, self._config.exploration_config)
         return False
 
