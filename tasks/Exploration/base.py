@@ -348,9 +348,12 @@ class BaseExploration(GameUi, GeneralBattle, GeneralRoom, GeneralInvite, Replace
             
         return None
 
-    # 突破票只在每轮探索开始时探一次：探索过程中票数根本不会变（票只来自突破胜利和日常，
-    # 都不在探索里发生），中途反复跳去突破页只会白花 6 秒并把地图进度重置。
-    ticket_probed: bool = False
+    # 突破票要在探索过程中反复重探：突破券是探索副本的掉落物，票数会边刷边涨。
+    # 2026-11-11 曾误判成「票只来自突破胜利和日常，探索中不会变」而改成每轮只探一次，
+    # 结果 2026-11-12 02:08 探到 19/30 后就一路缓存，02:33 实际已经 30 张还在继续刷探索。
+    # 改成按时间节流重探，往返实测约 2.7 秒。
+    TICKET_PROBE_INTERVAL = 300
+    ticket_probed_at = 0.0
     ticket_probe_last: int = -1
 
     def read_realm_raid_ticket(self) -> int:
@@ -459,10 +462,13 @@ class BaseExploration(GameUi, GeneralBattle, GeneralRoom, GeneralInvite, Replace
         if not con_scrolls.scrolls_enable:
             return
         # 优先去突破页读真票数；读不到才退回大地图 OCR（旧逻辑，可能误读成 247 / 122）
+        # 副本会掉突破券，所以票要看新鲜的：按 TICKET_PROBE_INTERVAL 节流重探，
+        # 不能缓存一次用到底，否则票涨到阈值也不会切突破。
         cu = self.ticket_probe_last
-        if not self.ticket_probed:
+        now_ts = time.time()
+        if not self.ticket_probed_at or now_ts - self.ticket_probed_at >= self.TICKET_PROBE_INTERVAL:
+            self.ticket_probed_at = now_ts
             cu = self.read_realm_raid_ticket()
-            self.ticket_probed = True
             if cu >= 0:
                 self.ticket_probe_last = cu
         if cu < 0:
