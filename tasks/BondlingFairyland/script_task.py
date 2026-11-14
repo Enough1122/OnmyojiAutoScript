@@ -57,16 +57,23 @@ class ScriptTask(GameUi, GeneralInvite, GeneralRoom, BondlingBattle, SwitchSoul,
         if cong.bondling_config.check_enable:
             logger.hr('第一步, 检查契忆数量', 2)
             self.goto_page(page_mall, confirm_wait=2.5)
-            self.ui_click(self.I_MALL_SCCALES, self.I_MALL_SCCALES_CHECK)
-            self.ui_click(self.I_MALL_BONDLINGS_SURE, self.I_MALL_BONDLINGS_ON)
-            MAX_COUNT = cong.bondling_config.limit_num
-            cu, re, total = self.O_BL_CHECK_MONEY.ocr(self.device.image)
-            if cu >= MAX_COUNT:
-                logger.info(f'契忆数量: {cu} 大于 {MAX_COUNT}')
+            # 商店推荐位会每天刷新，I_MALL_SCCALES / I_MALL_BONDLINGS_SURE 的落点随之漂移，
+            # 2026-11-13 13:04-13:10 就是因为确认按钮消失，ui_click 硬等 30 秒 → GameStuckError，
+            # 连撞三次把脚本打到 Request human takeover。给两步都加 timeout，识别不到就跳过计数。
+            mall_ok = self.ui_click(self.I_MALL_SCCALES, self.I_MALL_SCCALES_CHECK, timeout=10)
+            mall_ok = mall_ok and self.ui_click(self.I_MALL_BONDLINGS_SURE, self.I_MALL_BONDLINGS_ON, timeout=10)
+            if not mall_ok:
+                logger.warning('契忆商店面板识别失败, 跳过契忆数量检查')
                 self.goto_page(page_main)
-                self.set_next_run(task='BondlingFairyland', finish=True, success=True)
-                raise TaskEnd
-            logger.info(f'契忆数量: {cu} 小于 {MAX_COUNT}, 继续任务')
+            else:
+                MAX_COUNT = cong.bondling_config.limit_num
+                cu, re, total = self.O_BL_CHECK_MONEY.ocr(self.device.image)
+                if cu >= MAX_COUNT:
+                    logger.info(f'契忆数量: {cu} 大于 {MAX_COUNT}')
+                    self.goto_page(page_main)
+                    self.set_next_run(task='BondlingFairyland', finish=True, success=True)
+                    raise TaskEnd
+                logger.info(f'契忆数量: {cu} 小于 {MAX_COUNT}, 继续任务')
         logger.hr('第二步, 切换御魂', 2)
         self.switch_soul()
         logger.hr('第三步, 前往契灵主界面', 2)
