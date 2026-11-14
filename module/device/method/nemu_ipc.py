@@ -13,7 +13,7 @@ from module.base.decorator import cached_property, del_cached_property, has_cach
 from module.base.utils import ensure_time
 from module.device.method.minitouch import insert_swipe, random_rectangle_point
 from module.device.method.utils import RETRY_TRIES, retry_sleep
-from module.exception import RequestHumanTakeover
+from module.exception import GameStuckError, RequestHumanTakeover
 from module.logger import logger
 
 
@@ -506,6 +506,36 @@ class NemuIpc():
         del_cached_property(self, 'nemu_ipc')
         logger.info('nemu_ipc released')
 
+    def _nemu_reprobe_display_after_adb_reconnect(self, want, err):
+        """
+        截图连不上时，重连 adb 再探一次虚拟显示 id。
+
+        adb 侧探不到 display id 的常见原因就是 adb 自己超时（2026-11-13 15:36 与
+        17:01 两次都是先报 adb read timeout，再退回 display 0）。重连一次 adb 往往
+        就能重新拿到 mumuscreenNNN 的编号，比退回 display 0 靠谱。
+
+        Args:
+            want (int): 上一次使用的 display id
+            err (Exception): 上一次截图失败的原因，仅用于日志
+
+        Returns:
+            int: 新的 display id；仍然探不到时返回 want
+        """
+        try:
+            self.adb_reconnect()
+        except Exception as e:
+            logger.warning(f'Failed to reconnect adb before nemu ipc display re-detect: {e}')
+        self._reset_mumu_display_ids()
+        try:
+            ids = self._mumu_display_ids()
+        except Exception as e:
+            logger.warning(f'Failed to re-detect MuMu display id after adb reconnect: {e}')
+            return want
+        if ids:
+            return ids[0]
+        logger.warning(f'Still no MuMu display id after adb reconnect (last error: {err})')
+        return want
+
     def screenshot_nemu_ipc(self):
         ipc = self.nemu_ipc
         # MuMu 15.0 开了多虚拟显示后，游戏渲染在 mumuscreen004/005 这类虚拟显示上，
@@ -550,11 +580,28 @@ class NemuIpc():
                 ipc.width = 0
                 ipc.height = 0
             else:
-                logger.warning(f'Nemu ipc screenshot still failed on display {want} ({e}), retry on display 0')
-                ipc.display_id = 0
+                # display 0 是安卓桌面，退过去一个模板都匹配不上，只会把 retry 的 5 次
+                # 配额烧光再抛 RequestHumanTakeover 把整个脚本打死。2026-11-13 15:36:47
+                # 与 17:01:50 两次踩的都是这条路（adb read timeout 让重探也失败）。
+                # 改成：重连 adb 再探一次；仍然探不到就抛 GameStuckError，让 Restart
+                # 任务拉起 app 重排虚拟显示，脚本进程活着。
+                logger.warning(
+                    f'Nemu ipc screenshot still failed on display {want} ({e}), '
+                    f're-detect failed, adb reconnect then re-detect'
+                )
+                fresh = self._nemu_reprobe_display_after_adb_reconnect(want, e)
+                logger.info(f'Nemu ipc display id {want} -> {fresh} after adb reconnect')
+                ipc.display_id = fresh
                 ipc.width = 0
                 ipc.height = 0
-            image = ipc.screenshot()
+            try:
+                image = ipc.screenshot()
+            except Exception as err:
+                # 走到这里说明重探过 display id 还是拍不到画面：再重试也只是空转，
+                # 降级成 GameStuckError 交给 Restart，别让脚本进程退出。
+                raise GameStuckError(
+                    f'Nemu ipc screenshot unavailable on display {ipc.display_id} ({err}), need app restart'
+                ) from err
 
         image = cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
         cv2.flip(image, 0, dst=image)
