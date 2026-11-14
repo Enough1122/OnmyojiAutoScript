@@ -3,6 +3,9 @@
 # github https://github.com/runhey
 import time
 import re
+
+import cv2
+import numpy as np
 from cached_property import cached_property
 
 from tasks.base_task import BaseTask
@@ -150,6 +153,15 @@ class ScriptTask(GeneralBattle, GameUi, SwitchSoul, RealmRaidAssets):
         # 开始循环
         success = True
         last_battle = True  # 记录上一次战斗的结果
+        # 2026-11-12 本地修复：13:47 那轮出现过连续 27 次「False battle」——
+        # 亮度判据在刚结算完、面板还在淡入的那一帧会把好格子读成暗格（只剩一格亮），
+        # 于是 find_one 反复挑中同一格，fire 进去却是空战斗，白白烧掉 20 分钟。
+        # 这里记住本面板打不了的格子，并给整轮假战斗设上限。
+        self._failed_orders = set()   # 0 基下标，亮度推断：本面板内有效；换面板/刷新即清
+        self._false_orders = set()    # 0 基下标，实测证伪（进去是空战斗）：只有刷新/换面板才清
+        false_streak = 0
+        false_total = 0
+        clear_retry = 0
         # 更改循环顺序
         while 1:
             self.screenshot()
@@ -167,11 +179,23 @@ class ScriptTask(GeneralBattle, GameUi, SwitchSoul, RealmRaidAssets):
                 break
             # ----------------------------------------开始进攻
             medal, index = self.find_one(False)
+            if not medal and not index and self._failed_orders and clear_retry < 2:
+                # 只撤「亮度推断」的黑名单（可能是面板淡入误读）；实测证伪的 _false_orders 不在此列，
+                # 它始终涂黑，所以这样撤掉重挑不会再把格子送进空战斗。
+                logger.warning('No target left because of the failed list, retry without it')
+                self._failed_orders.clear()
+                clear_retry += 1
+                continue
             if not medal and not index:
                 # 已经没有可以挑战的了，只能刷新
                 if con.raid_config.when_attack_fail == WhenAttackFail.CONTINUE:
                     logger.info('No one can attack and then refresh')
                     if self.check_refresh():
+                        self._failed_orders.clear()
+                        self._false_orders.clear()
+                        clear_retry = 0
+                        false_total = 0
+                        false_streak = 0
                         continue
                     else:
                         success = False
@@ -191,21 +215,58 @@ class ScriptTask(GeneralBattle, GameUi, SwitchSoul, RealmRaidAssets):
                 logger.info('Now is the first one')
                 if con.raid_config.exit_four:
                     logger.info('Exit four enable')
-                    self.fire(index)
-                    self.run_general_battle_back(con.general_battle_config, exit_four=True)
-                    self.fire(index)
-                    self.run_general_battle_back(con.general_battle_config, exit_four=True)
-                    self.fire(index)
-                    self.run_general_battle_back(con.general_battle_config, exit_four=True)
-                    self.fire(index)
-                    self.run_general_battle_back(con.general_battle_config, exit_four=True)
+                    # 2026-11-12 本地修复：fire() 现在会在同一格点不动时返回 False，
+                    # 这时不能再继续走「退四」和后面的实打，否则会对着已清空的格子反复点。
+                    exit_four_ok = True
+                    for _ in range(4):
+                        if not self.fire(index):
+                            exit_four_ok = False
+                            break
+                        self.run_general_battle_back(con.general_battle_config, exit_four=True)
+                    if not exit_four_ok:
+                        logger.warning('Exit-four aborted because fire failed, re-pick a target')
+                        continue
             elif self.check_medal_is_frog(frog, medal, index):
                 # 如果挑战的这只是呱太的话，就要把锁定改为不锁定
                 con.general_battle_config.lock_team_enable = False
-            self.fire(index)
+            if not self.fire(index):
+                logger.warning(f'Fire order {index} failed, re-pick a target')
+                if lock_before:
+                    con.general_battle_config.lock_team_enable = lock_before
+                continue
             last_battle = self.run_general_battle(con.general_battle_config)
             if lock_before:
                 con.general_battle_config.lock_team_enable = lock_before
+            # 进去却是「False battle」：这一格其实打不了，别原地反复点
+            if not last_battle and con.raid_config.when_attack_fail == WhenAttackFail.CONTINUE:
+                false_streak += 1
+                false_total += 1
+                logger.warning(f'Battle not established on position {index} '
+                               f'(streak {false_streak}, total {false_total})')
+                if false_streak >= 1:
+                    # 2026-11-12 15:13 复盘：同一格第一次假战斗就该拉黑。
+                    # 那时 9 格只剩 9 号亮，连着 5 次假战斗白烧 6 分钟才退出；
+                    # 代价只是本面板少试一次，刷新/下一轮即可回收，比空转划算。
+                    self._false_orders.add(index - 1)
+                    self._failed_orders.discard(index - 1)
+                    false_streak = 0
+                    logger.warning(f'Mark position {index} as failed for this board')
+                if false_total >= 5:
+                    logger.warning('Too many failed battles on this board, refresh or exit')
+                    if self.check_refresh():
+                        self._failed_orders.clear()
+                        self._false_orders.clear()
+                        clear_retry = 0
+                        false_total = 0
+                        false_streak = 0
+                        continue
+                    success = False
+                    break
+                # 假战斗没有奖励可领，但「三胜奖励」面板可能已经盖住九格，先清掉再重挑
+                self.reward_detect_click(False)
+                continue
+            false_streak = 0
+            clear_retry = 0   # 打成了就重置「撤黑名单重挑」的额度
             # 检查是否每三次领一个奖励
             if self.reward_detect_click(False):
                 logger.info('Rewards of three wins')
@@ -214,6 +275,11 @@ class ScriptTask(GeneralBattle, GameUi, SwitchSoul, RealmRaidAssets):
             if con.raid_config.three_refresh and self.appear(self.I_RR_THREE, threshold=0.8):
                 logger.info('Three refresh')
                 if self.check_refresh():
+                    self._failed_orders.clear()
+                    self._false_orders.clear()
+                    clear_retry = 0
+                    false_total = 0
+                    false_streak = 0
                     continue
                 else:
                     success = False
@@ -222,6 +288,9 @@ class ScriptTask(GeneralBattle, GameUi, SwitchSoul, RealmRaidAssets):
             if not last_battle and con.raid_config.when_attack_fail == WhenAttackFail.REFRESH:
                 logger.info('Battle lost and then refresh')
                 if self.check_refresh():
+                    self._failed_orders.clear()
+                    self._false_orders.clear()
+                    clear_retry = 0
                     continue
                 else:
                     success = False
@@ -357,13 +426,25 @@ class ScriptTask(GeneralBattle, GameUi, SwitchSoul, RealmRaidAssets):
         # https://github.com/runhey/OnmyojiAutoScript/issues/71
         # 如果开始失败后继挑战剩下的
         if self.config.realm_raid.raid_config.when_attack_fail == WhenAttackFail.CONTINUE:
-            for i, roi in enumerate(self.false_roi):
-                self.false_image.roi_back = roi
-                if not self.appear(self.false_image):
-                    continue
+            # 2026-11-12 本地修复：旧的 false_image 模板(loser_sign_1.png)与「破」字印章不符，
+            # 实测 9 格匹配峰值仅 0.41~0.53，永远低于 0.8，导致已清空的格子仍被当成可打，
+            # 连续点击同一格 10 次触发 GameTooManyClickError。改用格子亮度判据。
+            failed_positions = self.find_failed_partition(image)
+            # 复核分支会重新截图（面板淡入时第一帧不可信），这里必须换成最新那帧再涂黑
+            image = self.device.image
+            for i in failed_positions:
                 logger.info(f'Position {i+1} is a failed')
                 x, y, w, h = self.partition[i].roi_back
                 image[y:y+h, x:x+w, ...] = 0
+            # 本轮已经被「False battle」实测证伪的格子也一并排除，避免反复进空战斗
+            for i in getattr(self, '_false_orders', ()):
+                if 0 <= i < len(self.partition):
+                    x, y, w, h = self.partition[i].roi_back
+                    image[y:y+h, x:x+w, ...] = 0
+            for i in getattr(self, '_failed_orders', ()):  # 0 基
+                if 0 <= i < len(self.partition):
+                    x, y, w, h = self.partition[i].roi_back
+                    image[y:y+h, x:x+w, ...] = 0
         # -----------------------------------------------------
         target = self.order_medal.find_anyone(image)
         if target:
@@ -376,6 +457,59 @@ class ScriptTask(GeneralBattle, GameUi, SwitchSoul, RealmRaidAssets):
                     return target, i + 1
 
         return None, None
+
+    # 已清空(已破)格子的判定阈值：亮度均值低于此值即认为格子被灰化
+    FAILED_PARTITION_BRIGHTNESS = 150
+
+    def _partition_brightness(self, image: np.ndarray, index: int) -> float:
+        """取第 index 个格子（0 基）内部区域的灰度均值。
+
+        只取格子中右上部分：左侧是头像、底部是按钮，都要避开；
+        实测干净面板上可打格子 196~206、已破格子 104~112。
+        """
+        x, y, w, h = self.partition[index].roi_back
+        x1 = int(round(x + w * 0.42))
+        x2 = int(round(x + w * 0.97))
+        y1 = int(round(y + h * 0.10))
+        y2 = int(round(y + h * 0.62))
+        crop = image[y1:y2, x1:x2]
+        if crop.size == 0:
+            return 255.0
+        # OAS 内部图像是 RGB（见 module/atom/image.py load_image 的 BGR2RGB）
+        gray = cv2.cvtColor(crop, cv2.COLOR_RGB2GRAY)
+        return float(gray.mean())
+
+    def find_failed_partition(self, image: np.ndarray = None) -> list:
+        """返回已清空(已破)的格子下标列表（0 基）。"""
+        if image is None:
+            image = self.device.image
+        # 只有确认站在突破九格面板上才判亮度：战斗/结算/其他页面里格子区域内容完全无关，
+        # 误判会把本来可打的格子涂黑，导致白白刷新。
+        if not self.appear(self.I_RR_PERSON, threshold=0.8):
+            return []
+        values = [self._partition_brightness(image, i) for i in range(len(self.partition))]
+        # 干净面板上可打格子亮度 196~206；若整屏最亮的格子都不到 170，
+        # 说明画面被战斗特效/弹窗/暗化覆盖，此时不能按亮度判已破，直接放行。
+        if max(values) < 170:
+            logger.warning(f'Partition brightness looks abnormal (max={max(values):.1f}), skip failed detection')
+            return []
+        failed = [i for i, v in enumerate(values) if v < self.FAILED_PARTITION_BRIGHTNESS]
+        # 2026-11-12 本地修复：整屏 8 格同时判暗基本不可能，实测是结算动画刚结束、
+        # 面板还在淡入时抓到的那一帧（13:49 那轮就是这样，只剩一格亮 → 反复进空战斗）。
+        # 大面积可疑时等面板稳定再取一帧复核，只认两帧都暗的格子。
+        if len(failed) >= 6:
+            time.sleep(0.8)
+            self.screenshot()
+            image2 = self.device.image
+            if not self.appear(self.I_RR_PERSON, threshold=0.8):
+                return []
+            values2 = [self._partition_brightness(image2, i) for i in range(len(self.partition))]
+            if max(values2) < 170:
+                return []
+            failed2 = [i for i, v in enumerate(values2) if v < self.FAILED_PARTITION_BRIGHTNESS]
+            logger.warning(f'Too many failed partitions ({len(failed)}), re-check -> {len(failed2)}')
+            failed = [i for i in failed if i in failed2]
+        return failed
 
     def check_medal_is_frog(self, is_activity: False, target: RuleImage, order: int) -> bool:
         """
@@ -500,11 +634,24 @@ class ScriptTask(GeneralBattle, GameUi, SwitchSoul, RealmRaidAssets):
             retry_clean += 1
         
         click = self.partition[order - 1]
-        
+
+        # 点之前先确认这一格还没被打掉：暗格说明已清空，点了也不会进战斗，
+        # 早退比连点十次被 GameTooManyClickError 打断更安全。
+        # 只在整屏亮度正常（其他格子够亮）时才敢这么判，避免暗化画面误伤。
+        bright = [self._partition_brightness(self.device.image, i) for i in range(len(self.partition))]
+        if max(bright) >= 170 and bright[order - 1] < self.FAILED_PARTITION_BRIGHTNESS:
+            logger.warning(f'Partition {order} looks already cleared (brightness {bright[order - 1]:.0f}), skip')
+            return False
+
         # 进攻循环
+        # 2026-11-12 本地修复：目标格子已经打掉时，appear(I_RR_PERSON) 仍成立，
+        # 旧实现会无限点同一格，10 次后触发 GameTooManyClickError 直接崩任务。
+        # 这里给同一格的点击次数设上限，超了就放弃这一格交回 find_one 重新挑。
+        max_click = 4
+        click_count = 0
         while 1:
             self.screenshot()
-            
+
             # 双重保险：如果在进攻阶段又弹出了窗口，也把它关掉
             if self.appear(self.I_UI_CONFIRM):
                 logger.info("Refresh popup blocking attack! Clicking CANCEL.")
@@ -519,10 +666,16 @@ class ScriptTask(GeneralBattle, GameUi, SwitchSoul, RealmRaidAssets):
                 continue
             if self.appear_then_click(self.I_FIRE, interval=1):
                 continue
+            if click_count >= max_click:
+                logger.warning(f'Click partition {order} for {click_count} times but still not in battle, '
+                               f'give up this position and re-pick')
+                return False
             if self.click(click, interval=1.8):
+                click_count += 1
                 continue
-                
+
         logger.info(f'Click fire {order} success')
+        return True
 
     @cached_property
     def false_roi(self) -> list:
