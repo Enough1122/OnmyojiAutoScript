@@ -57,7 +57,15 @@ class ScriptTask(GameUi, MemoryScrollsAssets):
                     break
                 if self.appear_then_click(self.I_MS_FRAGMENT_S, interval=1.5):
                     continue
-            if self.appear(self.I_MS_FRAGMENT_S_50):
+            # 面板刚弹出时计数还在动画里, 单帧读不到 50/50 会误判成「未满」并让任务失败
+            # (2026-11-13 19:36 就是这样白失败一次)。这里多给 6 帧, 最多约 6 秒。
+            reached_50 = False
+            for _ in range(6):
+                self.screenshot()
+                if self.appear(self.I_MS_FRAGMENT_S_50):
+                    reached_50 = True
+                    break
+            if reached_50:
                 logger.info('Small Memory Scrolls fragments reached 50, planning tomorrow exploration')
                 # 安排下次探索
                 self.custom_next_run(task='Exploration', custom_time=self.config.memory_scrolls.memory_scrolls_finish.next_exploration_time, time_delta=1)
