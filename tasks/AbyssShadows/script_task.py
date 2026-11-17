@@ -114,7 +114,25 @@ class ScriptTask(GeneralBattle, GameUi, SwitchSoul, AbyssShadowsAssets):
         if not self.select_boss(AreaType.DRAGON):
             logger.warning("Failed to enter abyss shadows")
             self.goto_main()
-            self.set_next_run(task='AbyssShadows', finish=False, server=True, success=False)
+            now = datetime.now()
+            window_end = now.replace(hour=21, minute=50, second=0, microsecond=0)
+            # 2026-11-14 新增: 活动 20:00-22:00 期间若寮里还没点「开启」, 5 分钟后再来看一次;
+            # 原先失败直接顺延 1 天, 20:22 那轮撞上未开启就整晚错过(11-13/11-14 连续两天)。
+            if getattr(self, '_abyss_unopened', False) and now.hour >= 20 and now < window_end:
+                retry_at = min(now + timedelta(minutes=5), window_end)
+                logger.info(f"Abyss shadows not opened by guild yet, retry at {retry_at:%H:%M:%S}")
+                self.set_next_run(task='AbyssShadows', finish=True, target=retry_at)
+            else:
+                # 失败不再按 failure_interval 顺延一天(会把次日 20:00 的场次推到 21:5x),
+                # 改按固定的暗域开放日(五/六/日 20:00)排下一场。
+                if today == 4:
+                    self.custom_next_run(task='AbyssShadows', custom_time=cfg.abyss_shadows_time.custom_run_time_saturday, time_delta=1)
+                elif today == 5:
+                    self.custom_next_run(task='AbyssShadows', custom_time=cfg.abyss_shadows_time.custom_run_time_sunday, time_delta=1)
+                elif today == 6:
+                    self.custom_next_run(task='AbyssShadows', custom_time=cfg.abyss_shadows_time.custom_run_time_friday, time_delta=5)
+                else:
+                    self.custom_next_run(task='AbyssShadows', custom_time=cfg.abyss_shadows_time.custom_run_time_friday, time_delta=4 - today)
             raise TaskEnd
         
         # 等待可进攻时间  
@@ -349,6 +367,7 @@ class ScriptTask(GeneralBattle, GameUi, SwitchSoul, AbyssShadowsAssets):
                     if not self.config.abyss_shadows.open_abyss_enable:
                         logger.warning("Abyss shadows is not opened this round, "
                                        "set abyss_shadows.open_abyss_enable to click the open button")
+                        self._abyss_unopened = True
                         return False
                     if open_times >= 3:
                         logger.warning("Click open abyss shadows 3 times but still not opened, give up")
@@ -517,6 +536,21 @@ class ScriptTask(GeneralBattle, GameUi, SwitchSoul, AbyssShadowsAssets):
             
         return suceess
 
+    def _widen_battle_back_roi(self) -> None:
+        """
+        把返回箭头的匹配区域拉到比模板四边各外扩 10px。
+
+        assets 模块在脚本进程内是被缓存的, 只改 assets.py 不重启脚本进程不会生效;
+        而且 roi_back 与模板等宽时 matchTemplate 只剩一个落点, 渲染差 1-2px 就从 0.93
+        掉到 0.635 (2026-11-13 20:03 首领战因此空转 60s 抛 GameStuckError)。
+        这里在每次进入战斗返回流程前补一遍, 幂等。
+        """
+        back = self.I_ABYSS_BATTLE_BACK
+        x, y, w, h = [int(v) for v in back.roi_front]
+        expect = (max(0, x - 10), max(0, y - 10), w + 20, h + 20)
+        if tuple(int(v) for v in back.roi_back) != expect:
+            back.roi_back = expect
+
     def run_general_battle_back(self, Monster_type: str) -> bool:
         """
         重写父类方法，因为狭间暗域的准备和战斗流程不一样
@@ -525,6 +559,7 @@ class ScriptTask(GeneralBattle, GameUi, SwitchSoul, AbyssShadowsAssets):
         :return:
         """
         cfg: AbyssShadows = self.config.abyss_shadows
+        self._widen_battle_back_roi()
         while 1:
             #确保进入战斗
             self.screenshot()
@@ -559,20 +594,33 @@ class ScriptTask(GeneralBattle, GameUi, SwitchSoul, AbyssShadowsAssets):
             return True
 
         # 点击返回
+        # 兜底: 模板连续 8 秒认不出返回箭头时, 直接点左上角的固定坐标(35,31)。
+        # 狭间战斗内左上角返回箭头的位置是固定的, 与其空转到 stuck 超时(60s)再重启 app,
+        # 不如按位置点一下。2026-11-13 20:03 首领战就是模板 roi 与模板等宽、
+        # 渲染差 1-2px 导致 0.93->0.635 认不出, 白等 60 秒。
+        start_exit = time.time()
         while 1:
             self.screenshot()
             # 狭间战斗界面的返回箭头是另一套皮肤, 通用 I_EXIT(gb_exit) 在这里只 0.70, 匹配不到
             # 会一直空转到 stuck 超时(60s)后抛 GameStuckError, 2026-11-07 连挂三场即因此。
             if self.appear_then_click(self.I_ABYSS_BATTLE_BACK, interval=2):
+                start_exit = time.time()
                 continue
             if self.appear_then_click(self.I_EXIT, interval=2):
+                start_exit = time.time()
                 continue
             if self.appear_then_click(self.I_UI_CONFIRM, interval=2):
+                start_exit = time.time()
                 continue
             if self.appear_then_click(self.I_WIN, interval=2):
+                start_exit = time.time()
                 continue
             if self.appear(self.I_ABYSS_NAVIGATION):
                 break
+            if time.time() - start_exit > 8:
+                logger.warning('狭间战斗返回箭头识别不到, 按固定坐标点击')
+                self.device.click(35, 31)
+                start_exit = time.time()
         logger.info(f"Click {self.I_UI_CONFIRM.name}")
 
         return True

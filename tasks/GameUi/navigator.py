@@ -594,6 +594,42 @@ class GameUi(BaseTask, GameUiAssets):
             )
             action_done = True
 
+        # 庭院镜头被拖偏时, 世界锚定的灯笼会随镜头平移: 召唤灯笼实测 x=896..1114,
+        # 探索灯笼 roi_back 虽宽 (243,100,933,211) 但镜头一偏渲染角度就变, 分数从 0.815
+        # 掉到 0.462。2026-11-13 20:41/21:14 的 page_main->page_summon、以及 2026-11-14
+        # 03:09/07:03/08:25 的 page_main->page_exploration 都是连续 7~8 轮 Transition failed
+        # 直到 GameStuckError 重启 app 才恢复。这里在放弃这条边之前把庭院镜头拖回原位,
+        # 每拖一次重新识别一次。新增 exploration 边 (2026-11-14): 与 summon 同构。
+        # 2026-11-14 18:25 又补一例: page_main -> page_town 连续 6 轮
+        # "Transition failed before leaving page_main"，最后 GameStuckError 重启。
+        # 庭院里所有世界锚定的入口(探索/召唤灯笼、町屋牌坊、神社鸟居)都随镜头平移一起漂走，
+        # 所以不再按目的地逐条列举，只要「从庭院出发的边」失败就尝试把镜头拖回。
+        if not action_done and source.key == "page_main":
+            # 先复用成熟的镜头回拖 helper: 按 I_CHECK_MAIN 分数自适应方向拖回, 净位移可控。
+            # 实测 08:25 卡死帧 I_CHECK_MAIN=0.6273、底栏 3/4 probe 命中, 正好满足它的触发条件。
+            if self._recover_panned_main_page():
+                logger.warning(
+                    f"Main page camera restored before giving up: {transition.key}"
+                )
+                if self._execute_action(
+                    transition.action, interval=0.8, skip_first_screenshot=False
+                ):
+                    action_done = True
+            if not action_done:
+                # helper 未触发(非镜头偏)或恢复后仍识别不到: 对称方向再拖几轮。
+                # (1,-1,1,-1) 净位移为 0, 不会把镜头永久拖歪。
+                for direction in (1, -1, 1, -1):
+                    self._drag_main_camera(direction * self.MAIN_PAGE_DRAG_DISTANCE)
+                    if self._execute_action(
+                        transition.action, interval=0.8, skip_first_screenshot=False
+                    ):
+                        logger.warning(
+                            "Main page lantern not recognized, camera dragged back and retried: "
+                            f"{transition.key}"
+                        )
+                        action_done = True
+                        break
+
         if not action_done:
             self._run_hooks(source.on_leave_failure)
             self._run_hooks(transition.on_leave_failure)

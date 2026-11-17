@@ -380,23 +380,34 @@ class ScriptTask(WQExplore, SecretScriptTask, WantedQuestsAssets):
         self.run_general_battle(config=wq_config)
         self.wait_until_appear(self.I_WQC_FIRE, wait_time=4)
         # 关闭 挑战界面
+        # 无 timeout 的纯截图循环同样会 60s 触发 GameStuckError，给 20s 硬兜底。
+        close_timer = Timer(20).start()
         while 1:
             self.screenshot()
             if self.appear(self.I_CHECK_EXPLORATION):
                 break
             if self.appear_then_click(self.I_UI_BACK_YELLOW, interval=1.5):
                 continue
+            if close_timer.reached():
+                logger.warning('Close challenge page timeout, force goto page_exploration')
+                self.goto_page(page_exploration)
+                break
 
     def secret(self, goto, num=1):
-        self.ui_click(goto, self.I_WQSE_FIRE)
+        # 前置 ui_click / wait_until_appear 都必须有上限，否则按钮不出现就纯截图空转。
+        self.ui_click(goto, self.I_WQSE_FIRE, timeout=20)
         for i in range(num):
-            self.wait_until_appear(self.I_WQSE_FIRE)
+            self.wait_until_appear(self.I_WQSE_FIRE, wait_time=10)
             # self.ui_click_until_disappear(self.I_WQSE_FIRE)
             # 又臭又长的对话针的是服了这个网易
             click_count = 0
+            chat_timer = Timer(45).start()
             while 1:
                 self.screenshot()
                 if not self.appear(self.I_UI_BACK_RED, threshold=0.7):
+                    break
+                if chat_timer.reached():
+                    logger.warning('Secret mission chat loop timeout, skip remaining dialogue')
                     break
                 if self.appear_then_click(self.I_WQSE_FIRE, interval=1):
                     continue
@@ -409,6 +420,10 @@ class ScriptTask(WQExplore, SecretScriptTask, WantedQuestsAssets):
                         self.device.click_record_clear()
                     continue
             success = self.run_general_battle(self.battle_config)
+        # 战斗后若停在剧情对话过场（山兔台词），back / zone 模板全不命中，
+        # 这个 while 会纯截图空转 60s 抛 GameStuckError（06:33 / 06:36 两次）。
+        # 20s 硬兜底跳出，交给下面的 goto_page(page_exploration) 接管导航。
+        back_timer = Timer(20).start()
         while 1:
             self.screenshot()
             if self.appear(self.I_CHECK_SECRET_ZONES):
@@ -417,6 +432,9 @@ class ScriptTask(WQExplore, SecretScriptTask, WantedQuestsAssets):
                 continue
             if self.appear_then_click(self.I_UI_BACK_BLUE, interval=1.5):
                 continue
+            if back_timer.reached():
+                logger.warning('Back to secret zones timeout, force goto page_exploration')
+                break
         self.goto_page(page_exploration)
         self.wait_until_stable(self.I_CHECK_EXPLORATION)
         logger.info('Secret mission finished')

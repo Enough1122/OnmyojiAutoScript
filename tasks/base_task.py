@@ -32,6 +32,20 @@ from tasks.GlobalGame.config_emergency import FriendInvitation
 
 
 
+# 「大人15分钟未使用加成，已自动关闭，是否再次打开？」弹窗：游戏空闲 15 分钟后
+# 盖在任意页面上，且背景页仍能被 navigator 正常识别，所以 close_unknown_pages 不会
+# 被触发，navigator 会一直点被弹窗挡住的返回键直到 GameStuckError（2026-11-16
+# 02:08/02:23/02:32 连续三次）。用弹窗标题文字做全局检测，在每帧截图后优先点
+# 「取消」，绝不能点「确认」（会重新开启加成，弹窗反复出现）。模板按 BGR 落盘，
+# 与 RuleImage.load_image 的 cv2.COLOR_BGR2RGB 配套；device.image 运行时是 RGB。
+I_BUFF_EXPIRED_POPUP = RuleImage(
+    roi_front=(455, 280, 380, 80), roi_back=(425, 250, 440, 140),
+    threshold=0.8, method="Template matching",
+    file="./tasks/GlobalGame/ui/ui_buff_expired_popup.png")
+# 弹窗「取消」按钮中心（1280x720 实拍，adb -d <game_display> tap 535 424 实测生效）。
+BUFF_POPUP_CANCEL = (535, 424)
+
+
 class BaseTask(GlobalGameAssets, CostumeBase):
     config: Config = None
     device: Device = None
@@ -141,6 +155,29 @@ class BaseTask(GlobalGameAssets, CostumeBase):
             self.set_next_run(task='WantedQuests', target=datetime.now().replace(microsecond=0))
         return True
 
+    def _dismiss_buff_expired_popup(self) -> None:
+        """每帧截图后兜底关闭『大人15分钟未使用加成，已自动关闭』弹窗。
+
+        弹窗盖在任意页面上时背景页仍能被 navigator 正常识别，close_unknown_pages
+        不会被触发（2026-11-16 02:08/02:23/02:32 连续 GameStuckError 的真因）。
+        这里在 BaseTask.screenshot 全局检测弹窗标题文字，命中就点『取消』（绝不点
+        『确认』，否则会重新开启加成、弹窗周期性反复出现），最多连点 3 帧、每帧
+        重新取图确认；时间戳节流 + 清 click_record，避免同名按钮被连点检测记账。
+        只调 self.device.screenshot() 不调 self.screenshot()，避免递归。
+        """
+        if time() - getattr(self, '_buff_popup_last_click', 0.0) < 1.0:
+            return
+        for _ in range(3):
+            if not I_BUFF_EXPIRED_POPUP.match(self.device.image):
+                return
+            logger.info('Buff expired popup detected, click cancel')
+            self.device.click(BUFF_POPUP_CANCEL[0], BUFF_POPUP_CANCEL[1],
+                              control_name='BUFF_POPUP_CANCEL')
+            self.device.click_record_remove('BUFF_POPUP_CANCEL')
+            self._buff_popup_last_click = time()
+            sleep(0.4)
+            self.device.screenshot()
+
     def screenshot(self):
         """
         截图 引入中间函数的目的是 为了解决如协作的这类突发的事件
@@ -149,6 +186,8 @@ class BaseTask(GlobalGameAssets, CostumeBase):
         self.device.screenshot()
         # 判断勾协
         self._burst()
+        # 「15分钟未使用加成」弹窗全局兜底（背景页可识别时 close_unknown_pages 不管）
+        self._dismiss_buff_expired_popup()
 
         # # 判断网络异常
         # if self.appear(self.I_NETWORK_ABNORMAL):

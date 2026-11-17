@@ -147,7 +147,11 @@ class SoloExploration(BaseExploration):
                 self.device.click_record_remove(self.S_SWIPE_BACKGROUND_RIGHT.name)
                 if self.check_exit():
                     break
-                self.ui_click(self.I_E_EXPLORATION_CLICK, stop=self.I_E_SETTINGS_BUTTON)
+                # stop/click 都不命中时，无 timeout 会纯截图空转 60s 触发 GameStuckError。
+                # 20s 上限，超时点返回键把画面退回探索大世界（点击会清 stuck timer）。
+                if not self.ui_click(self.I_E_EXPLORATION_CLICK, stop=self.I_E_SETTINGS_BUTTON, timeout=20):
+                    logger.warning('Exploration ENTRANCE ui_click timeout, back to world')
+                    self.appear_then_click(self.I_UI_BACK_YELLOW, interval=1)
                 continue
             #
             elif scene == Scene.MAIN:

@@ -99,6 +99,9 @@ class ReplaceShikigami(BaseTask, ReplaceShikigamiAssets):
         start_time = time.time()   # 记录起始时间
         click_interval_timer = Timer(1.5).start()  # 点击选择式神间隔
         clicked = False
+        # 连续点式神却始终没弹出确认、也没填上坑位时提前放弃, 避免空转到
+        # click_record_check 累计 10 次抛 GameTooManyClickError 或 120 秒超时 Restart。
+        no_progress_clicks = 0
         while 1:
             # ——1. 先做超时检查——
             if time.time() - start_time > TIMEOUT_SEC:
@@ -112,25 +115,39 @@ class ReplaceShikigami(BaseTask, ReplaceShikigamiAssets):
 
             if not self.appear(stop_image):
                 break
+            # 候补式神全是满级/不可用时, 会一直在选式神界面空点同一格
+            # (2026-11-11 04:19、2026-11-14 10:27)。确认/替换分支会把计数清零,
+            # 只有一直点不上式神才累加, 到 8 次就放弃本轮, 让调用方正常顺延。
+            if no_progress_clicks >= 8:
+                logger.warning('Set shikigami no progress after 8 clicks, give up this round')
+                break
 
             if self.appear_then_click(self.I_U_CONFIRM_SMALL, interval=0.5):
                 clicked = False  # 点击了确认, 恢复选式神的操作
+                no_progress_clicks = 0
                 continue
 
             # 是否育成候补式神按钮
             if self.appear_then_click(self.I_UI_CONFIRM, interval=1) or self.appear_then_click(self.I_UI_CONFIRM_SAMLL, interval=1):
+                no_progress_clicks = 0
                 continue
             # 与下方点击第7个式神操作互斥, 防止确认按钮还没有出现被下方取消掉
             if not clicked and self.click(click_match, interval=1.5):
                 clicked = True
+                no_progress_clicks += 1
+                # 单格点选不该累计进连点判定；真正的进展分支会清零计数
+                self.device.click_record_remove(click_match.name)
                 continue
             if not clicked and self.click(_click_match[6], interval=4.5):
                 # 有的时候第七个格子被占用到寄养上去了
                 # 导致一直无法选上
                 clicked = True
+                no_progress_clicks += 1
+                self.device.click_record_remove(_click_match[6].name)
                 continue
             if self.appear_then_click(self.I_U_CIRCLE_ALTERNATE, interval=2.5):
                 self.appear_then_click(self.I_U_CONFIRM_ALTERNATE, interval=1.5)
+                no_progress_clicks = 0
                 continue
         logger.info('Set shikigami: %d' % shikigami_order)
 

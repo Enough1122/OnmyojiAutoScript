@@ -268,9 +268,16 @@ class ScriptTask(GameUi, CollectiveMissionsAssets):
                 max_number = total
                 max_index = i
         if max_number <= 30:
-            logger.info('The number of all matter is less than 30')
-            logger.info('Please check your game resolution')
-            raise RequestHumanTakeover
+            # 2026-11-16 03:26/03:37 复盘：今天材料已捐空（四项全 0/16、0/28、
+            # 0/21、0/12）是正常稳态，不是分辨率/识别错误。原来抛 RequestHumanTakeover
+            # 会让 ScriptProcess 直接 SystemExit 杀掉整个脚本子进程（日志 Error: 1 +
+            # process exit）；watchdog 补拉后 collective_missions 仍逾期又立刻重跑，
+            # 于是一晚上反复自杀。改为关面板 + 顺延 + TaskEnd 正常收尾，让调度器继续
+            # 跑后面的任务。收尾方式与 run() 里「今日已完成」分支保持一致。
+            logger.warning('No material left to donate (all 0), finish CollectiveMissions normally')
+            self._close_records()
+            self.set_next_run(task='CollectiveMissions', success=False, finish=True)
+            raise TaskEnd('CollectiveMissions')
 
         match_swipe = {
             0: self.S_CM_MATTER_1,
@@ -358,8 +365,14 @@ class ScriptTask(GameUi, CollectiveMissionsAssets):
             if missions == missions_select:
                 logger.info(f"成功切换任务")
                 return True
-            if click_cnt > 20:
-                logger.warning(f'click_cnt={click_cnt}')
+            # 2026-11-13 04:13 复盘：原来上限是 20 次，但「刷新任务」点的是同一个按钮
+            # CM_CM_SWITCH，device.click_record_check 在**同名按钮累计 10 次**时就会抛
+            # GameTooManyClickError（当时目标任务「觉醒二」一直没刷出来，池子在
+            # 契灵/御灵一/御灵二/御灵三/御魂二/御魂三 之间循环）→ 脚本被 stuck 判定重启 app。
+            # 刷新本身就是「反复点同一个按钮」，不该计入连点检测；次数也收到 8 次，
+            # 刷 8 次还没出说明今天池子里就没有，别把时间耗在这。
+            if click_cnt >= 8:
+                logger.warning(f'[SelectMission] target {missions_select} not found after {click_cnt} refreshes, give up')
                 return False
             if not (self.I_CM_SWITCH.match_brightness(self.device.image) and
                 self.I_CM_SWITCH.match_brightness(self.device.image) and
@@ -371,6 +384,7 @@ class ScriptTask(GameUi, CollectiveMissionsAssets):
             if self.appear_then_click(self.I_CM_SWITCH, interval=2):
                 logger.info(f"尝试切换任务")
                 click_cnt += 1
+                self.device.click_record_clear()
 
 
 

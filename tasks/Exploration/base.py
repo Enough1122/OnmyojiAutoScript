@@ -182,6 +182,10 @@ class BaseExploration(GameUi, GeneralBattle, GeneralRoom, GeneralInvite, Replace
             time.sleep(1)
 
         # 选中对应章节
+        # 章节 OCR 与按钮都不命中时，这个 while 会变成纯截图空转，60s 后抛
+        # GameStuckError（07:15 / 07:24 两个静默窗口）。20s 硬兜底退回探索大世界，
+        # 让 run_solo 主循环刷新场景；返回 False 不影响调用方（其返回值未被使用）。
+        level_timer = Timer(20).start()
         while 1:
             self.screenshot()
             if self.appear_then_click(self.I_UI_CONFIRM, interval=1):
@@ -195,6 +199,10 @@ class BaseExploration(GameUi, GeneralBattle, GeneralRoom, GeneralInvite, Replace
                 break
             if self.is_in_room():
                 break
+            if level_timer.reached():
+                logger.warning('Select exploration level timeout, back to exploration world')
+                self.appear_then_click(self.I_UI_BACK_YELLOW, interval=1)
+                return False
 
         return True
 
@@ -479,6 +487,14 @@ class BaseExploration(GameUi, GeneralBattle, GeneralRoom, GeneralInvite, Replace
             logger.info(f'[TicketProbe] world map ocr: {cu}/{total}')
         # 判断突破票数量
         if cu < con_scrolls.scrolls_threshold:
+            return
+
+        # 2026-11-15 新增: 跨日后前 30 分钟不因突破票让路。
+        # 原来 00:01 起刷绘卷, 票一旦 >= threshold(20) 就立刻让给 RealmRaid 并把探索
+        # 顺延 scrolls_cd(30 分钟), 抢排名的黄金半小时被吞掉(11-15 00:02:34 实测)。
+        _now = datetime.now()
+        if _now.hour == 0 and _now.minute < 30:
+            logger.info("It is the first 30 minutes of a new day, keep exploring and delay realm_raid")
             return
 
         # 关闭加成

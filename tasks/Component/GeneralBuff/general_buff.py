@@ -81,6 +81,29 @@ class GeneralBuff(BaseTask, GeneralBuffAssets):
         self.I_OPEN_YELLOW.roi_back = list(area)  # 动态设置roi
         self.I_CLOSE_RED.roi_back = list(area)
 
+    def _toggle(self, is_open: bool, name: str) -> bool:
+        """
+        2026-11-13 00:16 复盘：加成面板里某一行的开关位置可能被「剩余时间」倒计时占据
+        （金币100%/经验100% 分别显示 00:09 / 00:11），此时既不是 I_OPEN_YELLOW 也不是
+        I_CLOSE_RED，ui_click 会一路点到超时；四个 buff 方法共用同一个按钮名，
+        累计点击很容易撞到 device.click_record_check 的「同一按钮 >=10 次」直接抛
+        GameTooManyClickError，把整条脚本打挂（Exploration 连挂 3 次 → Request human takeover）。
+        这里在切换结束后清掉点击历史，并缩短超时，切不动就放弃、留给下一轮。
+        """
+        click = self.I_CLOSE_RED if is_open else self.I_OPEN_YELLOW
+        stop = self.I_OPEN_YELLOW if is_open else self.I_CLOSE_RED
+        try:
+            # 先确认开关真的在：加成快到期时那一格会被倒计时（如 00:09）占住，
+            # 此时点开点关都无意义，直接跳过，别把时间花在空点上。
+            self.screenshot()
+            if not self.appear(click) and not self.appear(stop):
+                logger.warning(f'{name} switch not found (occupied by countdown?), skip')
+                return False
+            return bool(self.ui_click(click=click, stop=stop, interval=1.5, timeout=6))
+        finally:
+            # 切换 buff 本身就是「按状态反复点同一个按钮」，不该计入卡死检测
+            self.device.click_record_clear()
+
     def gold_50(self, is_open: bool = True):
         """
         金币50buff
@@ -94,12 +117,8 @@ class GeneralBuff(BaseTask, GeneralBuffAssets):
             logger.warning('No gold 50 buff')
             return None
         self.set_switch_area(area)
-        if is_open:
-            if not self.ui_click(click=self.I_CLOSE_RED, stop=self.I_OPEN_YELLOW, interval=1.5, timeout=10):
-                logger.warning('Open gold 50 buff failed')
-        else:
-            if not self.ui_click(click=self.I_OPEN_YELLOW, stop=self.I_CLOSE_RED, interval=1.5, timeout=10):
-                logger.warning('Close gold 50 buff failed')
+        if not self._toggle(is_open, 'gold 50'):
+            logger.warning(f'{"Open" if is_open else "Close"} gold 50 buff failed')
 
     def gold_100(self, is_open: bool = True):
         """
@@ -114,12 +133,8 @@ class GeneralBuff(BaseTask, GeneralBuffAssets):
             logger.warning('No gold 100 buff')
             return None
         self.set_switch_area(area)
-        if is_open:
-            if not self.ui_click(click=self.I_CLOSE_RED, stop=self.I_OPEN_YELLOW, interval=1.5, timeout=10):
-                logger.warning('Open gold 100 buff failed')
-        else:
-            if not self.ui_click(click=self.I_OPEN_YELLOW, stop=self.I_CLOSE_RED, interval=1.5, timeout=10):
-                logger.warning('Close gold 100 buff failed')
+        if not self._toggle(is_open, 'gold 100'):
+            logger.warning(f'{"Open" if is_open else "Close"} gold 100 buff failed')
 
     def exp_50(self, is_open: bool = True):
         """
@@ -145,12 +160,8 @@ class GeneralBuff(BaseTask, GeneralBuffAssets):
             else:
                 break
 
-        if is_open:
-            if not self.ui_click(click=self.I_CLOSE_RED, stop=self.I_OPEN_YELLOW, interval=1.5, timeout=10):
-                logger.warning('Open exp 50 buff failed')
-        else:
-            if not self.ui_click(click=self.I_OPEN_YELLOW, stop=self.I_CLOSE_RED, interval=1.5, timeout=10):
-                logger.warning('Close exp 50 buff failed')
+        if not self._toggle(is_open, 'exp 50'):
+            logger.warning(f'{"Open" if is_open else "Close"} exp 50 buff failed')
 
     def exp_100(self, is_open: bool = True):
         """
@@ -173,12 +184,8 @@ class GeneralBuff(BaseTask, GeneralBuffAssets):
             else:
                 break
 
-        if is_open:
-            if not self.ui_click(click=self.I_CLOSE_RED, stop=self.I_OPEN_YELLOW, interval=1.5, timeout=10):
-                logger.warning('Open exp 100 buff failed')
-        else:
-            if not self.ui_click(click=self.I_OPEN_YELLOW, stop=self.I_CLOSE_RED, interval=1.5, timeout=10):
-                logger.warning('Close exp 100 buff failed')
+        if not self._toggle(is_open, 'exp 100'):
+            logger.warning(f'{"Open" if is_open else "Close"} exp 100 buff failed')
 
     def get_area_image(self, target: RuleImage) -> list:
         """
@@ -215,12 +222,9 @@ class GeneralBuff(BaseTask, GeneralBuffAssets):
             logger.warning('No awake buff')
             return None
         self.set_switch_area(area)
-        if is_open:
-            if not self.ui_click(click=self.I_CLOSE_RED, stop=self.I_OPEN_YELLOW, interval=1.5, timeout=10):
-                logger.warning('Open awake buff failed')
-        else:
-            if not self.ui_click(click=self.I_OPEN_YELLOW, stop=self.I_CLOSE_RED, interval=1.5, timeout=10):
-                logger.warning('Close awake buff failed')
+        # 同 _toggle 注释：觉醒/御魂这两行也可能是「43天 / 12天」倒计时占位，同样会空点到超时
+        if not self._toggle(is_open, 'awake'):
+            logger.warning(f'{"Open" if is_open else "Close"} awake buff failed')
 
     def soul(self, is_open: bool = True):
         """
@@ -235,12 +239,8 @@ class GeneralBuff(BaseTask, GeneralBuffAssets):
             logger.warning('No soul buff')
             return None
         self.set_switch_area(area)
-        if is_open:
-            if not self.ui_click(click=self.I_CLOSE_RED, stop=self.I_OPEN_YELLOW, interval=1.5, timeout=10):
-                logger.warning('Open soul buff failed')
-        else:
-            if not self.ui_click(click=self.I_OPEN_YELLOW, stop=self.I_CLOSE_RED, interval=1.5, timeout=10):
-                logger.warning('Close soul buff failed')
+        if not self._toggle(is_open, 'soul'):
+            logger.warning(f'{"Open" if is_open else "Close"} soul buff failed')
 
     def reject_invite(self):
         from tasks.Component.GeneralInvite.assets import GeneralInviteAssets as gia

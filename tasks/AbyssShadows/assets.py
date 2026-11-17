@@ -69,7 +69,10 @@ class AbyssShadowsAssets:
 	# 战报退出按钮 
 	I_ABYSS_MAP_EXIT = RuleImage(roi_front=(1154,96,32,32), roi_back=(1154,96,32,32), threshold=0.8, method="Template matching", file="./tasks/AbyssShadows/res/res_abyss_map_exit.png")
 	# 狭间战斗内左上角返回箭头(与通用战斗 gb_exit 皮肤不同, 2026-11-07 新增)
-	I_ABYSS_BATTLE_BACK = RuleImage(roi_front=(21,19,29,27), roi_back=(21,19,29,27), threshold=0.8, method="Template matching", file="./tasks/AbyssShadows/res/res_abyss_battle_back.png")
+	# 狭间战斗内左上角返回箭头(与通用战斗 gb_exit 皮肤不同, 2026-11-07 新增)
+	# roi_back 必须比模板大: 与模板等宽时 matchTemplate 只剩 1 个落点, 渲染差 1-2px 就从 0.93 掉到 0.635,
+	# 20:03 首领战因此空转 60s 抛 GameStuckError(2026-11-13)。四边各外扩 10px。
+	I_ABYSS_BATTLE_BACK = RuleImage(roi_front=(21,19,29,27), roi_back=(11,9,49,47), threshold=0.8, method="Template matching", file="./tasks/AbyssShadows/res/res_abyss_battle_back.png")
 	# 挑战按钮 
 	I_ABYSS_FIRE = RuleImage(roi_front=(1121,605,77,50), roi_back=(1121,605,77,50), threshold=0.8, method="Template matching", file="./tasks/AbyssShadows/res/res_abyss_fire.png")
 	# 前往 

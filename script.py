@@ -742,16 +742,22 @@ class Script:
                                 "Please read the help text of the options.")
                 logger.critical("Possible reason #2: There is a problem with this task. "
                                 "Please contact developers or try to fix it yourself.")
-                logger.critical('Request human takeover')
+                logger.critical('Delay failed task and keep scheduler alive')
                 # 添加失败三次的推送通知
                 self.config.notifier.push(
                     title=f'{I18n.trans_zh_cn(task)}{task}',
                     content=f"<{self.config_name}> 任务连续失败三次，请上线查看"
                 )
-                # 关闭模拟器
+                # 关闭模拟器（error_repeated=true 时仍按原配置关）
                 if self.config.script.error.error_repeated:
                     self.device.emulator_stop()
-                exit(1)
+                # 连败不再终止脚本子进程：杀掉进程会让整条挂机停摆。
+                # 按该任务自己的 failure_interval 顺延（server=False，避免 parse_tomorrow_server
+                # 把任务推到明天），清零失败计数后继续调度其它任务。
+                self.config.task_delay(task=task, success=False, server=False)
+                self.failure_record[task] = 0
+                del_cached_property(self, 'config')
+                continue
 
             if success:
                 del_cached_property(self, 'config')
