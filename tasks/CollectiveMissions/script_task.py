@@ -325,6 +325,8 @@ class ScriptTask(GameUi, CollectiveMissionsAssets):
         reward_number = 0
         # 兜底：材料/次数到上限时面板会直接关掉，原来的死循环只能等 60s 的 stuck 检测
         # 把任务打成 GameStuckError，这里主动收尾（每次成功动作都会 reset）。
+        # 2026-11-17 合并上游 13221d2c 时保留本地 40s 口径，不采上游的 Timer(5)：
+        # 领奖面板滑入动画本身就要 1~3 秒，5s 内没有命中就退会漏掉第二份双倍奖励。
         donate_timer = Timer(40).start()
         while 1:
             self.screenshot()
@@ -335,7 +337,10 @@ class ScriptTask(GameUi, CollectiveMissionsAssets):
                 reward_number += 1
                 donate_timer.reset()
                 continue
-            if self.appear_then_click(self.I_CM_PRESENT, interval=1):
+            # I_CM_REWARDS 补点来自上游 13221d2c：面板重建后「获得奖励」模板不命中，
+            # 只剩这个奖励按钮可点，否则要空转到 40s 兜底。
+            if self.appear_then_click(self.I_CM_PRESENT, interval=1)\
+                    or self.appear_then_click(self.I_CM_REWARDS, interval=0.5):
                 donate_timer.reset()
                 continue
             if self.ocr_appear(O_CM_LIMIT_1):
@@ -374,6 +379,7 @@ class ScriptTask(GameUi, CollectiveMissionsAssets):
             if click_cnt >= 8:
                 logger.warning(f'[SelectMission] target {missions_select} not found after {click_cnt} refreshes, give up')
                 return False
+
             if not (self.I_CM_SWITCH.match_brightness(self.device.image) and
                 self.I_CM_SWITCH.match_brightness(self.device.image) and
                 self.I_CM_SWITCH.match_mean_color(self.device.image, color=(134, 107, 83))
